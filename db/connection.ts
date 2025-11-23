@@ -1,13 +1,13 @@
 import sql from "mssql";
 
 const config: sql.config = {
-  user: "posseable_user",
-  password: "Posseable2025!",
-  server: "SITON-PC",
-  database: "PosseableDB",
+  user: process.env.DB_USER!,
+  password: process.env.DB_PASSWORD!,
+  server: process.env.DB_SERVER!,
+  database: process.env.DB_DATABASE!,
   options: {
-    port: 1433,
-    encrypt: false,
+    port: Number(process.env.DB_PORT) || 1433,
+    encrypt: false, // MSSQL local
     trustServerCertificate: true,
   },
 };
