@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
 import bcrypt from "bcrypt";
 import { cookies } from "next/headers";
+import { findUserByCredentials } from "@/lib/services/authService";
 
 export async function POST(req: Request) {
   try {
@@ -21,10 +22,7 @@ export async function POST(req: Request) {
     }
 
     // 1. שליפת המשתמש מה-DB
-    const result = await query(
-      "SELECT national_id, full_name, email, password_hash, must_reset, role FROM app_user WHERE national_id = @id AND email = @mail",
-      { id: national_id, mail: email }
-    );
+    const result = await findUserByCredentials(national_id, email);
 
     if (!result.recordset.length) {
       return NextResponse.json({ error: "User not found" }, { status: 401 });
