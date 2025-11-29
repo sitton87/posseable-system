@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, PROGRAM_OPTIONS } from "@/type";
+import { Activity, SeasonPlan, ActivitySeries } from "@/type";
 
 // Styles
 const muted = "#6b7280";
@@ -67,9 +67,13 @@ export default function ActivitiesPage() {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [filterKind, setFilterKind] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [seasonsOptions, setSeasonsOptions] = useState<SeasonPlan[]>([]);
+  const [seriesOptions, setSeriesOptions] = useState<ActivitySeries[]>([]);
+  const [seriesOptionsLoading, setSeriesOptionsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     season_id: "",
+    series_id: "",
     group_id: "",
     kind: "גלישה",
     activity_date: "",
@@ -82,8 +86,24 @@ export default function ActivitiesPage() {
   });
 
   useEffect(() => {
+    fetchSeasons();
+  }, []);
+
+  useEffect(() => {
     fetchActivities();
   }, [filterKind, filterStatus]);
+
+  const fetchSeasons = async () => {
+    try {
+      const res = await fetch("/api/seasons", { credentials: "include" });
+      const data = await res.json();
+      if (data.success) {
+        setSeasonsOptions(data.seasons);
+      }
+    } catch (err) {
+      console.error("Error fetching seasons:", err);
+    }
+  };
 
   const fetchActivities = async () => {
     try {
@@ -94,7 +114,7 @@ export default function ActivitiesPage() {
       if (filterStatus) params.append("status", filterStatus);
       if (params.toString()) url += `?${params}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { credentials: "include" });
       const data = await res.json();
       if (data.success) {
         setActivities(data.activities);
@@ -107,10 +127,60 @@ export default function ActivitiesPage() {
     }
   };
 
+  const fetchSeriesOptions = async (
+    seasonId: string,
+    options?: { presetSeriesId?: string; autoSelectDefault?: boolean }
+  ) => {
+    if (!seasonId) {
+      setSeriesOptions([]);
+      setFormData((prev) => ({ ...prev, series_id: "" }));
+      return;
+    }
+    try {
+      setSeriesOptionsLoading(true);
+      const res = await fetch(`/api/series?season_id=${seasonId}`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSeriesOptions(data.series);
+        if (options?.presetSeriesId) {
+          setFormData((prev) => ({
+            ...prev,
+            series_id: options.presetSeriesId as string,
+          }));
+        } else if (options?.autoSelectDefault) {
+          const defaultSeries =
+            data.series.find((s: ActivitySeries) => s.is_default) ||
+            data.series[0];
+          setFormData((prev) => ({
+            ...prev,
+            series_id: defaultSeries ? defaultSeries.id.toString() : "",
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching series options:", err);
+      alert("שגיאה בטעינת סדרות פעילות");
+    } finally {
+      setSeriesOptionsLoading(false);
+    }
+  };
+
+  const handleSeasonSelect = (seasonId: string) => {
+    setFormData((prev) => ({ ...prev, season_id: seasonId, series_id: "" }));
+    if (seasonId) {
+      fetchSeriesOptions(seasonId, { autoSelectDefault: true });
+    } else {
+      setSeriesOptions([]);
+    }
+  };
+
   const handleAdd = () => {
     setEditingActivity(null);
     setFormData({
       season_id: "",
+      series_id: "",
       group_id: "",
       kind: "גלישה",
       activity_date: "",
@@ -121,6 +191,7 @@ export default function ActivitiesPage() {
       status: "מתוכנן",
       notes: "",
     });
+    setSeriesOptions([]);
     setShowModal(true);
   };
 
@@ -128,6 +199,7 @@ export default function ActivitiesPage() {
     setEditingActivity(activity);
     setFormData({
       season_id: activity.season_id.toString(),
+      series_id: activity.series_id?.toString() || "",
       group_id: activity.group_id || "",
       kind: activity.kind,
       activity_date: activity.activity_date.toString().split("T")[0],
@@ -139,11 +211,18 @@ export default function ActivitiesPage() {
       notes: activity.notes || "",
     });
     setShowModal(true);
+    fetchSeriesOptions(activity.season_id.toString(), {
+      presetSeriesId: activity.series_id?.toString() || "",
+    });
   };
 
   const handleSubmit = async () => {
     if (!formData.season_id || !formData.activity_date) {
       alert("עונה ותאריך הם שדות חובה");
+      return;
+    }
+    if (!formData.series_id) {
+      alert("יש לבחור סדרת פעילויות");
       return;
     }
 
@@ -152,9 +231,12 @@ export default function ActivitiesPage() {
         ? "/api/activities/update"
         : "/api/activities/add";
       const method = editingActivity ? "PUT" : "POST";
+      const seasonIdNumber = parseInt(formData.season_id, 10);
+      const seriesIdNumber = parseInt(formData.series_id, 10);
 
       const body: any = {
-        season_id: parseInt(formData.season_id),
+        season_id: seasonIdNumber,
+        series_id: seriesIdNumber,
         group_id: formData.group_id || null,
         kind: formData.kind,
         activity_date: formData.activity_date,
@@ -173,6 +255,7 @@ export default function ActivitiesPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
 
@@ -299,6 +382,7 @@ export default function ActivitiesPage() {
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
                 <th style={{ textAlign: "right", padding: 8 }}>סוג</th>
+                <th style={{ textAlign: "right", padding: 8 }}>סדרה</th>
                 <th style={{ textAlign: "right", padding: 8 }}>תאריך</th>
                 <th style={{ textAlign: "center", padding: 8 }}>שעה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>מיקום</th>
@@ -315,6 +399,9 @@ export default function ActivitiesPage() {
                   style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
                 >
                   <td style={{ padding: 8, fontWeight: 600 }}>{a.kind}</td>
+                  <td style={{ padding: 8, color: muted }}>
+                    {a.series_name || `סדרה #${a.series_id}`}
+                  </td>
                   <td style={{ padding: 8, color: muted }}>
                     {new Date(a.activity_date).toLocaleDateString("he-IL")}
                   </td>
@@ -535,17 +622,58 @@ export default function ActivitiesPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>
-                    מזהה עונה <span style={{ color: "#ef4444" }}>*</span>
+                    עונה <span style={{ color: "#ef4444" }}>*</span>
                   </label>
-                  <input
-                    type="number"
+                  <select
                     style={inputStyle}
                     value={formData.season_id}
+                    onChange={(e) => handleSeasonSelect(e.target.value)}
+                  >
+                    <option value="">בחר עונה...</option>
+                    {seasonsOptions.map((season) => (
+                      <option key={season.id} value={season.id}>
+                        {season.name} · {season.year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    סדרת פעילויות <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <select
+                    style={inputStyle}
+                    value={formData.series_id}
                     onChange={(e) =>
-                      setFormData({ ...formData, season_id: e.target.value })
+                      setFormData((prev) => ({ ...prev, series_id: e.target.value }))
                     }
-                    placeholder="1"
-                  />
+                    disabled={
+                      !formData.season_id ||
+                      seriesOptionsLoading ||
+                      seriesOptions.length === 0
+                    }
+                  >
+                    <option value="">
+                      {!formData.season_id
+                        ? "בחר עונה קודם"
+                        : seriesOptionsLoading
+                        ? "טוען סדרות..."
+                        : "בחר סדרה"}
+                    </option>
+                    {seriesOptions.map((series) => (
+                      <option key={series.id} value={series.id}>
+                        {series.name}
+                        {series.is_default ? " · ברירת מחדל" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {formData.season_id &&
+                    !seriesOptionsLoading &&
+                    seriesOptions.length === 0 && (
+                      <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
+                        אין סדרות לעונה זו. צור סדרה חדשה בעמוד העונות.
+                      </div>
+                    )}
                 </div>
                 <div>
                   <label style={labelStyle}>מזהה קבוצה (אופציונלי)</label>

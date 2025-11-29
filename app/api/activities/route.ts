@@ -6,11 +6,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const kind = searchParams.get("kind");
     const status = searchParams.get("status");
+    const seasonId = searchParams.get("season_id");
+    const seriesId = searchParams.get("series_id");
 
     let sql = `
       SELECT
         a.id,
         a.season_id,
+        a.series_id,
         a.group_id,
         a.kind,
         a.activity_date,
@@ -21,9 +24,27 @@ export async function GET(req: Request) {
         a.status,
         a.notes,
         a.created_at,
-        g.name as group_name
+        g.name as group_name,
+        sas.name as series_name,
+        (
+          SELECT COUNT(*)
+          FROM registration r
+          WHERE r.activity_id = a.id
+        ) AS participant_count,
+        lead_info.lead_national_id,
+        lead_info.lead_name
       FROM activity a
-      LEFT JOIN [groups] g ON a.group_id = g.id
+      INNER JOIN season_activity_series sas ON sas.id = a.series_id
+      LEFT JOIN [group] g ON a.group_id = g.id
+      OUTER APPLY (
+        SELECT TOP 1
+          av.volunteer_national_id AS lead_national_id,
+          v.full_name AS lead_name
+        FROM activity_volunteer av
+        INNER JOIN volunteer v ON v.national_id = av.volunteer_national_id
+        WHERE av.activity_id = a.id AND av.is_lead = 1
+        ORDER BY av.assigned_at DESC
+      ) AS lead_info
       WHERE 1=1
     `;
 
@@ -39,6 +60,16 @@ export async function GET(req: Request) {
     if (status) {
       sql += " AND a.status = @status";
       params.status = status;
+    }
+
+    if (seasonId) {
+      sql += " AND a.season_id = @season_id";
+      params.season_id = Number(seasonId);
+    }
+
+    if (seriesId) {
+      sql += " AND a.series_id = @series_id";
+      params.series_id = Number(seriesId);
     }
 
     sql += " ORDER BY a.activity_date DESC, a.start_time DESC";

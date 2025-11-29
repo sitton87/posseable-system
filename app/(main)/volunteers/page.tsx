@@ -55,13 +55,34 @@ const labelStyle: React.CSSProperties = {
   display: "block",
 };
 
+const LEGACY_KIND_LABELS: Record<string, string> = {
+  Water: "מים",
+  water: "מים",
+  Media: "מדיה",
+  media: "מדיה",
+  Other: "אחר",
+  other: "אחר",
+};
+
+const normalizeKind = (value?: string | null) => {
+  if (!value) return null;
+  return LEGACY_KIND_LABELS[value] || value;
+};
+
+const getVolunteerKindLabel = (volunteer: Volunteer) =>
+  normalizeKind(volunteer.volunteer_type) ||
+  normalizeKind(volunteer.kind) ||
+  null;
+
 export default function VolunteersPage() {
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [filteredVolunteers, setFilteredVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingVolunteer, setViewingVolunteer] = useState<Volunteer | null>(null);
+  const [viewingVolunteer, setViewingVolunteer] = useState<Volunteer | null>(
+    null
+  );
   const [editingVolunteer, setEditingVolunteer] = useState<Volunteer | null>(
     null
   );
@@ -121,10 +142,10 @@ export default function VolunteersPage() {
   // Build dynamic list of available kinds from volunteers
   useEffect(() => {
     const kinds = volunteers
-      .map((v) => v.kind)
-      .filter((k): k is string => !!k) // Remove null/undefined
-      .filter((k, i, arr) => arr.indexOf(k) === i) // Remove duplicates
-      .sort(); // Sort alphabetically
+      .map((v) => getVolunteerKindLabel(v))
+      .filter((k): k is string => !!k)
+      .filter((k, i, arr) => arr.indexOf(k) === i)
+      .sort();
     setAvailableKinds(kinds);
   }, [volunteers]);
 
@@ -134,7 +155,9 @@ export default function VolunteersPage() {
 
     // Filter by kind (volunteer type)
     if (filterKind) {
-      filtered = filtered.filter((v) => v.kind === filterKind);
+      filtered = filtered.filter(
+        (v) => getVolunteerKindLabel(v) === filterKind
+      );
     }
 
     // Filter by active status
@@ -284,9 +307,7 @@ export default function VolunteersPage() {
       const data = await res.json();
 
       if (data.success) {
-        alert(
-          editingVolunteer ? "מתנדב עודכן בהצלחה!" : "מתנדב נוסף בהצלחה!"
-        );
+        alert(editingVolunteer ? "מתנדב עודכן בהצלחה!" : "מתנדב נוסף בהצלחה!");
         setShowModal(false);
         fetchVolunteers();
       } else {
@@ -487,11 +508,9 @@ export default function VolunteersPage() {
                   >
                     {v.national_id}
                   </td>
-                  <td style={{ padding: 8, fontWeight: 600 }}>
-                    {v.full_name}
-                  </td>
+                  <td style={{ padding: 8, fontWeight: 600 }}>{v.full_name}</td>
                   <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
-                    {v.kind || "—"}
+                    {getVolunteerKindLabel(v) || "—"}
                   </td>
                   <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
                     {v.city || "—"}
@@ -775,7 +794,11 @@ export default function VolunteersPage() {
                   style={inputStyle}
                   value={formData.volunteer_type}
                   onChange={(e) => {
-                    setFormData({ ...formData, volunteer_type: e.target.value, kind: e.target.value })
+                    setFormData({
+                      ...formData,
+                      volunteer_type: e.target.value,
+                      kind: e.target.value,
+                    });
                   }}
                 >
                   <option value="">בחר...</option>
@@ -844,8 +867,9 @@ export default function VolunteersPage() {
               </div>
 
               {/* שדות נוספים לפי סוג מתנדב */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}
+              >
                 {/* שדות למתנדבי מדיה */}
                 {formData.volunteer_type === "מדיה" && (
                   <>
@@ -873,10 +897,17 @@ export default function VolunteersPage() {
                     <div>
                       <label style={labelStyle}>זמינות</label>
                       <textarea
-                        style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+                        style={{
+                          ...inputStyle,
+                          minHeight: 60,
+                          resize: "vertical",
+                        }}
                         value={formData.availability}
                         onChange={(e) =>
-                          setFormData({ ...formData, availability: e.target.value })
+                          setFormData({
+                            ...formData,
+                            availability: e.target.value,
+                          })
                         }
                         placeholder="למשל: ימי שני-רביעי, 09:00-17:00"
                       />
@@ -952,10 +983,7 @@ export default function VolunteersPage() {
                 marginTop: 20,
               }}
             >
-              <button
-                style={btnSecondary}
-                onClick={() => setShowModal(false)}
-              >
+              <button style={btnSecondary} onClick={() => setShowModal(false)}>
                 ביטול
               </button>
               <button style={btnPrimary} onClick={handleSubmit}>
@@ -1174,7 +1202,9 @@ export default function VolunteersPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 12, color: muted }}>תאריך הצטרפות</div>
+                  <div style={{ fontSize: 12, color: muted }}>
+                    תאריך הצטרפות
+                  </div>
                   <div>
                     {viewingVolunteer.join_date
                       ? new Date(viewingVolunteer.join_date).toLocaleDateString(

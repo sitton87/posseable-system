@@ -4,11 +4,19 @@ import { query } from "@/db/connection";
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, name, organization, phone, email, notes, is_active } = body;
+    const {
+      national_id,
+      full_name,
+      organization,
+      phone,
+      email,
+      notes,
+      is_active,
+    } = body;
 
-    if (!id) {
+    if (!national_id) {
       return NextResponse.json(
-        { error: "Donor ID is required" },
+        { error: "תעודת זהות נדרשת" },
         { status: 400 }
       );
     }
@@ -16,22 +24,22 @@ export async function PUT(req: Request) {
     const sql = `
       UPDATE donor
       SET
-        name = @name,
+        full_name = @full_name,
         organization = @organization,
         phone = @phone,
         email = @email,
         notes = @notes,
         is_active = @is_active
-      WHERE id = @id
+      WHERE national_id = @national_id
     `;
 
     await query(sql, {
-      id,
-      name,
-      organization,
-      phone,
-      email,
-      notes,
+      national_id,
+      full_name,
+      organization: organization || null,
+      phone: phone || null,
+      email: email || null,
+      notes: notes || null,
       is_active: is_active ? 1 : 0,
     });
 
@@ -48,18 +56,17 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const national_id = searchParams.get("national_id");
 
-    if (!id) {
+    if (!national_id) {
       return NextResponse.json(
-        { error: "Donor ID is required" },
+        { error: "תעודת זהות נדרשת" },
         { status: 400 }
       );
     }
 
-    // Soft delete - mark as inactive
-    const sql = `UPDATE donor SET is_active = 0 WHERE id = @id`;
-    await query(sql, { id });
+    const sql = `UPDATE donor SET is_active = 0 WHERE national_id = @national_id`;
+    await query(sql, { national_id });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

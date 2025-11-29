@@ -6,6 +6,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       season_id,
+      series_id,
       group_id,
       kind,
       activity_date,
@@ -18,26 +19,49 @@ export async function POST(req: Request) {
     } = body;
 
     // Validation
-    if (!season_id || !kind || !activity_date) {
+    if (!series_id || !kind || !activity_date) {
       return NextResponse.json(
-        { error: "season_id, kind, and activity_date are required" },
+        { error: "series_id, kind, and activity_date are required" },
+        { status: 400 }
+      );
+    }
+
+    const seriesResult = await query(
+      `SELECT id, season_id FROM season_activity_series WHERE id = @series_id`,
+      { series_id }
+    );
+
+    if (!seriesResult.recordset.length) {
+      return NextResponse.json(
+        { error: "Series not found" },
+        { status: 404 }
+      );
+    }
+
+    const targetSeasonId = seriesResult.recordset[0].season_id;
+    if (season_id && Number(season_id) !== targetSeasonId) {
+      return NextResponse.json(
+        { error: "series_id does not belong to the provided season_id" },
         { status: 400 }
       );
     }
 
     const sql = `
       INSERT INTO activity (
-        season_id, group_id, kind, activity_date, start_time, end_time,
+        season_id, series_id, group_id, kind, activity_date, start_time, end_time,
         location, capacity, status, notes
       )
       VALUES (
-        @season_id, @group_id, @kind, @activity_date, @start_time, @end_time,
+        @season_id, @series_id, @group_id, @kind, @activity_date, @start_time, @end_time,
         @location, @capacity, @status, @notes
       )
     `;
 
+    const normalizedStatus = status || "מתוכנן";
+
     await query(sql, {
-      season_id,
+      season_id: targetSeasonId,
+      series_id,
       group_id,
       kind,
       activity_date,
@@ -45,7 +69,7 @@ export async function POST(req: Request) {
       end_time,
       location,
       capacity,
-      status,
+      status: normalizedStatus,
       notes,
     });
 

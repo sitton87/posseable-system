@@ -8,22 +8,41 @@ export async function GET(req: Request) {
 
     let sql = `
       SELECT 
-        id,
-        name,
-        organization,
-        phone,
-        email,
-        notes,
-        is_active
-      FROM donor
+        d.national_id,
+        d.full_name,
+        d.organization,
+        d.phone,
+        d.email,
+        d.notes,
+        d.is_active,
+        d.created_at,
+        COALESCE(SUM(ftd.amount), 0) AS total_donations
+      FROM donor d
+      LEFT JOIN finance_transaction_donor ftd
+        ON ftd.donor_id = d.national_id
+      LEFT JOIN finance_transaction ft
+        ON ft.id = ftd.finance_transaction_id
+        AND ft.type = 'income'
+        AND ft.category = N'תרומה'
+      WHERE 1=1
     `;
 
-    // Filter by active status if requested
     if (activeOnly === "true") {
-      sql += " WHERE is_active = 1";
+      sql += " AND d.is_active = 1";
     }
 
-    sql += " ORDER BY name ASC";
+    sql += `
+      GROUP BY
+        d.national_id,
+        d.full_name,
+        d.organization,
+        d.phone,
+        d.email,
+        d.notes,
+        d.is_active,
+        d.created_at
+      ORDER BY d.full_name ASC
+    `;
 
     const result = await query(sql);
 

@@ -7,6 +7,7 @@ export async function PUT(req: Request) {
     const {
       id,
       season_id,
+      series_id,
       group_id,
       kind,
       activity_date,
@@ -25,10 +26,38 @@ export async function PUT(req: Request) {
       );
     }
 
+    if (!series_id) {
+      return NextResponse.json(
+        { error: "series_id is required" },
+        { status: 400 }
+      );
+    }
+
+    const seriesResult = await query(
+      `SELECT id, season_id FROM season_activity_series WHERE id = @series_id`,
+      { series_id }
+    );
+
+    if (!seriesResult.recordset.length) {
+      return NextResponse.json(
+        { error: "Series not found" },
+        { status: 404 }
+      );
+    }
+
+    const targetSeasonId = seriesResult.recordset[0].season_id;
+    if (season_id && Number(season_id) !== targetSeasonId) {
+      return NextResponse.json(
+        { error: "series_id does not belong to the provided season_id" },
+        { status: 400 }
+      );
+    }
+
     const sql = `
       UPDATE activity
       SET
         season_id = @season_id,
+        series_id = @series_id,
         group_id = @group_id,
         kind = @kind,
         activity_date = @activity_date,
@@ -43,7 +72,8 @@ export async function PUT(req: Request) {
 
     await query(sql, {
       id,
-      season_id,
+      season_id: targetSeasonId,
+      series_id,
       group_id,
       kind,
       activity_date,
@@ -51,7 +81,7 @@ export async function PUT(req: Request) {
       end_time,
       location,
       capacity,
-      status,
+      status: status || "מתוכנן",
       notes,
     });
 

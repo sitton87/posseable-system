@@ -32,6 +32,8 @@ const btnSecondary: React.CSSProperties = {
   ...btn,
   background: "#f3f4f6",
   color: "#374151",
+  fontSize: 12,
+  padding: "6px 10px",
 };
 
 const inputStyle: React.CSSProperties = {
@@ -55,9 +57,12 @@ export default function DonorsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingDonor, setEditingDonor] = useState<Donor | null>(null);
+  const [viewingDonor, setViewingDonor] = useState<Donor | null>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: "",
+    national_id: "",
+    full_name: "",
     organization: "",
     phone: "",
     email: "",
@@ -72,7 +77,7 @@ export default function DonorsPage() {
   const fetchDonors = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/donors");
+      const res = await fetch("/api/donors", { credentials: "include" });
       const data = await res.json();
       if (data.success) {
         setDonors(data.donors);
@@ -88,7 +93,8 @@ export default function DonorsPage() {
   const handleAdd = () => {
     setEditingDonor(null);
     setFormData({
-      name: "",
+      national_id: "",
+      full_name: "",
       organization: "",
       phone: "",
       email: "",
@@ -101,7 +107,8 @@ export default function DonorsPage() {
   const handleEdit = (donor: Donor) => {
     setEditingDonor(donor);
     setFormData({
-      name: donor.name,
+      national_id: donor.national_id,
+      full_name: donor.full_name,
       organization: donor.organization || "",
       phone: donor.phone || "",
       email: donor.email || "",
@@ -112,7 +119,12 @@ export default function DonorsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name.trim()) {
+    if (!/^\d{9}$/.test(formData.national_id)) {
+      alert("תעודת זהות חייבת להכיל 9 ספרות");
+      return;
+    }
+
+    if (!formData.full_name.trim()) {
       alert("שם התורם הוא שדה חובה");
       return;
     }
@@ -122,7 +134,8 @@ export default function DonorsPage() {
       const method = editingDonor ? "PUT" : "POST";
 
       const body: any = {
-        name: formData.name,
+        national_id: formData.national_id,
+        full_name: formData.full_name,
         organization: formData.organization || null,
         phone: formData.phone || null,
         email: formData.email || null,
@@ -130,13 +143,10 @@ export default function DonorsPage() {
         is_active: formData.is_active,
       };
 
-      if (editingDonor) {
-        body.id = editingDonor.id;
-      }
-
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
 
@@ -159,9 +169,13 @@ export default function DonorsPage() {
     if (!confirm("האם אתה בטוח שברצונך לבטל את התורם?")) return;
 
     try {
-      const res = await fetch(`/api/donors/update?id=${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/donors/update?national_id=${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
       const data = await res.json();
 
       if (data.success) {
@@ -220,10 +234,12 @@ export default function DonorsPage() {
         >
           <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
             <tr style={{ color: muted, fontSize: 13 }}>
-              <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+                <th style={{ textAlign: "right", padding: 8 }}>ת.ז</th>
+                <th style={{ textAlign: "right", padding: 8 }}>שם</th>
               <th style={{ textAlign: "center", padding: 8 }}>ארגון</th>
               <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
               <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
+              <th style={{ textAlign: "center", padding: 8 }}>סה״כ תרומות</th>
               <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
               <th style={{ textAlign: "center", padding: 8 }}>פעולות</th>
             </tr>
@@ -234,15 +250,27 @@ export default function DonorsPage() {
                 key={d.id}
                 style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
               >
-                <td style={{ padding: 8, fontWeight: 600 }}>{d.name}</td>
-                <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                  {d.organization || "—"}
+                <td style={{ padding: 8, color: muted, fontFamily: "monospace" }}>
+                  {d.national_id}
                 </td>
+                <td style={{ padding: 8, fontWeight: 600 }}>{d.full_name}</td>
+                  <td style={{ textAlign: "center", padding: 8, color: muted }}>
+                    {d.organization || "—"}
+                  </td>
                 <td style={{ textAlign: "center", padding: 8, color: muted }}>
                   {d.phone || "—"}
                 </td>
                 <td style={{ textAlign: "center", padding: 8, color: muted }}>
                   {d.email || "—"}
+                </td>
+                <td
+                  style={{
+                    textAlign: "center",
+                    padding: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  ₪{(d.total_donations || 0).toLocaleString()}
                 </td>
                 <td style={{ textAlign: "center", padding: 8 }}>
                   <span
@@ -268,11 +296,20 @@ export default function DonorsPage() {
                     ✏️ ערוך
                   </button>
                   <button
+                    style={{ ...btnSecondary, marginLeft: 4 }}
+                    onClick={() => {
+                      setViewingDonor(d);
+                      setShowViewModal(true);
+                    }}
+                  >
+                    👁️ צפייה
+                  </button>
+                  <button
                     style={{
                       ...btnSecondary,
                       color: "#dc2626",
                     }}
-                    onClick={() => handleDelete(d.id)}
+                    onClick={() => handleDelete(d.national_id)}
                   >
                     🗑️ בטל
                   </button>
@@ -319,19 +356,43 @@ export default function DonorsPage() {
             </h3>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>
-                  שם התורם <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="הזן שם מלא"
-                />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>
+                    תעודת זהות <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={9}
+                    style={inputStyle}
+                    value={formData.national_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, national_id: e.target.value })
+                    }
+                    placeholder="9 ספרות"
+                    disabled={!!editingDonor}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    שם התורם <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.full_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, full_name: e.target.value })
+                    }
+                    placeholder="הזן שם מלא"
+                  />
+                </div>
               </div>
 
               <div>
@@ -427,6 +488,107 @@ export default function DonorsPage() {
                 <button style={btnPrimary} onClick={handleSubmit}>
                   {editingDonor ? "עדכן" : "הוסף"}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Modal */}
+      {showViewModal && viewingDonor && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.35)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() => setShowViewModal(false)}
+        >
+          <div
+            style={{
+              ...cardStyle,
+              width: "min(600px, 90vw)",
+              padding: 24,
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                פרטי תורם
+              </h3>
+              <button
+                style={btnSecondary}
+                onClick={() => setShowViewModal(false)}
+              >
+                ✕ סגור
+              </button>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
+              <div>
+                <label style={labelStyle}>תעודת זהות</label>
+                <div style={{ fontFamily: "monospace" }}>
+                  {viewingDonor.national_id}
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>שם מלא</label>
+                <div style={{ fontWeight: 600 }}>{viewingDonor.full_name}</div>
+              </div>
+              <div>
+                <label style={labelStyle}>ארגון</label>
+                <div>{viewingDonor.organization || "—"}</div>
+              </div>
+              <div>
+                <label style={labelStyle}>טלפון</label>
+                <div>{viewingDonor.phone || "—"}</div>
+              </div>
+              <div>
+                <label style={labelStyle}>אימייל</label>
+                <div>{viewingDonor.email || "—"}</div>
+              </div>
+              <div>
+                <label style={labelStyle}>סטטוס</label>
+                <div>
+                  <span
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: viewingDonor.is_active
+                        ? "rgba(34, 197, 94, 0.1)"
+                        : "rgba(239, 68, 68, 0.1)",
+                      color: viewingDonor.is_active ? "#16a34a" : "#dc2626",
+                    }}
+                  >
+                    {viewingDonor.is_active ? "פעיל" : "לא פעיל"}
+                  </span>
+                </div>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStyle}>הערות</label>
+                <div style={{ whiteSpace: "pre-wrap" }}>
+                  {viewingDonor.notes || "—"}
+                </div>
               </div>
             </div>
           </div>

@@ -4,27 +4,57 @@ import { query } from "@/db/connection";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, organization, phone, email, notes, is_active } = body;
+    const {
+      national_id,
+      full_name,
+      organization,
+      phone,
+      email,
+      notes,
+      is_active,
+    } = body;
 
     // Validation
-    if (!name) {
+    if (!national_id || !/^\d{9}$/.test(national_id)) {
       return NextResponse.json(
-        { error: "Name is required" },
+        { error: "תעודת זהות חייבת להכיל 9 ספרות" },
         { status: 400 }
       );
     }
 
-    // Generate new GUID for id (in case the table doesn't have a DEFAULT NEWID())
-    const id = crypto.randomUUID();
+    if (!full_name || !full_name.trim()) {
+      return NextResponse.json(
+        { error: "שם התורם הוא שדה חובה" },
+        { status: 400 }
+      );
+    }
 
     const sql = `
-      INSERT INTO donor (id, name, organization, phone, email, notes, is_active)
-      VALUES (@id, @name, @organization, @phone, @email, @notes, @is_active)
+      INSERT INTO donor (
+        national_id,
+        full_name,
+        organization,
+        phone,
+        email,
+        notes,
+        is_active,
+        created_at
+      )
+      VALUES (
+        @national_id,
+        @full_name,
+        @organization,
+        @phone,
+        @email,
+        @notes,
+        @is_active,
+        SYSUTCDATETIME()
+      )
     `;
 
     await query(sql, {
-      id,
-      name,
+      national_id,
+      full_name,
       organization: organization || null,
       phone: phone || null,
       email: email || null,
@@ -41,4 +71,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

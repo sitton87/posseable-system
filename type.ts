@@ -91,9 +91,28 @@ export type SeasonPlan = {
   notes?: string | null;
 };
 
+export type ActivitySeries = {
+  id: number;
+  season_id: number;
+  name: string;
+  description?: string | null;
+  status?: string | null;
+  start_date?: Date | string | null;
+  end_date?: Date | string | null;
+  lead_national_id?: string | null;
+  lead_name?: string | null;
+  notes?: string | null;
+  is_default: boolean;
+  created_at: Date | string;
+  season_name?: string;
+  season_year?: number;
+  activities_count?: number;
+};
+
 export type Activity = {
   id: string;
   season_id: number; // INT not string
+  series_id: number;
   group_id?: string | null; // קישור לקבוצה
   kind: string;
   activity_date: Date | string;
@@ -106,6 +125,10 @@ export type Activity = {
   created_at: Date | string;
   // From JOIN
   group_name?: string;
+  series_name?: string;
+  participant_count?: number;
+  lead_name?: string | null;
+  lead_national_id?: string | null;
 };
 
 export type Registration = {
@@ -135,13 +158,15 @@ export type ActivityEquipment = {
 };
 
 export type Donor = {
-  id: string;
-  name: string;
+  national_id: string;
+  full_name: string;
   organization?: string | null;
   phone?: string | null;
   email?: string | null;
   notes?: string | null;
   is_active: boolean;
+  created_at: Date | string;
+  total_donations?: number;
 };
 
 export type Supplier = {
@@ -167,7 +192,7 @@ export type VolunteerFormData = Omit<Volunteer, "created_at">;
 export type SurferFormData = Omit<Surfer, "created_at" | "group_name">;
 export type ActivityFormData = Omit<
   Activity,
-  "id" | "created_at" | "group_name"
+  "id" | "created_at" | "group_name" | "series_name" | "participant_count" | "lead_name" | "lead_national_id"
 >;
 export type GroupFormData = Omit<
   Group,
