@@ -12,6 +12,8 @@ import {
   Heart,
   Wallet,
   ArrowRightCircle,
+  CalendarRange,
+  UsersRound,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -36,7 +38,9 @@ export default function Navbar() {
     { href: "/dashboard", icon: <Home size={22} />, label: "דף הבית" },
     { href: "/volunteers", icon: <Users size={22} />, label: "מתנדבים" },
     { href: "/surfers", icon: <UserCircle size={22} />, label: "גולשים" },
+    { href: "/groups", icon: <UsersRound size={22} />, label: "קבוצות" },
     { href: "/activities", icon: <Calendar size={22} />, label: "פעילויות" },
+    { href: "/seasons", icon: <CalendarRange size={22} />, label: "עונות" },
     { href: "/equipment", icon: <Wrench size={22} />, label: "ציוד" },
     { href: "/suppliers", icon: <Handshake size={22} />, label: "ספקים" },
     { href: "/donors", icon: <Heart size={22} />, label: "תורמים" },

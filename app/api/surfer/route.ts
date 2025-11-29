@@ -9,8 +9,8 @@ export async function GET(req: Request) {
     const status = searchParams.get("status");
 
     let sql = `
-      SELECT 
-        id,
+      SELECT
+        national_id,
         full_name,
         phone,
         email,
@@ -20,6 +20,7 @@ export async function GET(req: Request) {
         gender,
         status,
         program,
+        group_id,
         medical_approval,
         medical_condition,
         needs_wheelchair,

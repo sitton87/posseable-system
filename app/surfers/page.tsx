@@ -1,41 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-// Types
-type Surfer = {
-  id: string;
-  full_name: string;
-  phone?: string;
-  email?: string;
-  residence?: string;
-  age?: number;
-  date_of_birth?: string;
-  gender?: string;
-  status?: string;
-  program?: string;
-  medical_approval?: boolean;
-  medical_condition?: string;
-  needs_wheelchair?: boolean;
-  volunteers_needed?: number;
-  special_requirements?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  active: boolean;
-  notes?: string;
-  created_at: string;
-};
-
-// Constants
-const GENDER_OPTIONS = ["זכר", "נקבה", "אחר"];
-const STATUS_OPTIONS = ["מאושר", "בהמתנה", "לא פעיל"];
-const PROGRAM_OPTIONS = [
-  "שיקום לוחמים",
-  "גלי הקשת",
-  "תוכנית כללית",
-  "נוער בסיכון",
-  "משפחות",
-];
+import {
+  Surfer,
+  GENDER_OPTIONS,
+  STATUS_OPTIONS,
+  PROGRAM_OPTIONS,
+} from "@/type";
 
 // Styles
 const muted = "#6b7280";
@@ -93,6 +64,7 @@ export default function SurferPage() {
   const [filterStatus, setFilterStatus] = useState<string>("");
 
   const [formData, setFormData] = useState({
+    national_id: "",
     full_name: "",
     phone: "",
     email: "",
@@ -102,10 +74,11 @@ export default function SurferPage() {
     gender: "",
     status: "בהמתנה",
     program: "",
+    group_id: "", // Add group_id here
     medical_approval: false,
     medical_condition: "",
     needs_wheelchair: false,
-    volunteers_needed: 1,
+    volunteers_needed: "",
     special_requirements: "",
     emergency_contact_name: "",
     emergency_contact_phone: "",
@@ -120,9 +93,9 @@ export default function SurferPage() {
   const fetchSurfers = async () => {
     try {
       setLoading(true);
-      let url = "/api/surfer?"; // ✅ שונה ל-surfer (יחיד)
-      if (filterProgram) url += `program=${filterProgram}&`;
-      if (filterStatus) url += `status=${filterStatus}&`;
+      let url = "/api/surfer?active=true";
+      if (filterProgram) url += `&program=${filterProgram}`;
+      if (filterStatus) url += `&status=${filterStatus}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -140,6 +113,7 @@ export default function SurferPage() {
   const handleAdd = () => {
     setEditingSurfer(null);
     setFormData({
+      national_id: "",
       full_name: "",
       phone: "",
       email: "",
@@ -149,10 +123,11 @@ export default function SurferPage() {
       gender: "",
       status: "בהמתנה",
       program: "",
+      group_id: "", // Add group_id here
       medical_approval: false,
       medical_condition: "",
       needs_wheelchair: false,
-      volunteers_needed: 1,
+      volunteers_needed: "",
       special_requirements: "",
       emergency_contact_name: "",
       emergency_contact_phone: "",
@@ -165,6 +140,7 @@ export default function SurferPage() {
   const handleEdit = (surfer: Surfer) => {
     setEditingSurfer(surfer);
     setFormData({
+      national_id: surfer.national_id,
       full_name: surfer.full_name,
       phone: surfer.phone || "",
       email: surfer.email || "",
@@ -174,10 +150,11 @@ export default function SurferPage() {
       gender: surfer.gender || "",
       status: surfer.status || "בהמתנה",
       program: surfer.program || "",
+      group_id: surfer.group_id || "", // Populate group_id here
       medical_approval: surfer.medical_approval || false,
       medical_condition: surfer.medical_condition || "",
       needs_wheelchair: surfer.needs_wheelchair || false,
-      volunteers_needed: surfer.volunteers_needed || 1,
+      volunteers_needed: surfer.volunteers_needed?.toString() || "",
       special_requirements: surfer.special_requirements || "",
       emergency_contact_name: surfer.emergency_contact_name || "",
       emergency_contact_phone: surfer.emergency_contact_phone || "",
@@ -188,24 +165,49 @@ export default function SurferPage() {
   };
 
   const handleSubmit = async () => {
+    if (!formData.national_id.trim()) {
+      alert("תעודת זהות היא שדה חובה");
+      return;
+    }
+
+    if (!/^\d{9}$/.test(formData.national_id)) {
+      alert("תעודת זהות חייבת להכיל בדיוק 9 ספרות");
+      return;
+    }
+
     if (!formData.full_name.trim()) {
       alert("שם מלא הוא שדה חובה");
       return;
     }
 
     try {
-      const url = editingSurfer ? "/api/surfer/update" : "/api/surfer/add"; // ✅ שונה ל-surfer (יחיד)
+      const url = editingSurfer ? "/api/surfer/update" : "/api/surfer/add";
       const method = editingSurfer ? "PUT" : "POST";
 
       const body: any = {
-        ...formData,
+        national_id: formData.national_id,
+        full_name: formData.full_name,
+        phone: formData.phone || null,
+        email: formData.email || null,
+        residence: formData.residence || null,
         age: formData.age ? parseInt(formData.age) : null,
         date_of_birth: formData.date_of_birth || null,
+        gender: formData.gender || null,
+        status: formData.status || null,
+        program: formData.program || null,
+        group_id: formData.group_id || null, // Add group_id to body
+        medical_approval: formData.medical_approval,
+        medical_condition: formData.medical_condition || null,
+        needs_wheelchair: formData.needs_wheelchair,
+        volunteers_needed: formData.volunteers_needed
+          ? parseInt(formData.volunteers_needed)
+          : null,
+        special_requirements: formData.special_requirements || null,
+        emergency_contact_name: formData.emergency_contact_name || null,
+        emergency_contact_phone: formData.emergency_contact_phone || null,
+        active: formData.active,
+        notes: formData.notes || null,
       };
-
-      if (editingSurfer) {
-        body.id = editingSurfer.id;
-      }
 
       const res = await fetch(url, {
         method,
@@ -228,12 +230,11 @@ export default function SurferPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (national_id: string) => {
     if (!confirm("האם אתה בטוח שברצונך לבטל את הגולש?")) return;
 
     try {
-      const res = await fetch(`/api/surfer/update?id=${id}`, {
-        // ✅ שונה ל-surfer (יחיד)
+      const res = await fetch(`/api/surfer/update?national_id=${national_id}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -324,7 +325,7 @@ export default function SurferPage() {
         </div>
       </div>
 
-      {/* Rest of the component - same as before */}
+      {/* Table */}
       <div style={cardStyle}>
         <div style={{ overflowX: "auto" }}>
           <table
@@ -336,6 +337,7 @@ export default function SurferPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
+                <th style={{ textAlign: "right", padding: 8 }}>ת.ז.</th>
                 <th style={{ textAlign: "right", padding: 8 }}>שם</th>
                 <th style={{ textAlign: "center", padding: 8 }}>תוכנית</th>
                 <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
@@ -349,9 +351,19 @@ export default function SurferPage() {
             <tbody>
               {surfers.map((s) => (
                 <tr
-                  key={s.id}
+                  key={s.national_id}
                   style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
                 >
+                  <td
+                    style={{
+                      padding: 8,
+                      fontFamily: "monospace",
+                      fontSize: 13,
+                      color: muted,
+                    }}
+                  >
+                    {s.national_id}
+                  </td>
                   <td style={{ padding: 8, fontWeight: 600 }}>
                     {s.full_name}
                     {s.needs_wheelchair && (
@@ -404,7 +416,7 @@ export default function SurferPage() {
                   <td
                     style={{ textAlign: "center", padding: 8, fontWeight: 600 }}
                   >
-                    {s.volunteers_needed || 1}
+                    {s.volunteers_needed || "—"}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     <button
@@ -419,7 +431,7 @@ export default function SurferPage() {
                         color: "#dc2626",
                         fontSize: 12,
                       }}
-                      onClick={() => handleDelete(s.id)}
+                      onClick={() => handleDelete(s.national_id)}
                     >
                       🗑️
                     </button>
@@ -429,7 +441,7 @@ export default function SurferPage() {
               {surfers.length === 0 && (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     style={{ textAlign: "center", padding: 20, color: muted }}
                   >
                     אין גולשים במערכת. לחץ על "הוסף גולש" להתחיל.
@@ -441,7 +453,7 @@ export default function SurferPage() {
         </div>
       </div>
 
-      {/* Modal - keeping same as uploaded file but continuing... */}
+      {/* Modal */}
       {showModal && (
         <div
           style={{
@@ -466,15 +478,386 @@ export default function SurferPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal content same as uploaded - keeping all the form fields... */}
             <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
               {editingSurfer ? "ערוך גולש" : "הוסף גולש חדש"}
             </h3>
 
-            {/* Keeping all form sections from the uploaded file... */}
-            {/* Full form code continues here - I'm keeping it short for brevity */}
-            <div style={{ textAlign: "center", color: muted, padding: 40 }}>
-              [טופס מלא כמו בקובץ המקורי]
+            {/* פרטים אישיים */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 16,
+                background: "#f9fafb",
+                borderRadius: 8,
+              }}
+            >
+              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+                📋 פרטים אישיים
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>
+                    תעודת זהות <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.national_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, national_id: e.target.value })
+                    }
+                    disabled={!!editingSurfer}
+                    placeholder="9 ספרות"
+                    maxLength={9}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    שם מלא <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.full_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, full_name: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>טלפון</label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>אימייל</label>
+                  <input
+                    type="email"
+                    style={inputStyle}
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>מקום מגורים</label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.residence}
+                    onChange={(e) =>
+                      setFormData({ ...formData, residence: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>תאריך לידה</label>
+                  <input
+                    type="date"
+                    style={inputStyle}
+                    value={formData.date_of_birth}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        date_of_birth: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>גיל</label>
+                  <input
+                    type="number"
+                    style={inputStyle}
+                    value={formData.age}
+                    onChange={(e) =>
+                      setFormData({ ...formData, age: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>מגדר</label>
+                  <select
+                    style={inputStyle}
+                    value={formData.gender}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gender: e.target.value })
+                    }
+                  >
+                    <option value="">בחר...</option>
+                    {GENDER_OPTIONS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>קבוצה (אופציונלי)</label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.group_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, group_id: e.target.value })
+                    }
+                    placeholder="מזהה קבוצה (GUID)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* תוכנית וסטטוס */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 16,
+                background: "#f9fafb",
+                borderRadius: 8,
+              }}
+            >
+              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+                🎯 תוכנית וסטטוס
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>תוכנית</label>
+                  <select
+                    style={inputStyle}
+                    value={formData.program}
+                    onChange={(e) =>
+                      setFormData({ ...formData, program: e.target.value })
+                    }
+                  >
+                    <option value="">בחר...</option>
+                    {PROGRAM_OPTIONS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>סטטוס</label>
+                  <select
+                    style={inputStyle}
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({ ...formData, status: e.target.value })
+                    }
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>מספר מתנדבים נדרש</label>
+                  <input
+                    type="number"
+                    style={inputStyle}
+                    value={formData.volunteers_needed}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        volunteers_needed: e.target.value,
+                      })
+                    }
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* מצב רפואי */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 16,
+                background: "#f9fafb",
+                borderRadius: 8,
+              }}
+            >
+              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+                🏥 מצב רפואי
+              </h4>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "flex", alignItems: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.medical_approval}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        medical_approval: e.target.checked,
+                      })
+                    }
+                    style={{ marginLeft: 8 }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>
+                    אושר רפואית
+                  </span>
+                </label>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "flex", alignItems: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.needs_wheelchair}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        needs_wheelchair: e.target.checked,
+                      })
+                    }
+                    style={{ marginLeft: 8 }}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>
+                    זקוק לכיסא גלגלים
+                  </span>
+                </label>
+              </div>
+              <div>
+                <label style={labelStyle}>מצב רפואי / הערות רפואיות</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+                  value={formData.medical_condition}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      medical_condition: e.target.value,
+                    })
+                  }
+                  placeholder="תאר מצב רפואי, תרופות, אלרגיות..."
+                />
+              </div>
+            </div>
+
+            {/* איש קשר חירום */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 16,
+                background: "#f9fafb",
+                borderRadius: 8,
+              }}
+            >
+              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+                🚨 איש קשר לחירום
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <label style={labelStyle}>שם איש קשר</label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.emergency_contact_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergency_contact_name: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>טלפון איש קשר</label>
+                  <input
+                    type="text"
+                    style={inputStyle}
+                    value={formData.emergency_contact_phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        emergency_contact_phone: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* דרישות מיוחדות והערות */}
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 16,
+                background: "#f9fafb",
+                borderRadius: 8,
+              }}
+            >
+              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+                📝 דרישות והערות
+              </h4>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>דרישות מיוחדות</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+                  value={formData.special_requirements}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      special_requirements: e.target.value,
+                    })
+                  }
+                  placeholder="דרישות מיוחדות לפעילות..."
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>הערות כלליות</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+                  value={formData.notes}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
+                  placeholder="הערות נוספות..."
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "flex-end",
+                marginTop: 20,
+              }}
+            >
+              <button style={btnSecondary} onClick={() => setShowModal(false)}>
+                ביטול
+              </button>
+              <button style={btnPrimary} onClick={handleSubmit}>
+                {editingSurfer ? "עדכן" : "הוסף"}
+              </button>
             </div>
           </div>
         </div>

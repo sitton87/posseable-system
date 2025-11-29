@@ -1,14 +1,28 @@
 // Database Models Types
 
 export type Volunteer = {
-  id: string; // uniqueidentifier (GUID)
+  national_id: string; // PK - תעודת זהות (9 תווים)
   full_name: string;
   phone?: string | null;
   email?: string | null;
   kind?: string | null;
+  street?: string | null; // רחוב
+  house_number?: string | null; // מספר בית
+  city?: string | null; // עיר
+  join_date?: string | null; // date - תאריך הצטרפות
+  training_date?: string | null; // date - תאריך הדרכה
+  total_activities: number; // סך פעילויות
+  profession?: string | null; // מקצוע
+  sea_connection_level?: number | null; // רמת קשר לים (0-255)
   active: boolean;
   notes?: string | null;
   created_at: Date | string;
+  // שדות חדשים
+  volunteer_type?: string | null; // מים/מדיה/אחר
+  media_specialization?: string | null; // צילום/וידאו/רחפן/סושיאל/אחר (רלוונטי למתנדבי מדיה)
+  availability?: string | null; // זמינות
+  personal_website?: string | null; // אתר אישי
+  documents?: string | null; // JSON של מסמכים
 };
 
 export type Role = {
@@ -24,17 +38,52 @@ export type VolunteerRole = {
 };
 
 export type Surfer = {
-  id: string;
+  national_id: string; // PK - תעודת זהות (9 תווים)
   full_name: string;
   phone?: string | null;
   email?: string | null;
+  residence?: string | null;
+  age?: number | null;
+  date_of_birth?: string | null; // date
+  gender?: string | null;
+  status?: string | null;
+  program?: string | null; // תוכנית: שיקום לוחמים, גלי הקשת, כללית, נוער בסיכון, משפחות
+  group_id?: string | null; // uniqueidentifier - קישור לקבוצה
+  medical_approval?: boolean | null;
+  medical_condition?: string | null;
+  needs_wheelchair?: boolean | null;
+  volunteers_needed?: number | null;
+  special_requirements?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
   active: boolean;
   notes?: string | null;
   created_at: Date | string;
+  // From JOIN
+  group_name?: string;
+};
+
+export type Group = {
+  id: string; // uniqueidentifier (GUID)
+  name: string;
+  description?: string | null;
+  season_id: number; // INT - קישור לעונה
+  start_season_id?: number | null;
+  min_participants: number;
+  max_participants: number;
+  current_participants: number;
+  status: string; // פעיל, סגור, מלא, הושהה
+  is_active: boolean;
+  notes?: string | null;
+  created_at: Date | string;
+  updated_at: Date | string;
+  // From JOIN
+  season_name?: string;
+  season_year?: number;
 };
 
 export type SeasonPlan = {
-  id: string;
+  id: number; // INT not GUID
   name: string;
   year: number;
   start_date: Date | string;
@@ -44,7 +93,8 @@ export type SeasonPlan = {
 
 export type Activity = {
   id: string;
-  season_id: string;
+  season_id: number; // INT not string
+  group_id?: string | null; // קישור לקבוצה
   kind: string;
   activity_date: Date | string;
   start_time?: string | null;
@@ -54,6 +104,8 @@ export type Activity = {
   status: string;
   notes?: string | null;
   created_at: Date | string;
+  // From JOIN
+  group_name?: string;
 };
 
 export type Registration = {
@@ -111,6 +163,55 @@ export type ApiResponse<T> = {
 };
 
 // Form types
-export type VolunteerFormData = Omit<Volunteer, "id" | "created_at">;
-export type SurferFormData = Omit<Surfer, "id" | "created_at">;
-export type ActivityFormData = Omit<Activity, "id" | "created_at">;
+export type VolunteerFormData = Omit<Volunteer, "created_at">;
+export type SurferFormData = Omit<Surfer, "created_at" | "group_name">;
+export type ActivityFormData = Omit<
+  Activity,
+  "id" | "created_at" | "group_name"
+>;
+export type GroupFormData = Omit<
+  Group,
+  | "id"
+  | "created_at"
+  | "updated_at"
+  | "current_participants"
+  | "season_name"
+  | "season_year"
+>;
+
+// Constants
+export const GENDER_OPTIONS = ["זכר", "נקבה", "אחר"] as const;
+export const STATUS_OPTIONS = ["מאושר", "בהמתנה", "לא פעיל"] as const;
+export const GROUP_STATUS_OPTIONS = ["פעיל", "סגור", "מלא", "הושהה"] as const;
+export const PROGRAM_OPTIONS = [
+  "שיקום לוחמים",
+  "גלי הקשת",
+  "כללית",
+  "נוער בסיכון",
+  "משפחות",
+] as const;
+export const VOLUNTEER_KIND_OPTIONS = [
+  "מתנדב קבוע",
+  "מתנדב זמני",
+  "מדריך",
+  "מאמן",
+  "צוות ניהול",
+] as const;
+export const SEA_CONNECTION_LEVEL_OPTIONS = [
+  { value: 0, label: "אין קשר" },
+  { value: 1, label: "מתחיל" },
+  { value: 2, label: "בינוני" },
+  { value: 3, label: "מתקדם" },
+  { value: 4, label: "מומחה" },
+  { value: 5, label: "מקצועי" },
+] as const;
+
+export const VOLUNTEER_TYPE_OPTIONS = ["מים", "מדיה", "אחר"] as const;
+
+export const MEDIA_SPECIALIZATION_OPTIONS = [
+  "צילום",
+  "וידאו",
+  "רחפן",
+  "סושיאל",
+  "אחר",
+] as const;

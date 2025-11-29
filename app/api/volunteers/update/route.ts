@@ -1,71 +1,90 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
 
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const volunteerId = searchParams.get("volunteerId");
-
-    if (!volunteerId) {
-      return NextResponse.json(
-        { error: "volunteerId is required" },
-        { status: 400 }
-      );
-    }
-
-    // Get volunteer's roles with role details
-    const result = await query(
-      `SELECT 
-        vr.volunteer_id,
-        vr.role_id,
-        vr.assigned_at,
-        r.name as role_name,
-        r.description as role_description
-      FROM volunteer_role vr
-      INNER JOIN role r ON vr.role_id = r.id
-      WHERE vr.volunteer_id = @volunteerId
-      ORDER BY vr.assigned_at DESC`,
-      { volunteerId }
-    );
-
-    return NextResponse.json({
-      success: true,
-      roles: result.recordset,
-    });
-  } catch (err: any) {
-    console.error("Error fetching volunteer roles:", err);
-    return NextResponse.json(
-      { error: "Server error", details: err.message },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(req: Request) {
+export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { volunteer_id, role_id } = body;
+    const {
+      national_id,
+      full_name,
+      phone,
+      email,
+      kind,
+      street,
+      house_number,
+      city,
+      join_date,
+      training_date,
+      profession,
+      sea_connection_level,
+      active,
+      notes,
+      volunteer_type,
+      media_specialization,
+      availability,
+      personal_website,
+      documents,
+    } = body;
 
-    if (!volunteer_id || !role_id) {
+    // Validation
+    if (!national_id || !full_name) {
       return NextResponse.json(
-        { error: "volunteer_id and role_id are required" },
+        { error: "national_id and full_name are required" },
         { status: 400 }
       );
     }
 
-    // Assign role to volunteer
+    // Update volunteer
     await query(
-      `INSERT INTO volunteer_role (volunteer_id, role_id, assigned_at)
-       VALUES (@volunteer_id, @role_id, GETDATE())`,
-      { volunteer_id, role_id }
+      `UPDATE volunteer
+       SET full_name = @full_name,
+           phone = @phone,
+           email = @email,
+           kind = @kind,
+           street = @street,
+           house_number = @house_number,
+           city = @city,
+           join_date = @join_date,
+           training_date = @training_date,
+           profession = @profession,
+           sea_connection_level = @sea_connection_level,
+           active = @active,
+           notes = @notes,
+           volunteer_type = @volunteer_type,
+           media_specialization = @media_specialization,
+           availability = @availability,
+           personal_website = @personal_website,
+           documents = @documents
+       WHERE national_id = @national_id`,
+      {
+        national_id,
+        full_name,
+        phone: phone || null,
+        email: email || null,
+        kind: kind || null,
+        street: street || null,
+        house_number: house_number || null,
+        city: city || null,
+        join_date: join_date || null,
+        training_date: training_date || null,
+        profession: profession || null,
+        sea_connection_level: sea_connection_level !== undefined ? sea_connection_level : null,
+        active: active !== undefined ? active : true,
+        notes: notes || null,
+        volunteer_type: volunteer_type || null,
+        media_specialization: media_specialization || null,
+        availability: availability || null,
+        personal_website: personal_website || null,
+        documents: documents || null,
+      }
     );
 
     return NextResponse.json({
       success: true,
-      message: "Role assigned successfully",
+      message: "Volunteer updated successfully",
     });
   } catch (err: any) {
-    console.error("Error assigning role:", err);
+    console.error("Error updating volunteer:", err);
     return NextResponse.json(
       { error: "Server error", details: err.message },
       { status: 500 }
@@ -76,29 +95,26 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const volunteer_id = searchParams.get("volunteerId");
-    const role_id = searchParams.get("roleId");
+    const national_id = searchParams.get("national_id");
 
-    if (!volunteer_id || !role_id) {
+    if (!national_id) {
       return NextResponse.json(
-        { error: "volunteerId and roleId are required" },
+        { error: "national_id is required" },
         { status: 400 }
       );
     }
 
-    // Remove role from volunteer
-    await query(
-      `DELETE FROM volunteer_role 
-       WHERE volunteer_id = @volunteer_id AND role_id = @role_id`,
-      { volunteer_id, role_id }
-    );
+    // Soft delete - just mark as inactive
+    await query(`UPDATE volunteer SET active = 0 WHERE national_id = @national_id`, {
+      national_id,
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Role removed successfully",
+      message: "Volunteer deactivated successfully",
     });
   } catch (err: any) {
-    console.error("Error removing role:", err);
+    console.error("Error deleting volunteer:", err);
     return NextResponse.json(
       { error: "Server error", details: err.message },
       { status: 500 }

@@ -7,49 +7,36 @@ export async function GET(req: Request) {
     const activeOnly = searchParams.get("active");
 
     let sql = `
-      SELECT
-        national_id,
-        full_name,
+      SELECT 
+        id,
+        name,
+        contact_name,
         phone,
         email,
-        kind,
-        street,
-        house_number,
-        city,
-        join_date,
-        training_date,
-        total_activities,
-        profession,
-        sea_connection_level,
-        active,
         notes,
-        created_at,
-        volunteer_type,
-        media_specialization,
-        availability,
-        personal_website,
-        documents
-      FROM volunteer
+        is_active
+      FROM supplier
     `;
 
     // Filter by active status if requested
     if (activeOnly === "true") {
-      sql += " WHERE active = 1";
+      sql += " WHERE is_active = 1";
     }
 
-    sql += " ORDER BY created_at DESC";
+    sql += " ORDER BY name ASC";
 
     const result = await query(sql);
 
     return NextResponse.json({
       success: true,
-      volunteers: result.recordset,
+      suppliers: result.recordset,
     });
   } catch (err: any) {
-    console.error("Error fetching volunteers:", err);
+    console.error("Error fetching suppliers:", err);
     return NextResponse.json(
       { error: "Server error", details: err.message },
       { status: 500 }
     );
   }
 }
+

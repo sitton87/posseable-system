@@ -5,6 +5,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
+      national_id,
       full_name,
       phone,
       email,
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
       gender,
       status,
       program,
+      group_id,
       medical_approval,
       medical_condition,
       needs_wheelchair,
@@ -26,34 +28,39 @@ export async function POST(req: Request) {
     } = body;
 
     // Validation
-    if (!full_name) {
+    if (!national_id || !full_name) {
       return NextResponse.json(
-        { error: "full_name is required" },
+        { error: "national_id and full_name are required" },
         { status: 400 }
       );
     }
 
-    // Generate new GUID for id
-    const id = crypto.randomUUID();
+    // Validate national_id format (9 digits)
+    if (!/^\d{9}$/.test(national_id)) {
+      return NextResponse.json(
+        { error: "national_id must be exactly 9 digits" },
+        { status: 400 }
+      );
+    }
 
     // Insert surfer
     await query(
       `INSERT INTO surfer (
-        id, full_name, phone, email, residence, age, date_of_birth,
-        gender, status, program, medical_approval, medical_condition,
+        national_id, full_name, phone, email, residence, age, date_of_birth,
+        gender, status, program, group_id, medical_approval, medical_condition,
         needs_wheelchair, volunteers_needed, special_requirements,
         emergency_contact_name, emergency_contact_phone,
-        active, notes, created_at
+        active, notes
       )
       VALUES (
-        @id, @full_name, @phone, @email, @residence, @age, @date_of_birth,
-        @gender, @status, @program, @medical_approval, @medical_condition,
+        @national_id, @full_name, @phone, @email, @residence, @age, @date_of_birth,
+        @gender, @status, @program, @group_id, @medical_approval, @medical_condition,
         @needs_wheelchair, @volunteers_needed, @special_requirements,
         @emergency_contact_name, @emergency_contact_phone,
-        @active, @notes, GETDATE()
+        @active, @notes
       )`,
       {
-        id,
+        national_id,
         full_name,
         phone: phone || null,
         email: email || null,
@@ -63,12 +70,13 @@ export async function POST(req: Request) {
         gender: gender || null,
         status: status || "בהמתנה",
         program: program || null,
+        group_id: group_id || null,
         medical_approval:
-          medical_approval !== undefined ? medical_approval : false,
+          medical_approval !== undefined ? medical_approval : null,
         medical_condition: medical_condition || null,
         needs_wheelchair:
-          needs_wheelchair !== undefined ? needs_wheelchair : false,
-        volunteers_needed: volunteers_needed || 1,
+          needs_wheelchair !== undefined ? needs_wheelchair : null,
+        volunteers_needed: volunteers_needed || null,
         special_requirements: special_requirements || null,
         emergency_contact_name: emergency_contact_name || null,
         emergency_contact_phone: emergency_contact_phone || null,
@@ -79,7 +87,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      id,
+      national_id,
       message: "Surfer added successfully",
     });
   } catch (err: any) {
