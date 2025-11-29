@@ -1,22 +1,13 @@
-"use client";
+import type { CSSProperties, HTMLAttributes } from "react";
+import { cardStyle as baseCardStyle } from "@/app/styles/components";
 
-import React from "react";
-import clsx from "clsx";
+type CardProps = HTMLAttributes<HTMLDivElement> & {
+  style?: CSSProperties;
+};
 
-export default function Card({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+export function Card({ children, style, ...rest }: CardProps) {
   return (
-    <div
-      className={clsx(
-        "bg-white rounded-xl shadow p-4 border border-gray-200",
-        className
-      )}
-    >
+    <div style={{ ...baseCardStyle, ...style }} {...rest}>
       {children}
     </div>
   );

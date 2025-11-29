@@ -7,59 +7,18 @@ import {
   STATUS_OPTIONS,
   PROGRAM_OPTIONS,
 } from "@/type";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, spacing } from "@/app/styles/foundations";
+import { Button, Card, Modal } from "@/app/components/ui";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
-};
-
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
-};
+const muted = colors.textMuted;
 
 export default function SurferPage() {
   const [surfers, setSurfers] = useState<Surfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSurfer, setEditingSurfer] = useState<Surfer | null>(null);
+  const [viewingSurfer, setViewingSurfer] = useState<Surfer | null>(null);
   const [filterProgram, setFilterProgram] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
 
@@ -270,7 +229,7 @@ export default function SurferPage() {
   return (
     <div style={{ padding: 20 }}>
       {/* Header */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
@@ -287,9 +246,9 @@ export default function SurferPage() {
               סה״כ {surfers.length} גולשים במערכת
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
+          <Button onClick={handleAdd}>
             + הוסף גולש
-          </button>
+          </Button>
         </div>
 
         {/* Filters */}
@@ -323,10 +282,10 @@ export default function SurferPage() {
             </select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -419,22 +378,27 @@ export default function SurferPage() {
                     {s.volunteers_needed || "—"}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
+                    <Button
+                      variant="secondary"
+                      style={{ marginLeft: 4, fontSize: 12 }}
+                      onClick={() => setViewingSurfer(s)}
+                    >
+                      👁️
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ marginLeft: 4, fontSize: 12 }}
                       onClick={() => handleEdit(s)}
                     >
                       ✏️
-                    </button>
-                    <button
-                      style={{
-                        ...btnSecondary,
-                        color: "#dc2626",
-                        fontSize: 12,
-                      }}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ color: colors.danger, fontSize: 12 }}
                       onClick={() => handleDelete(s.national_id)}
                     >
                       🗑️
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -451,33 +415,17 @@ export default function SurferPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            overflow: "auto",
-            padding: "20px 0",
-          }}
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            style={{
-              ...cardStyle,
-              width: "min(900px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflow: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(900px, 95vw)"
+        style={{ padding: 24 }}
+        overlayStyle={{ padding: `${spacing.xl}px 0` }}
+      >
+        <div>
             <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
               {editingSurfer ? "ערוך גולש" : "הוסף גולש חדש"}
             </h3>
@@ -852,16 +800,173 @@ export default function SurferPage() {
                 marginTop: 20,
               }}
             >
-              <button style={btnSecondary} onClick={() => setShowModal(false)}>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>
                 ביטול
-              </button>
-              <button style={btnPrimary} onClick={handleSubmit}>
+              </Button>
+              <Button onClick={handleSubmit}>
                 {editingSurfer ? "עדכן" : "הוסף"}
-              </button>
+              </Button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
+
+      {/* View Modal */}
+      <Modal
+        open={!!viewingSurfer}
+        onClose={() => setViewingSurfer(null)}
+        width="min(700px, 90vw)"
+        style={{ padding: 24 }}
+        overlayStyle={{ padding: `${spacing.lg}px 0` }}
+      >
+        {viewingSurfer && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                פרטי גולש - {viewingSurfer.full_name}
+              </h3>
+              <Button
+                variant="secondary"
+                onClick={() => setViewingSurfer(null)}
+                style={{ fontSize: 13 }}
+              >
+                ✕ סגור
+              </Button>
+            </div>
+
+            <ViewSection title="📋 פרטים אישיים">
+              <InfoRow label="תעודת זהות" value={viewingSurfer.national_id} />
+              <InfoRow label="טלפון" value={viewingSurfer.phone || "—"} />
+              <InfoRow label="אימייל" value={viewingSurfer.email || "—"} />
+              <InfoRow label="גיל" value={viewingSurfer.age?.toString() || "—"} />
+              <InfoRow label="מגדר" value={viewingSurfer.gender || "—"} />
+              <InfoRow label="מקום מגורים" value={viewingSurfer.residence || "—"} />
+            </ViewSection>
+
+            <ViewSection title="🎯 תוכנית וסטטוס">
+              <InfoRow label="תוכנית" value={viewingSurfer.program || "—"} />
+              <InfoRow label="סטטוס" value={viewingSurfer.status || "—"} />
+              <InfoRow
+                label="קבוצה"
+                value={viewingSurfer.group_id || "לא שויכה"}
+              />
+              <InfoRow
+                label="מתנדבים נדרשים"
+                value={
+                  viewingSurfer.volunteers_needed?.toString() ||
+                  "לא הוגדר"
+                }
+              />
+            </ViewSection>
+
+            <ViewSection title="🏥 מצב רפואי">
+              <InfoRow
+                label="אישור רפואי"
+                value={viewingSurfer.medical_approval ? "כן" : "לא"}
+              />
+              <InfoRow
+                label="זקוק לכיסא גלגלים"
+                value={viewingSurfer.needs_wheelchair ? "כן" : "לא"}
+              />
+              <InfoRow
+                label="מצב רפואי"
+                value={viewingSurfer.medical_condition || "—"}
+              />
+            </ViewSection>
+
+            <ViewSection title="🚨 איש קשר לחירום">
+              <InfoRow
+                label="שם איש קשר"
+                value={viewingSurfer.emergency_contact_name || "—"}
+              />
+              <InfoRow
+                label="טלפון חירום"
+                value={viewingSurfer.emergency_contact_phone || "—"}
+              />
+            </ViewSection>
+
+            {!!viewingSurfer.special_requirements && (
+              <ViewSection title="📝 דרישות מיוחדות">
+                <p style={{ margin: 0 }}>{viewingSurfer.special_requirements}</p>
+              </ViewSection>
+            )}
+
+            {!!viewingSurfer.notes && (
+              <ViewSection title="הערות">
+                <p style={{ margin: 0 }}>{viewingSurfer.notes}</p>
+              </ViewSection>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+type InfoRowProps = {
+  label: string;
+  value: string;
+};
+
+function InfoRow({ label, value }: InfoRowProps) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          color: colors.textMuted,
+          marginBottom: 2,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontWeight: 600 }}>{value}</div>
+    </div>
+  );
+}
+
+type ViewSectionProps = {
+  title: string;
+  children: React.ReactNode;
+};
+
+function ViewSection({ title, children }: ViewSectionProps) {
+  return (
+    <div
+      style={{
+        background: colors.surfaceAlt,
+        borderRadius: 12,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <h4
+        style={{
+          margin: 0,
+          fontSize: 14,
+          color: colors.textMuted,
+          fontWeight: 700,
+        }}
+      >
+        {title}
+      </h4>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 16,
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }

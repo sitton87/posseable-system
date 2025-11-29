@@ -1,33 +1,23 @@
-"use client";
+import { buttonVariants } from "@/app/styles/components";
+import type { ButtonHTMLAttributes, CSSProperties } from "react";
 
-import React from "react";
-import clsx from "clsx";
+type ButtonVariant = keyof typeof buttonVariants;
 
-type ButtonProps = {
-  children: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-  disabled?: boolean;
-  type?: "button" | "submit";
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  style?: CSSProperties;
 };
 
-export default function Button({
+export function Button({
+  variant = "primary",
+  style,
   children,
-  onClick,
-  className,
-  disabled,
-  type = "button",
+  ...rest
 }: ButtonProps) {
+  const baseStyle = buttonVariants[variant] ?? buttonVariants.primary;
+
   return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={clsx(
-        "px-4 py-2 rounded-md text-white font-semibold transition bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400",
-        className
-      )}
-    >
+    <button style={{ ...baseStyle, ...style }} {...rest}>
       {children}
     </button>
   );

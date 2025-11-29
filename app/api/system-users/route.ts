@@ -1,0 +1,200 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import {
+  fetchAppUsers,
+  findExistingAppUser,
+  insertAppUser,
+  updateAppUser,
+} from "@/lib/services/systemUserService";
+import { sendWelcomeEmail } from "@/lib/services/emailService";
+import { isAdminRole } from "@/lib/utils/roles";
+
+type SessionPayload = {
+  national_id: string;
+  role?: string;
+};
+
+async function getSession(): Promise<SessionPayload | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session");
+    if (!sessionCookie?.value) {
+      return null;
+    }
+    const parsed = JSON.parse(sessionCookie.value);
+    return parsed;
+  } catch (error) {
+    console.error("Failed to parse session cookie", error);
+    return null;
+  }
+}
+
+function forbiddenResponse() {
+  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+}
+
+function generateTemporaryPassword() {
+  return `Pos-${crypto.randomBytes(4).toString("hex")}`;
+}
+
+export async function GET() {
+  const session = await getSession();
+  if (!session || !isAdminRole(session.role)) {
+    return forbiddenResponse();
+  }
+
+  try {
+    const result = await fetchAppUsers();
+    return NextResponse.json({
+      success: true,
+      users: result.recordset,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to fetch users", error);
+    return NextResponse.json(
+      { error: "Failed to fetch users", details: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session || !isAdminRole(session.role)) {
+    return forbiddenResponse();
+  }
+
+  try {
+    const body = await req.json();
+    const {
+      national_id,
+      full_name,
+      email,
+      role,
+      must_reset,
+    } = body;
+
+    if (
+      !national_id ||
+      !/^\d{9}$/.test(national_id) ||
+      !full_name ||
+      !email ||
+      !role
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "national_id (9 digits), full_name, email and role are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const existing = await findExistingAppUser({ national_id, email });
+    if (existing.recordset.length) {
+      return NextResponse.json(
+        { error: "User with same ID or email already exists" },
+        { status: 409 }
+      );
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    const password_hash = await bcrypt.hash(temporaryPassword, 10);
+
+    await insertAppUser({
+      national_id,
+      full_name,
+      email,
+      password_hash,
+      role,
+      must_reset: must_reset ?? true,
+    });
+
+    let emailSent = false;
+    try {
+      await sendWelcomeEmail({
+        to: email,
+        fullName: full_name,
+        temporaryPassword,
+        nationalId: national_id,
+      });
+      emailSent = true;
+    } catch (mailError) {
+      console.error("Failed to send welcome email", mailError);
+    }
+
+    return NextResponse.json({ success: true, emailSent });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to create user", error);
+    return NextResponse.json(
+      { error: "Failed to create user", details: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(req: Request) {
+  const session = await getSession();
+  if (!session || !isAdminRole(session.role)) {
+    return forbiddenResponse();
+  }
+
+  try {
+    const body = await req.json();
+    const {
+      national_id,
+      full_name,
+      email,
+      role,
+      must_reset,
+      reset_password,
+    } = body;
+
+    if (!national_id) {
+      return NextResponse.json(
+        { error: "national_id is required" },
+        { status: 400 }
+      );
+    }
+
+    const updates: {
+      full_name?: string;
+      email?: string;
+      role?: string;
+      must_reset?: boolean;
+      password_hash?: string;
+    } = {};
+
+    if (typeof full_name === "string") updates.full_name = full_name;
+    if (typeof email === "string") updates.email = email;
+    if (typeof role === "string") updates.role = role;
+    if (typeof must_reset === "boolean") updates.must_reset = must_reset;
+
+    if (typeof reset_password === "string" && reset_password.trim()) {
+      updates.password_hash = await bcrypt.hash(reset_password.trim(), 10);
+    }
+
+    if (!Object.keys(updates).length) {
+      return NextResponse.json(
+        { error: "No updates supplied" },
+        { status: 400 }
+      );
+    }
+
+    await updateAppUser(national_id, updates);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to update user", error);
+    return NextResponse.json(
+      { error: "Failed to update user", details: message },
+      { status: 500 }
+    );
+  }
+}
+

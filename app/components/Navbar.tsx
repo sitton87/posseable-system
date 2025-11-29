@@ -16,7 +16,9 @@ import {
   ArrowRightCircle,
   CalendarRange,
   UsersRound,
+  Settings,
 } from "lucide-react";
+import { isAdminRole } from "@/lib/utils/roles";
 
 const NAV_EXPANDED_WIDTH = 224; // Tailwind w-56
 const NAV_COLLAPSED_WIDTH = 64; // Tailwind w-16
@@ -92,7 +94,9 @@ export default function Navbar() {
     window.location.href = "/reset-password";
   };
 
-  const menuItems = [
+  const isAdmin = userInfo?.role ? isAdminRole(userInfo.role) : false;
+
+  const baseMenuItems = [
     { href: "/dashboard", icon: <Home size={22} />, label: "דף הבית" },
     { href: "/volunteers", icon: <Users size={22} />, label: "מתנדבים" },
     { href: "/surfers", icon: <UserCircle size={22} />, label: "גולשים" },
@@ -104,6 +108,17 @@ export default function Navbar() {
     { href: "/donors", icon: <Heart size={22} />, label: "תורמים" },
     { href: "/finance", icon: <Wallet size={22} />, label: "כספים" },
   ];
+
+  const menuItems = isAdmin
+    ? [
+        ...baseMenuItems,
+        {
+          href: "/system-settings",
+          icon: <Settings size={22} />,
+          label: "הגדרות מערכת",
+        },
+      ]
+    : baseMenuItems;
 
   return (
     <div

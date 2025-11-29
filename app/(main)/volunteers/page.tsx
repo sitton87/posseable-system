@@ -74,6 +74,38 @@ const getVolunteerKindLabel = (volunteer: Volunteer) =>
   normalizeKind(volunteer.kind) ||
   null;
 
+type DocumentEntry = {
+  name: string;
+  mime?: string;
+  data?: string;
+  url?: string;
+  uploadDate?: string;
+  uploadedAt?: string;
+};
+
+const parseDocuments = (value?: string | null): DocumentEntry[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (item) => item && typeof item === "object" && item.name
+      );
+    }
+    return [];
+  } catch (err) {
+    console.warn("Failed to parse documents JSON", err);
+    return [];
+  }
+};
+
+const buildDocumentDataUrl = (doc: DocumentEntry) => {
+  if (doc.data) {
+    return `data:${doc.mime || "application/octet-stream"};base64,${doc.data}`;
+  }
+  return doc.url || "";
+};
+
 export default function VolunteersPage() {
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [filteredVolunteers, setFilteredVolunteers] = useState<Volunteer[]>([]);
@@ -86,6 +118,10 @@ export default function VolunteersPage() {
   const [editingVolunteer, setEditingVolunteer] = useState<Volunteer | null>(
     null
   );
+  const [documentEntries, setDocumentEntries] = useState<DocumentEntry[]>([]);
+  const viewingDocuments = viewingVolunteer
+    ? parseDocuments(viewingVolunteer.documents)
+    : [];
 
   // Filter states
   const [filterKind, setFilterKind] = useState("");
@@ -218,6 +254,7 @@ export default function VolunteersPage() {
       personal_website: "",
       documents: "",
     });
+    setDocumentEntries([]);
     setShowModal(true);
   };
 
@@ -249,7 +286,48 @@ export default function VolunteersPage() {
       personal_website: volunteer.personal_website || "",
       documents: volunteer.documents || "",
     });
+    setDocumentEntries(parseDocuments(volunteer.documents));
     setShowModal(true);
+  };
+
+  const handleDocumentsTextChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, documents: value }));
+    setDocumentEntries(parseDocuments(value));
+  };
+
+  const handleDocumentUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result?.toString() || "";
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      const newEntry: DocumentEntry = {
+        name: file.name,
+        mime: file.type,
+        data: base64,
+        uploadedAt: new Date().toISOString(),
+      };
+      const updated = [...documentEntries, newEntry];
+      setDocumentEntries(updated);
+      setFormData((prev) => ({
+        ...prev,
+        documents: JSON.stringify(updated, null, 2),
+      }));
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleDocumentRemove = (index: number) => {
+    const updated = documentEntries.filter((_, idx) => idx !== index);
+    setDocumentEntries(updated);
+    setFormData((prev) => ({
+      ...prev,
+      documents: updated.length ? JSON.stringify(updated, null, 2) : "",
+    }));
   };
 
   const handleSubmit = async () => {
@@ -933,17 +1011,94 @@ export default function VolunteersPage() {
 
                 {/* מסמכים - לכל סוגי המתנדבים */}
                 <div>
-                  <label style={labelStyle}>מסמכים (JSON)</label>
+                  <label style={labelStyle}>מסמכים מצורפים</label>
+                  <input
+                    type="file"
+                    accept=".pdf,image/*"
+                    onChange={handleDocumentUpload}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <div style={{ fontSize: 12, color: muted, marginBottom: 8 }}>
+                    תמיכה ב-PDF ותמונות. עד 1 קובץ בכל פעם.
+                  </div>
+                  {documentEntries.length > 0 && (
+                    <div
+                      style={{
+                        border: "1px solid rgba(15,23,42,0.08)",
+                        borderRadius: 8,
+                        padding: 12,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        marginBottom: 8,
+                        background: "#fff",
+                      }}
+                    >
+                      {documentEntries.map((doc, idx) => (
+                        <div
+                          key={`${doc.name}-${idx}`}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 12,
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600 }}>{doc.name}</div>
+                            <div style={{ fontSize: 12, color: muted }}>
+                              {doc.mime || "קובץ"}
+                              {doc.uploadedAt
+                                ? ` · ${new Date(
+                                    doc.uploadedAt
+                                  ).toLocaleDateString("he-IL")}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            {buildDocumentDataUrl(doc) && (
+                              <a
+                                href={buildDocumentDataUrl(doc)}
+                                download={doc.name}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  ...btnSecondary,
+                                  fontSize: 12,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                הורד
+                              </a>
+                            )}
+                            <button
+                              style={{
+                                ...btnSecondary,
+                                fontSize: 12,
+                                color: "#dc2626",
+                              }}
+                              onClick={() => handleDocumentRemove(idx)}
+                              type="button"
+                            >
+                              מחק
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <label style={{ ...labelStyle, marginTop: 8 }}>
+                    מסמכים (JSON - למתקדמים)
+                  </label>
                   <textarea
                     style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
                     value={formData.documents}
-                    onChange={(e) =>
-                      setFormData({ ...formData, documents: e.target.value })
-                    }
+                    onChange={(e) => handleDocumentsTextChange(e.target.value)}
                     placeholder='[{"name": "אישור רפואי", "url": "...", "uploadDate": "2024-01-01"}]'
                   />
                   <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>
-                    פורמט JSON של מסמכים
+                    ניתן לערוך ידנית, או להשתמש בשדה העלאה כדי לעדכן את הרשימה
+                    אוטומטית.
                   </div>
                 </div>
               </div>
@@ -1266,7 +1421,7 @@ export default function VolunteersPage() {
             </div>
 
             {/* מסמכים */}
-            {viewingVolunteer.documents && (
+            {viewingDocuments.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <h4
                   style={{
@@ -1279,8 +1434,57 @@ export default function VolunteersPage() {
                 >
                   📄 מסמכים
                 </h4>
-                <div style={{ fontSize: 13, fontFamily: "monospace" }}>
-                  {viewingVolunteer.documents}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  {viewingDocuments.map((doc, idx) => (
+                      <div
+                        key={`${doc.name}-${idx}`}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          border: "1px solid rgba(15,23,42,0.08)",
+                          background: "#fff",
+                          gap: 12,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{doc.name}</div>
+                          <div style={{ fontSize: 12, color: muted }}>
+                            {doc.mime || "קובץ"}
+                            {doc.uploadedAt || doc.uploadDate
+                              ? ` · ${new Date(
+                                  doc.uploadedAt || doc.uploadDate!
+                                ).toLocaleDateString("he-IL")}`
+                              : ""}
+                          </div>
+                        </div>
+                        {buildDocumentDataUrl(doc) && (
+                          <a
+                            href={buildDocumentDataUrl(doc)}
+                            download={doc.name}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontSize: 12,
+                              color: "#0ea5e9",
+                              textDecoration: "none",
+                              fontWeight: 600,
+                            }}
+                          >
+                            הורד
+                          </a>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
