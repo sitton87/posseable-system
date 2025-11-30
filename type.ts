@@ -69,6 +69,7 @@ export type Group = {
   description?: string | null;
   season_id: number; // INT - קישור לעונה
   start_season_id?: number | null;
+  additional_seasons?: string | null;
   min_participants: number;
   max_participants: number;
   current_participants: number;
@@ -80,6 +81,7 @@ export type Group = {
   // From JOIN
   season_name?: string;
   season_year?: number;
+  surfers?: Surfer[];
 };
 
 export type SeasonPlan = {
@@ -170,7 +172,8 @@ export type Donor = {
 };
 
 export type Supplier = {
-  id: string;
+  supplier_identifier: string;
+  identifier_type: string;
   name: string;
   contact_name?: string | null;
   phone?: string | null;
@@ -192,7 +195,13 @@ export type VolunteerFormData = Omit<Volunteer, "created_at">;
 export type SurferFormData = Omit<Surfer, "created_at" | "group_name">;
 export type ActivityFormData = Omit<
   Activity,
-  "id" | "created_at" | "group_name" | "series_name" | "participant_count" | "lead_name" | "lead_national_id"
+  | "id"
+  | "created_at"
+  | "group_name"
+  | "series_name"
+  | "participant_count"
+  | "lead_name"
+  | "lead_national_id"
 >;
 export type GroupFormData = Omit<
   Group,
@@ -240,3 +249,30 @@ export const MEDIA_SPECIALIZATION_OPTIONS = [
   "סושיאל",
   "אחר",
 ] as const;
+
+export type PermissionLevel = "none" | "read" | "write";
+
+export type RoleGroup = {
+  code: string;
+  name: string;
+  description?: string | null;
+  is_default: boolean;
+  created_at: Date | string;
+};
+
+export type AppPage = {
+  page_key: string;
+  display_name: string;
+  route_path: string;
+  category?: string | null;
+  is_active: boolean;
+  created_at: Date | string;
+};
+
+export type RoleGroupPermission = {
+  role_group_code: string;
+  page_key: string;
+  permission_level: PermissionLevel;
+  updated_at: Date | string;
+  updated_by?: string | null;
+};

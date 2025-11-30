@@ -1,53 +1,41 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useState, useEffect } from "react";
 import { Activity, SeasonPlan, ActivitySeries } from "@/type";
+import { Button, Card, Modal } from "@/app/components/ui";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, radii, spacing } from "@/app/styles/foundations";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+const sectionBoxStyle: CSSProperties = {
+  marginBottom: spacing.lg,
+  padding: spacing.lg,
+  background: colors.surfaceAlt,
+  borderRadius: radii.card,
 };
-
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
+const smallButtonStyle: CSSProperties = {
+  fontSize: 12,
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
 };
-
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
+const statusStyles: Record<string, { background: string; color: string }> = {
+  הושלם: { background: colors.successSoft, color: colors.success },
+  פעיל: { background: colors.primarySoft, color: colors.primary },
+  מתוכנן: { background: "rgba(251, 191, 36, 0.15)", color: "#d97706" },
+  בוטל: { background: colors.dangerSoft, color: colors.danger },
 };
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
+const defaultStatusStyle = {
+  background: colors.borderMuted,
+  color: colors.textPrimary,
 };
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
+const getStatusStyle = (status: string) =>
+  statusStyles[status] || defaultStatusStyle;
+const formatDate = (value?: string | null) =>
+  value ? new Date(value).toLocaleDateString("he-IL") : "—";
+const formatTimeRange = (start?: string | null, end?: string | null) => {
+  if (start && end) return `${start}-${end}`;
+  return start || end || "—";
 };
 
 const ACTIVITY_KINDS = [
@@ -64,7 +52,9 @@ export default function ActivitiesPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [viewingActivity, setViewingActivity] = useState<Activity | null>(null);
   const [filterKind, setFilterKind] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [seasonsOptions, setSeasonsOptions] = useState<SeasonPlan[]>([]);
@@ -174,6 +164,15 @@ export default function ActivitiesPage() {
     } else {
       setSeriesOptions([]);
     }
+  };
+
+  const handleView = (activity: Activity) => {
+    setViewingActivity(activity);
+    setShowViewModal(true);
+  };
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setViewingActivity(null);
   };
 
   const handleAdd = () => {
@@ -299,7 +298,7 @@ export default function ActivitiesPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 20, textAlign: "center" }}>
+      <div style={{ padding: spacing.xl, textAlign: "center" }}>
         <div>טוען פעילויות...</div>
       </div>
     );
@@ -312,15 +311,17 @@ export default function ActivitiesPage() {
   });
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: spacing.xl }}>
       {/* Header */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 16,
+            marginBottom: spacing.md,
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <div>
@@ -331,14 +332,19 @@ export default function ActivitiesPage() {
               סה״כ {activities.length} פעילויות במערכת
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
-            + הוסף פעילות
-          </button>
+          <Button onClick={handleAdd}>+ הוסף פעילות</Button>
         </div>
 
         {/* Filters */}
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ flex: 1 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: spacing.md,
+          }}
+        >
+          <div>
+            <label style={labelStyle}>סוג פעילות</label>
             <select
               style={inputStyle}
               value={filterKind}
@@ -352,7 +358,8 @@ export default function ActivitiesPage() {
               ))}
             </select>
           </div>
-          <div style={{ flex: 1 }}>
+          <div>
+            <label style={labelStyle}>סטטוס פעילות</label>
             <select
               style={inputStyle}
               value={filterStatus}
@@ -367,10 +374,10 @@ export default function ActivitiesPage() {
             </select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -430,47 +437,37 @@ export default function ActivitiesPage() {
                     <span
                       style={{
                         padding: "4px 8px",
-                        borderRadius: 6,
+                        borderRadius: radii.button,
                         fontSize: 12,
                         fontWeight: 600,
-                        background:
-                          a.status === "הושלם"
-                            ? "rgba(34, 197, 94, 0.1)"
-                            : a.status === "פעיל"
-                            ? "rgba(59, 130, 246, 0.1)"
-                            : a.status === "מתוכנן"
-                            ? "rgba(251, 191, 36, 0.1)"
-                            : "rgba(239, 68, 68, 0.1)",
-                        color:
-                          a.status === "הושלם"
-                            ? "#16a34a"
-                            : a.status === "פעיל"
-                            ? "#2563eb"
-                            : a.status === "מתוכנן"
-                            ? "#d97706"
-                            : "#dc2626",
+                        ...getStatusStyle(a.status),
                       }}
                     >
                       {a.status}
                     </span>
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: 4 }}
+                      onClick={() => handleView(a)}
+                    >
+                      👁️
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: 4 }}
                       onClick={() => handleEdit(a)}
                     >
                       ✏️
-                    </button>
-                    <button
-                      style={{
-                        ...btnSecondary,
-                        color: "#dc2626",
-                        fontSize: 12,
-                      }}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, color: colors.danger }}
                       onClick={() => handleDelete(a.id)}
                     >
                       🗑️
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -487,254 +484,399 @@ export default function ActivitiesPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            overflow: "auto",
-            padding: "20px 0",
-          }}
-          onClick={() => setShowModal(false)}
-        >
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(720px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
+          {editingActivity ? "ערוך פעילות" : "הוסף פעילות חדשה"}
+        </h3>
+
+        {/* Basic Info */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            📋 פרטים בסיסיים
+          </h4>
           <div
             style={{
-              ...cardStyle,
-              width: "min(700px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflow: "auto",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingActivity ? "ערוך פעילות" : "הוסף פעילות חדשה"}
-            </h3>
+            <div>
+              <label style={labelStyle}>
+                סוג פעילות <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <select
+                style={inputStyle}
+                value={formData.kind}
+                onChange={(e) =>
+                  setFormData({ ...formData, kind: e.target.value })
+                }
+              >
+                {ACTIVITY_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>
+                סטטוס <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <select
+                style={inputStyle}
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({ ...formData, status: e.target.value })
+                }
+              >
+                {ACTIVITY_STATUS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>
+                תאריך <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="date"
+                style={inputStyle}
+                value={formData.activity_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, activity_date: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>מיקום</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
+                placeholder="למשל: חוף הצוק"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>שעת התחלה</label>
+              <input
+                type="time"
+                style={inputStyle}
+                value={formData.start_time}
+                onChange={(e) =>
+                  setFormData({ ...formData, start_time: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>שעת סיום</label>
+              <input
+                type="time"
+                style={inputStyle}
+                value={formData.end_time}
+                onChange={(e) =>
+                  setFormData({ ...formData, end_time: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        </div>
 
-            {/* Basic Info */}
+        {/* Scheduling */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            🗓️ שיוך לעונה וסדרה
+          </h4>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>
+                עונה <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <select
+                style={inputStyle}
+                value={formData.season_id}
+                onChange={(e) => handleSeasonSelect(e.target.value)}
+              >
+                <option value="">בחר עונה...</option>
+                {seasonsOptions.map((season) => (
+                  <option key={season.id} value={season.id}>
+                    {season.name} · {season.year}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>
+                סדרת פעילויות <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <select
+                style={inputStyle}
+                value={formData.series_id}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    series_id: e.target.value,
+                  }))
+                }
+                disabled={
+                  !formData.season_id ||
+                  seriesOptionsLoading ||
+                  seriesOptions.length === 0
+                }
+              >
+                <option value="">
+                  {!formData.season_id
+                    ? "בחר עונה קודם"
+                    : seriesOptionsLoading
+                    ? "טוען סדרות..."
+                    : "בחר סדרה"}
+                </option>
+                {seriesOptions.map((series) => (
+                  <option key={series.id} value={series.id}>
+                    {series.name}
+                    {series.is_default ? " · ברירת מחדל" : ""}
+                  </option>
+                ))}
+              </select>
+              {formData.season_id &&
+                !seriesOptionsLoading &&
+                seriesOptions.length === 0 && (
+                  <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
+                    אין סדרות לעונה זו. צור סדרה חדשה בעמוד העונות.
+                  </div>
+                )}
+            </div>
+            <div>
+              <label style={labelStyle}>מזהה קבוצה (אופציונלי)</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.group_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, group_id: e.target.value })
+                }
+                placeholder="GUID"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>קיבולת משתתפים</label>
+              <input
+                type="number"
+                style={inputStyle}
+                value={formData.capacity}
+                onChange={(e) =>
+                  setFormData({ ...formData, capacity: e.target.value })
+                }
+                placeholder="20"
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            📝 הערות
+          </h4>
+          <textarea
+            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+            value={formData.notes}
+            onChange={(e) =>
+              setFormData({ ...formData, notes: e.target.value })
+            }
+            placeholder="הערות נוספות..."
+          />
+        </div>
+
+        {/* Buttons */}
+        <div
+          style={{
+            display: "flex",
+            gap: spacing.md,
+            justifyContent: "flex-end",
+          }}
+        >
+          <Button
+            variant="secondary"
+            onClick={() => setShowModal(false)}
+            type="button"
+          >
+            ביטול
+          </Button>
+          <Button onClick={handleSubmit} type="button">
+            {editingActivity ? "עדכן" : "הוסף"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showViewModal && !!viewingActivity}
+        onClose={closeViewModal}
+        width="min(640px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        {viewingActivity && (
+          <>
             <div
               style={{
-                marginBottom: 20,
-                padding: 16,
-                background: "#f9fafb",
-                borderRadius: 8,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: spacing.lg,
+                gap: spacing.md,
+                flexWrap: "wrap",
               }}
             >
-              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-                📋 פרטים בסיסיים
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                פרטי פעילות –{" "}
+                {viewingActivity.series_name || `סדרה #${viewingActivity.series_id}`}
+              </h3>
+              <Button variant="secondary" onClick={closeViewModal} type="button">
+                ✕ סגור
+              </Button>
+            </div>
+
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+              <h4
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: 14,
+                  color: muted,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.sm,
+                }}
+              >
+                📋 פרטי פעילות
               </h4>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
+                  gap: "12px 24px",
                 }}
               >
                 <div>
-                  <label style={labelStyle}>
-                    סוג פעילות <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <select
-                    style={inputStyle}
-                    value={formData.kind}
-                    onChange={(e) =>
-                      setFormData({ ...formData, kind: e.target.value })
-                    }
+                  <div style={{ fontSize: 12, color: muted }}>סוג פעילות</div>
+                  <div style={{ fontWeight: 600 }}>{viewingActivity.kind}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
+                  <span
+                    style={{
+                      marginTop: spacing.xs,
+                      display: "inline-block",
+                      padding: "4px 8px",
+                      borderRadius: radii.button,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      ...getStatusStyle(viewingActivity.status),
+                    }}
                   >
-                    {ACTIVITY_KINDS.map((k) => (
-                      <option key={k} value={k}>
-                        {k}
-                      </option>
-                    ))}
-                  </select>
+                    {viewingActivity.status}
+                  </span>
                 </div>
                 <div>
-                  <label style={labelStyle}>
-                    סטטוס <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <select
-                    style={inputStyle}
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.value })
-                    }
-                  >
-                    {ACTIVITY_STATUS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                  <div style={{ fontSize: 12, color: muted }}>מיקום</div>
+                  <div>{viewingActivity.location || "—"}</div>
                 </div>
                 <div>
-                  <label style={labelStyle}>
-                    תאריך <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.activity_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, activity_date: e.target.value })
-                    }
-                  />
+                  <div style={{ fontSize: 12, color: muted }}>קיבולת</div>
+                  <div>{viewingActivity.capacity ?? "—"}</div>
                 </div>
                 <div>
-                  <label style={labelStyle}>מיקום</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
-                    placeholder="למשל: חוף הצוק"
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>שעת התחלה</label>
-                  <input
-                    type="time"
-                    style={inputStyle}
-                    value={formData.start_time}
-                    onChange={(e) =>
-                      setFormData({ ...formData, start_time: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>שעת סיום</label>
-                  <input
-                    type="time"
-                    style={inputStyle}
-                    value={formData.end_time}
-                    onChange={(e) =>
-                      setFormData({ ...formData, end_time: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>
-                    עונה <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <select
-                    style={inputStyle}
-                    value={formData.season_id}
-                    onChange={(e) => handleSeasonSelect(e.target.value)}
-                  >
-                    <option value="">בחר עונה...</option>
-                    {seasonsOptions.map((season) => (
-                      <option key={season.id} value={season.id}>
-                        {season.name} · {season.year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>
-                    סדרת פעילויות <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <select
-                    style={inputStyle}
-                    value={formData.series_id}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, series_id: e.target.value }))
-                    }
-                    disabled={
-                      !formData.season_id ||
-                      seriesOptionsLoading ||
-                      seriesOptions.length === 0
-                    }
-                  >
-                    <option value="">
-                      {!formData.season_id
-                        ? "בחר עונה קודם"
-                        : seriesOptionsLoading
-                        ? "טוען סדרות..."
-                        : "בחר סדרה"}
-                    </option>
-                    {seriesOptions.map((series) => (
-                      <option key={series.id} value={series.id}>
-                        {series.name}
-                        {series.is_default ? " · ברירת מחדל" : ""}
-                      </option>
-                    ))}
-                  </select>
-                  {formData.season_id &&
-                    !seriesOptionsLoading &&
-                    seriesOptions.length === 0 && (
-                      <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
-                        אין סדרות לעונה זו. צור סדרה חדשה בעמוד העונות.
-                      </div>
-                    )}
-                </div>
-                <div>
-                  <label style={labelStyle}>מזהה קבוצה (אופציונלי)</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.group_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, group_id: e.target.value })
-                    }
-                    placeholder="GUID"
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>קיבולת משתתפים</label>
-                  <input
-                    type="number"
-                    style={inputStyle}
-                    value={formData.capacity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, capacity: e.target.value })
-                    }
-                    placeholder="20"
-                    min="0"
-                  />
+                  <div style={{ fontSize: 12, color: muted }}>קבוצה</div>
+                  <div>{viewingActivity.group_name || viewingActivity.group_id || "—"}</div>
                 </div>
               </div>
             </div>
 
-            {/* Notes */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>הערות</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                placeholder="הערות נוספות..."
-              />
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+              <h4
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: 14,
+                  color: muted,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.sm,
+                }}
+              >
+                🗓️ לוח זמנים ושיוך
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px 24px",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>תאריך</div>
+                  <div>{formatDate(viewingActivity.activity_date)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>שעות</div>
+                  <div>
+                    {formatTimeRange(
+                      viewingActivity.start_time,
+                      viewingActivity.end_time
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>עונה</div>
+                  <div>{viewingActivity.season_name || viewingActivity.season_id}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>סדרה</div>
+                  <div>
+                    {viewingActivity.series_name ||
+                      (viewingActivity.series_id
+                        ? `סדרה #${viewingActivity.series_id}`
+                        : "—")}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Buttons */}
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                justifyContent: "flex-end",
-              }}
-            >
-              <button style={btnSecondary} onClick={() => setShowModal(false)}>
-                ביטול
-              </button>
-              <button style={btnPrimary} onClick={handleSubmit}>
-                {editingActivity ? "עדכן" : "הוסף"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            {viewingActivity.notes && (
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+                <h4
+                  style={{
+                    margin: "0 0 12px 0",
+                    fontSize: 14,
+                    color: muted,
+                    borderBottom: `2px solid ${colors.borderMuted}`,
+                    paddingBottom: spacing.sm,
+                  }}
+                >
+                  📝 הערות
+                </h4>
+                <div style={{ whiteSpace: "pre-wrap" }}>{viewingActivity.notes}</div>
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
-

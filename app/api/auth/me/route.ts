@@ -26,6 +26,7 @@ export async function GET() {
         national_id: user.national_id,
         full_name: user.full_name,
         role: user.role,
+        role_group_code: user.role_group_code,
       },
     });
   } catch (err: any) {

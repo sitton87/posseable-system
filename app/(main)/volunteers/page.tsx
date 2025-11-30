@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties, ChangeEvent } from "react";
 import { useState, useEffect } from "react";
 import {
   Volunteer,
@@ -7,52 +8,37 @@ import {
   VOLUNTEER_TYPE_OPTIONS,
   MEDIA_SPECIALIZATION_OPTIONS,
 } from "@/type";
+import { Button, Card, Modal } from "@/app/components/ui";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, radii, spacing } from "@/app/styles/foundations";
+import { usePagePermission } from "@/app/hooks/usePagePermission";
+import { AccessDenied } from "@/app/components/AccessDenied";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+
+const sectionBoxStyle: CSSProperties = {
+  marginBottom: spacing.xl,
+  padding: spacing.lg,
+  background: colors.surfaceAlt,
+  borderRadius: radii.card,
 };
 
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
+const smallButtonStyle: CSSProperties = {
+  fontSize: 12,
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
 };
 
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
+const secondaryLinkStyle: CSSProperties = {
+  ...smallButtonStyle,
+  borderRadius: radii.button,
+  border: `1px solid ${colors.border}`,
+  background: colors.surfaceAlt,
+  color: colors.textPrimary,
   fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
+  textDecoration: "none",
+  display: "inline-flex",
+  alignItems: "center",
 };
 
 const LEGACY_KIND_LABELS: Record<string, string> = {
@@ -123,6 +109,23 @@ export default function VolunteersPage() {
     ? parseDocuments(viewingVolunteer.documents)
     : [];
 
+  const {
+    permission,
+    loading: permissionLoading,
+    canEdit,
+  } = usePagePermission("volunteers");
+
+  const editWarning = () =>
+    alert("אין לך הרשאת עריכה בדף מתנדבים. פנה למנהל המערכת.");
+
+  const assertCanEdit = () => {
+    if (!canEdit) {
+      editWarning();
+      return false;
+    }
+    return true;
+  };
+
   // Filter states
   const [filterKind, setFilterKind] = useState("");
   const [filterActive, setFilterActive] = useState("all");
@@ -157,6 +160,23 @@ export default function VolunteersPage() {
   useEffect(() => {
     fetchVolunteers();
   }, []);
+
+  if (permissionLoading) {
+    return (
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <div>טוען הרשאות...</div>
+      </div>
+    );
+  }
+
+  if (permission === "none") {
+    return (
+      <AccessDenied
+        title="אין לך הרשאה לדף מתנדבים"
+        description="פנה למנהל המערכת כדי לקבל הרשאה מתאימה."
+      />
+    );
+  }
 
   const fetchVolunteers = async () => {
     try {
@@ -232,6 +252,7 @@ export default function VolunteersPage() {
   };
 
   const handleAdd = () => {
+    if (!assertCanEdit()) return;
     setEditingVolunteer(null);
     setFormData({
       national_id: "",
@@ -264,6 +285,7 @@ export default function VolunteersPage() {
   };
 
   const handleEdit = (volunteer: Volunteer) => {
+    if (!assertCanEdit()) return;
     setEditingVolunteer(volunteer);
     setFormData({
       national_id: volunteer.national_id,
@@ -295,9 +317,7 @@ export default function VolunteersPage() {
     setDocumentEntries(parseDocuments(value));
   };
 
-  const handleDocumentUpload = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleDocumentUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -331,6 +351,7 @@ export default function VolunteersPage() {
   };
 
   const handleSubmit = async () => {
+    if (!assertCanEdit()) return;
     if (!formData.national_id.trim()) {
       alert("תעודת זהות היא שדה חובה");
       return;
@@ -398,6 +419,7 @@ export default function VolunteersPage() {
   };
 
   const handleDelete = async (national_id: string) => {
+    if (!assertCanEdit()) return;
     if (!confirm("האם אתה בטוח שברצונך לבטל את המתנדב?")) return;
 
     try {
@@ -430,14 +452,16 @@ export default function VolunteersPage() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: spacing.xl }}>
       {/* Header */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <div>
@@ -448,41 +472,60 @@ export default function VolunteersPage() {
               מציג {filteredVolunteers.length} מתוך {volunteers.length} מתנדבים
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
+          <Button
+            onClick={handleAdd}
+            disabled={!canEdit}
+            title={canEdit ? undefined : "אין לך הרשאת עריכה בדף זה"}
+          >
             + הוסף מתנדב
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
+
+      {!canEdit && (
+        <div
+          style={{
+            marginBottom: spacing.lg,
+            border: "1px solid #fcd34d",
+            background: "#fffbeb",
+            color: "#92400e",
+            padding: spacing.md,
+            borderRadius: radii.card,
+            fontSize: 13,
+          }}
+        >
+          מצב קריאה בלבד: ניתן לצפות במידע אך לא לערוך או למחוק מתנדבים.
+        </div>
+      )}
 
       {/* Filters */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 12,
+            marginBottom: spacing.md,
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
             🔍 סינון מתנדבים
           </h3>
-          <button
-            style={{
-              ...btnSecondary,
-              fontSize: 12,
-              padding: "6px 10px",
-            }}
+          <Button
+            variant="secondary"
+            style={{ fontSize: 12, padding: "6px 12px" }}
             onClick={clearFilters}
           >
             נקה סינונים
-          </button>
+          </Button>
         </div>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            gap: 12,
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: spacing.md,
           }}
         >
           {/* Filter by kind */}
@@ -543,10 +586,10 @@ export default function VolunteersPage() {
             />
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -628,31 +671,34 @@ export default function VolunteersPage() {
                       : "—"}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: 4 }}
                       onClick={() => handleView(v)}
                       title="צפייה"
                     >
                       👁️
-                    </button>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
-                      onClick={() => handleEdit(v)}
-                      title="עריכה"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      style={{
-                        ...btnSecondary,
-                        color: "#dc2626",
-                        fontSize: 12,
-                      }}
-                      onClick={() => handleDelete(v.national_id)}
-                      title="מחיקה"
-                    >
-                      🗑️
-                    </button>
+                    </Button>
+                    {canEdit && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          style={{ ...smallButtonStyle, marginLeft: 4 }}
+                          onClick={() => handleEdit(v)}
+                          title="עריכה"
+                        >
+                          ✏️
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          style={{ ...smallButtonStyle, color: colors.danger }}
+                          onClick={() => handleDelete(v.national_id)}
+                          title="מחיקה"
+                        >
+                          🗑️
+                        </Button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -679,529 +725,473 @@ export default function VolunteersPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            overflow: "auto",
-            padding: "20px 0",
-          }}
-          onClick={() => setShowModal(false)}
-        >
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(900px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
+          {editingVolunteer ? "ערוך מתנדב" : "הוסף מתנדב חדש"}
+        </h3>
+
+        {/* פרטים אישיים */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            📋 פרטים אישיים
+          </h4>
           <div
             style={{
-              ...cardStyle,
-              width: "min(900px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflow: "auto",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingVolunteer ? "ערוך מתנדב" : "הוסף מתנדב חדש"}
-            </h3>
-
-            {/* פרטים אישיים */}
-            <div
-              style={{
-                marginBottom: 20,
-                padding: 16,
-                background: "#f9fafb",
-                borderRadius: 8,
-              }}
-            >
-              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-                📋 פרטים אישיים
-              </h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>
-                    תעודת זהות <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.national_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, national_id: e.target.value })
-                    }
-                    disabled={!!editingVolunteer}
-                    placeholder="9 ספרות"
-                    maxLength={9}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>
-                    שם מלא <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.full_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, full_name: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>טלפון</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>אימייל</label>
-                  <input
-                    type="email"
-                    style={inputStyle}
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>מקצוע</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.profession}
-                    onChange={(e) =>
-                      setFormData({ ...formData, profession: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+            <div>
+              <label style={labelStyle}>
+                תעודת זהות <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.national_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, national_id: e.target.value })
+                }
+                disabled={!!editingVolunteer}
+                placeholder="9 ספרות"
+                maxLength={9}
+              />
             </div>
-
-            {/* כתובת */}
-            <div
-              style={{
-                marginBottom: 20,
-                padding: 16,
-                background: "#f9fafb",
-                borderRadius: 8,
-              }}
-            >
-              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-                📍 כתובת
-              </h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>רחוב</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.street}
-                    onChange={(e) =>
-                      setFormData({ ...formData, street: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>מספר בית</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.house_number}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        house_number: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>עיר</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.city}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+            <div>
+              <label style={labelStyle}>
+                שם מלא <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.full_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, full_name: e.target.value })
+                }
+              />
             </div>
+            <div>
+              <label style={labelStyle}>טלפון</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>אימייל</label>
+              <input
+                type="email"
+                style={inputStyle}
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>מקצוע</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.profession}
+                onChange={(e) =>
+                  setFormData({ ...formData, profession: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        </div>
 
-            {/* פרטי התנדבות */}
-            <div
-              style={{
-                marginBottom: 20,
-                padding: 16,
-                background: "#f9fafb",
-                borderRadius: 8,
+        {/* כתובת */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            📍 כתובת
+          </h4>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr 1fr",
+              gap: spacing.md,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>רחוב</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.street}
+                onChange={(e) =>
+                  setFormData({ ...formData, street: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>מספר בית</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.house_number}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    house_number: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>עיר</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* פרטי התנדבות */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            🏄 פרטי התנדבות
+          </h4>
+
+          {/* סוג מתנדב */}
+          <div style={{ marginBottom: spacing.md }}>
+            <label style={labelStyle}>סוג מתנדב</label>
+            <select
+              style={inputStyle}
+              value={formData.volunteer_type}
+              onChange={(e) => {
+                setFormData({
+                  ...formData,
+                  volunteer_type: e.target.value,
+                  kind: e.target.value,
+                });
               }}
             >
-              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-                🏄 פרטי התנדבות
-              </h4>
+              <option value="">בחר...</option>
+              {VOLUNTEER_TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              {/* סוג מתנדב */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelStyle}>סוג מתנדב</label>
-                <select
-                  style={inputStyle}
-                  value={formData.volunteer_type}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      volunteer_type: e.target.value,
-                      kind: e.target.value,
-                    });
-                  }}
-                >
-                  <option value="">בחר...</option>
-                  {VOLUNTEER_TYPE_OPTIONS.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* תאריכים ורמת קשר */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: 12,
-                  marginBottom: 12,
-                }}
+          {/* תאריכים ורמת קשר */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: spacing.md,
+              marginBottom: spacing.md,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>תאריך הצטרפות</label>
+              <input
+                type="date"
+                style={inputStyle}
+                value={formData.join_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, join_date: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>תאריך הדרכה</label>
+              <input
+                type="date"
+                style={inputStyle}
+                value={formData.training_date}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    training_date: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>רמת קשר לים</label>
+              <select
+                style={inputStyle}
+                value={formData.sea_connection_level}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    sea_connection_level: e.target.value,
+                  })
+                }
               >
+                <option value="">בחר...</option>
+                {SEA_CONNECTION_LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* שדות נוספים לפי סוג מתנדב */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr",
+              gap: spacing.md,
+            }}
+          >
+            {/* שדות למתנדבי מדיה */}
+            {formData.volunteer_type === "מדיה" && (
+              <>
                 <div>
-                  <label style={labelStyle}>תאריך הצטרפות</label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.join_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, join_date: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>תאריך הדרכה</label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.training_date}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        training_date: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>רמת קשר לים</label>
+                  <label style={labelStyle}>התמחות</label>
                   <select
                     style={inputStyle}
-                    value={formData.sea_connection_level}
+                    value={formData.media_specialization}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        sea_connection_level: e.target.value,
+                        media_specialization: e.target.value,
                       })
                     }
                   >
                     <option value="">בחר...</option>
-                    {SEA_CONNECTION_LEVEL_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
+                    {MEDIA_SPECIALIZATION_OPTIONS.map((spec) => (
+                      <option key={spec} value={spec}>
+                        {spec}
                       </option>
                     ))}
                   </select>
                 </div>
-              </div>
 
-              {/* שדות נוספים לפי סוג מתנדב */}
-              <div
-                style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}
-              >
-                {/* שדות למתנדבי מדיה */}
-                {formData.volunteer_type === "מדיה" && (
-                  <>
-                    <div>
-                      <label style={labelStyle}>התמחות</label>
-                      <select
-                        style={inputStyle}
-                        value={formData.media_specialization}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            media_specialization: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">בחר...</option>
-                        {MEDIA_SPECIALIZATION_OPTIONS.map((spec) => (
-                          <option key={spec} value={spec}>
-                            {spec}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>זמינות</label>
-                      <textarea
-                        style={{
-                          ...inputStyle,
-                          minHeight: 60,
-                          resize: "vertical",
-                        }}
-                        value={formData.availability}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            availability: e.target.value,
-                          })
-                        }
-                        placeholder="למשל: ימי שני-רביעי, 09:00-17:00"
-                      />
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>אתר אישי / פורטפוליו</label>
-                      <input
-                        type="url"
-                        style={inputStyle}
-                        value={formData.personal_website}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            personal_website: e.target.value,
-                          })
-                        }
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* מסמכים - לכל סוגי המתנדבים */}
                 <div>
-                  <label style={labelStyle}>מסמכים מצורפים</label>
-                  <input
-                    type="file"
-                    accept=".pdf,image/*"
-                    onChange={handleDocumentUpload}
-                    style={{ marginBottom: 8 }}
+                  <label style={labelStyle}>זמינות</label>
+                  <textarea
+                    style={{
+                      ...inputStyle,
+                      minHeight: 60,
+                      resize: "vertical",
+                    }}
+                    value={formData.availability}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        availability: e.target.value,
+                      })
+                    }
+                    placeholder="למשל: ימי שני-רביעי, 09:00-17:00"
                   />
-                  <div style={{ fontSize: 12, color: muted, marginBottom: 8 }}>
-                    תמיכה ב-PDF ותמונות. עד 1 קובץ בכל פעם.
-                  </div>
-                  {documentEntries.length > 0 && (
+                </div>
+
+                <div>
+                  <label style={labelStyle}>אתר אישי / פורטפוליו</label>
+                  <input
+                    type="url"
+                    style={inputStyle}
+                    value={formData.personal_website}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        personal_website: e.target.value,
+                      })
+                    }
+                    placeholder="https://..."
+                  />
+                </div>
+              </>
+            )}
+
+            {/* מסמכים - לכל סוגי המתנדבים */}
+            <div>
+              <label style={labelStyle}>מסמכים מצורפים</label>
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                onChange={handleDocumentUpload}
+                style={{ marginBottom: spacing.xs }}
+              />
+              <div
+                style={{ fontSize: 12, color: muted, marginBottom: spacing.xs }}
+              >
+                תמיכה ב-PDF ותמונות. עד 1 קובץ בכל פעם.
+              </div>
+              {documentEntries.length > 0 && (
+                <div
+                  style={{
+                    border: `1px solid ${colors.borderMuted}`,
+                    borderRadius: radii.card,
+                    padding: spacing.md,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                    marginBottom: spacing.sm,
+                    background: colors.surface,
+                  }}
+                >
+                  {documentEntries.map((doc, idx) => (
                     <div
+                      key={`${doc.name}-${idx}`}
                       style={{
-                        border: "1px solid rgba(15,23,42,0.08)",
-                        borderRadius: 8,
-                        padding: 12,
                         display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        marginBottom: 8,
-                        background: "#fff",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: spacing.md,
                       }}
                     >
-                      {documentEntries.map((doc, idx) => (
-                        <div
-                          key={`${doc.name}-${idx}`}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 12,
-                          }}
-                        >
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>{doc.name}</div>
-                            <div style={{ fontSize: 12, color: muted }}>
-                              {doc.mime || "קובץ"}
-                              {doc.uploadedAt
-                                ? ` · ${new Date(
-                                    doc.uploadedAt
-                                  ).toLocaleDateString("he-IL")}`
-                                : ""}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            {buildDocumentDataUrl(doc) && (
-                              <a
-                                href={buildDocumentDataUrl(doc)}
-                                download={doc.name}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  ...btnSecondary,
-                                  fontSize: 12,
-                                  textDecoration: "none",
-                                }}
-                              >
-                                הורד
-                              </a>
-                            )}
-                            <button
-                              style={{
-                                ...btnSecondary,
-                                fontSize: 12,
-                                color: "#dc2626",
-                              }}
-                              onClick={() => handleDocumentRemove(idx)}
-                              type="button"
-                            >
-                              מחק
-                            </button>
-                          </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600 }}>{doc.name}</div>
+                        <div style={{ fontSize: 12, color: muted }}>
+                          {doc.mime || "קובץ"}
+                          {doc.uploadedAt
+                            ? ` · ${new Date(doc.uploadedAt).toLocaleDateString(
+                                "he-IL"
+                              )}`
+                            : ""}
                         </div>
-                      ))}
+                      </div>
+                      <div style={{ display: "flex", gap: spacing.sm }}>
+                        {buildDocumentDataUrl(doc) && (
+                          <a
+                            href={buildDocumentDataUrl(doc)}
+                            download={doc.name}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={secondaryLinkStyle}
+                          >
+                            הורד
+                          </a>
+                        )}
+                        <Button
+                          variant="secondary"
+                          style={{ ...smallButtonStyle, color: colors.danger }}
+                          onClick={() => handleDocumentRemove(idx)}
+                          type="button"
+                        >
+                          מחק
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                  <label style={{ ...labelStyle, marginTop: 8 }}>
-                    מסמכים (JSON - למתקדמים)
-                  </label>
-                  <textarea
-                    style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                    value={formData.documents}
-                    onChange={(e) => handleDocumentsTextChange(e.target.value)}
-                    placeholder='[{"name": "אישור רפואי", "url": "...", "uploadDate": "2024-01-01"}]'
-                  />
-                  <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>
-                    ניתן לערוך ידנית, או להשתמש בשדה העלאה כדי לעדכן את הרשימה
-                    אוטומטית.
-                  </div>
+                  ))}
                 </div>
+              )}
+              <label style={{ ...labelStyle, marginTop: spacing.sm }}>
+                מסמכים (JSON - למתקדמים)
+              </label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+                value={formData.documents}
+                onChange={(e) => handleDocumentsTextChange(e.target.value)}
+                placeholder='[{"name": "אישור רפואי", "url": "...", "uploadDate": "2024-01-01"}]'
+              />
+              <div
+                style={{ fontSize: 11, color: muted, marginTop: spacing.xs }}
+              >
+                ניתן לערוך ידנית, או להשתמש בשדה העלאה כדי לעדכן את הרשימה
+                אוטומטית.
               </div>
-            </div>
-
-            {/* הערות */}
-            <div
-              style={{
-                marginBottom: 20,
-                padding: 16,
-                background: "#f9fafb",
-                borderRadius: 8,
-              }}
-            >
-              <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-                📝 הערות
-              </h4>
-              <div>
-                <label style={labelStyle}>הערות כלליות</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="הערות נוספות..."
-                />
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                justifyContent: "flex-end",
-                marginTop: 20,
-              }}
-            >
-              <button style={btnSecondary} onClick={() => setShowModal(false)}>
-                ביטול
-              </button>
-              <button style={btnPrimary} onClick={handleSubmit}>
-                {editingVolunteer ? "עדכן" : "הוסף"}
-              </button>
             </div>
           </div>
         </div>
-      )}
 
-      {/* מודל צפייה */}
-      {showViewModal && viewingVolunteer && (
+        {/* הערות */}
+        <div style={sectionBoxStyle}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+            📝 הערות
+          </h4>
+          <div>
+            <label style={labelStyle}>הערות כלליות</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              placeholder="הערות נוספות..."
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
         <div
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            overflow: "auto",
-            padding: "20px 0",
+            display: "flex",
+            gap: spacing.md,
+            justifyContent: "flex-end",
+            marginTop: spacing.xl,
           }}
-          onClick={() => setShowViewModal(false)}
         >
-          <div
-            style={{
-              ...cardStyle,
-              width: "min(900px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflow: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
+          <Button
+            variant="secondary"
+            onClick={() => setShowModal(false)}
+            type="button"
           >
+            ביטול
+          </Button>
+          <Button onClick={handleSubmit} type="button">
+            {editingVolunteer ? "עדכן" : "הוסף"}
+          </Button>
+        </div>
+      </Modal>
+
+      {/* מודל צפייה */}
+      <Modal
+        open={showViewModal && !!viewingVolunteer}
+        onClose={() => setShowViewModal(false)}
+        width="min(900px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        {viewingVolunteer && (
+          <>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 20,
+                marginBottom: spacing.lg,
+                gap: spacing.md,
+                flexWrap: "wrap",
               }}
             >
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
                 פרטי מתנדב - {viewingVolunteer.full_name}
               </h3>
-              <button
-                style={btnSecondary}
+              <Button
+                variant="secondary"
                 onClick={() => setShowViewModal(false)}
+                type="button"
               >
                 ✕ סגור
-              </button>
+              </Button>
             </div>
 
             {/* פרטים אישיים */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
               <h4
                 style={{
                   margin: "0 0 12px 0",
                   fontSize: 14,
                   color: muted,
-                  borderBottom: "2px solid #e5e7eb",
-                  paddingBottom: 8,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.sm,
                 }}
               >
                 📋 פרטים אישיים
@@ -1248,14 +1238,14 @@ export default function VolunteersPage() {
             {(viewingVolunteer.street ||
               viewingVolunteer.house_number ||
               viewingVolunteer.city) && (
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
                 <h4
                   style={{
                     margin: "0 0 12px 0",
                     fontSize: 14,
                     color: muted,
-                    borderBottom: "2px solid #e5e7eb",
-                    paddingBottom: 8,
+                    borderBottom: `2px solid ${colors.borderMuted}`,
+                    paddingBottom: spacing.sm,
                   }}
                 >
                   📍 כתובת
@@ -1269,14 +1259,14 @@ export default function VolunteersPage() {
 
             {/* סוג מתנדב ופרטים ספציפיים */}
             {viewingVolunteer.volunteer_type && (
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
                 <h4
                   style={{
                     margin: "0 0 12px 0",
                     fontSize: 14,
                     color: muted,
-                    borderBottom: "2px solid #e5e7eb",
-                    paddingBottom: 8,
+                    borderBottom: `2px solid ${colors.borderMuted}`,
+                    paddingBottom: spacing.sm,
                   }}
                 >
                   🏊 סוג מתנדב
@@ -1324,7 +1314,7 @@ export default function VolunteersPage() {
                             href={viewingVolunteer.personal_website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: "#0ea5e9" }}
+                            style={{ color: colors.accent }}
                           >
                             {viewingVolunteer.personal_website}
                           </a>
@@ -1337,14 +1327,14 @@ export default function VolunteersPage() {
             )}
 
             {/* פרטי התנדבות */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
               <h4
                 style={{
                   margin: "0 0 12px 0",
                   fontSize: 14,
                   color: muted,
-                  borderBottom: "2px solid #e5e7eb",
-                  paddingBottom: 8,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.sm,
                 }}
               >
                 🏄 פרטי התנדבות
@@ -1404,13 +1394,15 @@ export default function VolunteersPage() {
                       style={{
                         display: "inline-block",
                         padding: "4px 8px",
-                        borderRadius: 6,
+                        borderRadius: radii.button,
                         fontSize: 12,
                         fontWeight: 600,
                         background: viewingVolunteer.active
-                          ? "#d1fae5"
-                          : "#fee2e2",
-                        color: viewingVolunteer.active ? "#065f46" : "#991b1b",
+                          ? colors.successSoft
+                          : colors.dangerSoft,
+                        color: viewingVolunteer.active
+                          ? colors.success
+                          : colors.danger,
                       }}
                     >
                       {viewingVolunteer.active ? "פעיל" : "לא פעיל"}
@@ -1422,14 +1414,14 @@ export default function VolunteersPage() {
 
             {/* מסמכים */}
             {viewingDocuments.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
                 <h4
                   style={{
                     margin: "0 0 12px 0",
                     fontSize: 14,
                     color: muted,
-                    borderBottom: "2px solid #e5e7eb",
-                    paddingBottom: 8,
+                    borderBottom: `2px solid ${colors.borderMuted}`,
+                    paddingBottom: spacing.sm,
                   }}
                 >
                   📄 מסמכים
@@ -1438,67 +1430,61 @@ export default function VolunteersPage() {
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: 8,
+                    gap: spacing.sm,
                   }}
                 >
                   {viewingDocuments.map((doc, idx) => (
-                      <div
-                        key={`${doc.name}-${idx}`}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "8px 12px",
-                          borderRadius: 8,
-                          border: "1px solid rgba(15,23,42,0.08)",
-                          background: "#fff",
-                          gap: 12,
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{doc.name}</div>
-                          <div style={{ fontSize: 12, color: muted }}>
-                            {doc.mime || "קובץ"}
-                            {doc.uploadedAt || doc.uploadDate
-                              ? ` · ${new Date(
-                                  doc.uploadedAt || doc.uploadDate!
-                                ).toLocaleDateString("he-IL")}`
-                              : ""}
-                          </div>
+                    <div
+                      key={`${doc.name}-${idx}`}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        borderRadius: radii.card,
+                        border: `1px solid ${colors.borderMuted}`,
+                        background: colors.surfaceAlt,
+                        gap: spacing.md,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{doc.name}</div>
+                        <div style={{ fontSize: 12, color: muted }}>
+                          {doc.mime || "קובץ"}
+                          {doc.uploadedAt || doc.uploadDate
+                            ? ` · ${new Date(
+                                doc.uploadedAt || doc.uploadDate!
+                              ).toLocaleDateString("he-IL")}`
+                            : ""}
                         </div>
-                        {buildDocumentDataUrl(doc) && (
-                          <a
-                            href={buildDocumentDataUrl(doc)}
-                            download={doc.name}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              fontSize: 12,
-                              color: "#0ea5e9",
-                              textDecoration: "none",
-                              fontWeight: 600,
-                            }}
-                          >
-                            הורד
-                          </a>
-                        )}
                       </div>
-                    )
-                  )}
+                      {buildDocumentDataUrl(doc) && (
+                        <a
+                          href={buildDocumentDataUrl(doc)}
+                          download={doc.name}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={secondaryLinkStyle}
+                        >
+                          הורד
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {/* הערות */}
             {viewingVolunteer.notes && (
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
                 <h4
                   style={{
                     margin: "0 0 12px 0",
                     fontSize: 14,
                     color: muted,
-                    borderBottom: "2px solid #e5e7eb",
-                    paddingBottom: 8,
+                    borderBottom: `2px solid ${colors.borderMuted}`,
+                    paddingBottom: spacing.sm,
                   }}
                 >
                   📝 הערות
@@ -1508,9 +1494,9 @@ export default function VolunteersPage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

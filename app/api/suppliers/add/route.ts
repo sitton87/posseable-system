@@ -1,25 +1,59 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { name, contact_name, phone, email, notes, is_active } = body;
+    const permission = await ensurePermissionResponse("suppliers", "write");
+    if (!permission.allowed) return permission.response;
 
-    // Validation
-    if (!name) {
+    const body = await req.json();
+    const {
+      supplier_identifier,
+      identifier_type,
+      name,
+      contact_name,
+      phone,
+      email,
+      notes,
+      is_active,
+    } = body;
+
+    if (!supplier_identifier || !identifier_type || !name) {
       return NextResponse.json(
-        { error: "Name is required" },
+        { error: "Supplier identifier, identifier type and name are required" },
         { status: 400 }
       );
     }
 
     const sql = `
-      INSERT INTO supplier (name, contact_name, phone, email, notes, is_active)
-      VALUES (@name, @contact_name, @phone, @email, @notes, @is_active)
+      INSERT INTO supplier (
+        supplier_identifier,
+        identifier_type,
+        name,
+        contact_name,
+        phone,
+        email,
+        notes,
+        is_active,
+        created_at
+      )
+      VALUES (
+        @supplier_identifier,
+        @identifier_type,
+        @name,
+        @contact_name,
+        @phone,
+        @email,
+        @notes,
+        @is_active,
+        GETDATE()
+      )
     `;
 
     await query(sql, {
+      supplier_identifier,
+      identifier_type,
       name,
       contact_name,
       phone,

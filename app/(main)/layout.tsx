@@ -1,4 +1,5 @@
 import Navbar from "../components/Navbar";
+import { PagePermissionGate } from "../components/PagePermissionGate";
 
 export default function MainLayout({
   children,
@@ -12,7 +13,7 @@ export default function MainLayout({
         className="flex-1 p-6 transition-[margin] duration-300"
         style={{ marginRight: "var(--sidebar-width, 224px)" }}
       >
-        {children}
+        <PagePermissionGate>{children}</PagePermissionGate>
       </main>
     </div>
   );

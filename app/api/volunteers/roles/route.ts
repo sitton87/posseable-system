@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function GET(req: Request) {
   try {
@@ -43,6 +44,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("volunteers", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const { volunteer_national_id, role_id } = body;
 
@@ -75,6 +79,9 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("volunteers", "write");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const volunteer_national_id = searchParams.get("volunteerId");
     const role_id = searchParams.get("roleId");

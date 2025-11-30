@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Surfer,
   GENDER_OPTIONS,
@@ -10,6 +10,8 @@ import {
 import { inputStyle, labelStyle } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import { Button, Card, Modal } from "@/app/components/ui";
+
+type GroupOption = { value: string; label: string };
 
 const muted = colors.textMuted;
 
@@ -21,6 +23,8 @@ export default function SurferPage() {
   const [viewingSurfer, setViewingSurfer] = useState<Surfer | null>(null);
   const [filterProgram, setFilterProgram] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
+  const [groupOptionsLoading, setGroupOptionsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     national_id: "",
@@ -49,6 +53,10 @@ export default function SurferPage() {
     fetchSurfers();
   }, [filterProgram, filterStatus]);
 
+  useEffect(() => {
+    fetchGroupOptions();
+  }, []);
+
   const fetchSurfers = async () => {
     try {
       setLoading(true);
@@ -66,6 +74,39 @@ export default function SurferPage() {
       alert("שגיאה בטעינת גולשים");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const groupOptionsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    groupOptions.forEach((option) => map.set(option.value, option.label));
+    return map;
+  }, [groupOptions]);
+
+  const getGroupDisplayName = (groupId?: string | null, fallbackName?: string | null) => {
+    if (fallbackName) return fallbackName;
+    if (!groupId) return "לא שויכה";
+    return groupOptionsMap.get(groupId) || groupId;
+  };
+
+  const fetchGroupOptions = async () => {
+    try {
+      setGroupOptionsLoading(true);
+      const res = await fetch("/api/groups", { credentials: "include" });
+      const data = await res.json();
+      if (data.success) {
+        const options = (data.groups || [])
+          .filter((group: any) => group?.id && group?.name)
+          .map((group: any) => ({
+            value: group.id,
+            label: group.name,
+          }));
+        setGroupOptions(options);
+      }
+    } catch (err) {
+      console.error("Error fetching groups:", err);
+    } finally {
+      setGroupOptionsLoading(false);
     }
   };
 
@@ -299,6 +340,7 @@ export default function SurferPage() {
                 <th style={{ textAlign: "right", padding: 8 }}>ת.ז.</th>
                 <th style={{ textAlign: "right", padding: 8 }}>שם</th>
                 <th style={{ textAlign: "center", padding: 8 }}>תוכנית</th>
+                <th style={{ textAlign: "center", padding: 8 }}>קבוצה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
                 <th style={{ textAlign: "center", padding: 8 }}>גיל</th>
                 <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
@@ -331,6 +373,9 @@ export default function SurferPage() {
                   </td>
                   <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
                     {s.program || "—"}
+                  </td>
+                  <td style={{ textAlign: "center", padding: 8, color: muted }}>
+                    {getGroupDisplayName(s.group_id, s.group_name || null)}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     <span
@@ -405,7 +450,7 @@ export default function SurferPage() {
               {surfers.length === 0 && (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     style={{ textAlign: "center", padding: 20, color: muted }}
                   >
                     אין גולשים במערכת. לחץ על "הוסף גולש" להתחיל.
@@ -555,15 +600,22 @@ export default function SurferPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>קבוצה (אופציונלי)</label>
-                  <input
-                    type="text"
+                  <select
                     style={inputStyle}
                     value={formData.group_id}
                     onChange={(e) =>
                       setFormData({ ...formData, group_id: e.target.value })
                     }
-                    placeholder="מזהה קבוצה (GUID)"
-                  />
+                  >
+                    <option value="">
+                      {groupOptionsLoading ? "טוען קבוצות..." : "לא שויכה"}
+                    </option>
+                    {groupOptions.map((group) => (
+                      <option key={group.value} value={group.value}>
+                        {group.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -854,7 +906,10 @@ export default function SurferPage() {
               <InfoRow label="סטטוס" value={viewingSurfer.status || "—"} />
               <InfoRow
                 label="קבוצה"
-                value={viewingSurfer.group_id || "לא שויכה"}
+                value={getGroupDisplayName(
+                  viewingSurfer.group_id,
+                  viewingSurfer.group_name || null
+                )}
               />
               <InfoRow
                 label="מתנדבים נדרשים"

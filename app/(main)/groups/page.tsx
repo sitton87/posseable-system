@@ -1,115 +1,151 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Group, GROUP_STATUS_OPTIONS } from "@/type";
+import type { CSSProperties, ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { Group, SeasonPlan, Surfer } from "@/type";
+import { GROUP_STATUS_OPTIONS } from "@/type";
+import { Button, Card, Modal } from "@/app/components/ui";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, radii, spacing } from "@/app/styles/foundations";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+type GroupWithSurfers = Group & { surfers?: Surfer[] };
+
+type GroupFormState = {
+  name: string;
+  description: string;
+  season_id: string;
+  start_season_id: string;
+  additional_seasons: string[];
+  min_participants: string;
+  max_participants: string;
+  status: string;
+  is_active: boolean;
+  notes: string;
 };
 
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+
+const statusStyles: Record<string, { background: string; color: string }> = {
+  פעיל: { background: colors.successSoft, color: colors.success },
+  מלא: { background: colors.primarySoft, color: colors.primary },
+  סגור: { background: colors.dangerSoft, color: colors.danger },
+  הושהה: { background: colors.warningSoft, color: colors.warning },
 };
 
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
+const smallButtonStyle: CSSProperties = {
+  fontSize: 12,
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
 };
 
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
+const sectionBoxStyle: CSSProperties = {
+  padding: spacing.md,
+  borderRadius: radii.card,
+  border: `1px solid ${colors.borderMuted}`,
+  background: colors.surface,
 };
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
+const createEmptyFormState = (): GroupFormState => ({
+  name: "",
+  description: "",
+  season_id: "",
+  start_season_id: "",
+  additional_seasons: [],
+  min_participants: "",
+  max_participants: "",
+  status: GROUP_STATUS_OPTIONS[0],
+  is_active: true,
+  notes: "",
+});
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
+const parseAdditionalSeasonsValue = (value?: string | null): string[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => item.toString());
+    }
+  } catch {
+    // ignore and fallback to string parsing
+  }
+  return value
+    .split(",")
+    .map((val) => val.trim())
+    .filter(Boolean);
 };
 
 export default function GroupsPage() {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupWithSurfers[]>([]);
+  const [seasons, setSeasons] = useState<SeasonPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seasonLoading, setSeasonLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    season_id: "",
-    min_participants: "",
-    max_participants: "",
-    status: "פעיל",
-    is_active: true,
-    notes: "",
-  });
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<GroupWithSurfers | null>(null);
+  const [viewingGroup, setViewingGroup] = useState<GroupWithSurfers | null>(null);
+  const [formData, setFormData] = useState<GroupFormState>(createEmptyFormState());
 
   useEffect(() => {
-    fetchGroups();
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([fetchGroups(), fetchSeasons()]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   const fetchGroups = async () => {
     try {
-      setLoading(true);
-      const res = await fetch("/api/groups");
+      const res = await fetch("/api/groups?includeSurfers=true", {
+        credentials: "include",
+      });
       const data = await res.json();
       if (data.success) {
         setGroups(data.groups);
+      } else {
+        console.error(data.error || "Failed to load groups");
       }
     } catch (err) {
       console.error("Error fetching groups:", err);
       alert("שגיאה בטעינת קבוצות");
+    }
+  };
+
+  const fetchSeasons = async () => {
+    try {
+      setSeasonLoading(true);
+      const res = await fetch("/api/seasons", { credentials: "include" });
+      const data = await res.json();
+      if (data.success) {
+        setSeasons(data.seasons);
+      }
+    } catch (err) {
+      console.error("Error fetching seasons:", err);
     } finally {
-      setLoading(false);
+      setSeasonLoading(false);
     }
   };
 
   const handleAdd = () => {
     setEditingGroup(null);
-    setFormData({
-      name: "",
-      description: "",
-      season_id: "",
-      min_participants: "",
-      max_participants: "",
-      status: "פעיל",
-      is_active: true,
-      notes: "",
-    });
+    setFormData(createEmptyFormState());
     setShowModal(true);
   };
 
-  const handleEdit = (group: Group) => {
+  const handleEdit = (group: GroupWithSurfers) => {
     setEditingGroup(group);
     setFormData({
       name: group.name,
       description: group.description || "",
       season_id: group.season_id.toString(),
-      min_participants: group.min_participants.toString(),
-      max_participants: group.max_participants.toString(),
+      start_season_id: group.start_season_id ? group.start_season_id.toString() : "",
+      additional_seasons: parseAdditionalSeasonsValue(group.additional_seasons),
+      min_participants: group.min_participants?.toString() || "",
+      max_participants: group.max_participants?.toString() || "",
       status: group.status,
       is_active: group.is_active,
       notes: group.notes || "",
@@ -117,9 +153,24 @@ export default function GroupsPage() {
     setShowModal(true);
   };
 
+  const handleView = (group: GroupWithSurfers) => {
+    setViewingGroup(group);
+    setShowViewModal(true);
+  };
+
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setViewingGroup(null);
+  };
+
+  const handleAdditionalSeasonsChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(event.target.selectedOptions).map((option) => option.value);
+    setFormData((prev) => ({ ...prev, additional_seasons: selected }));
+  };
+
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.season_id) {
-      alert("שם הקבוצה ומזהה עונה הם שדות חובה");
+      alert("שם הקבוצה ומזהה העונה הם שדות חובה");
       return;
     }
 
@@ -128,14 +179,20 @@ export default function GroupsPage() {
       const method = editingGroup ? "PUT" : "POST";
 
       const body: any = {
-        name: formData.name,
-        description: formData.description || null,
-        season_id: parseInt(formData.season_id),
-        min_participants: parseInt(formData.min_participants) || 0,
-        max_participants: parseInt(formData.max_participants) || 0,
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        season_id: parseInt(formData.season_id, 10),
+        start_season_id: formData.start_season_id
+          ? parseInt(formData.start_season_id, 10)
+          : null,
+        additional_seasons: formData.additional_seasons.map((seasonId) =>
+          parseInt(seasonId, 10)
+        ),
+        min_participants: parseInt(formData.min_participants || "0", 10),
+        max_participants: parseInt(formData.max_participants || "0", 10),
         status: formData.status,
         is_active: formData.is_active,
-        notes: formData.notes || null,
+        notes: formData.notes.trim() || null,
       };
 
       if (editingGroup) {
@@ -145,6 +202,7 @@ export default function GroupsPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
 
@@ -153,7 +211,7 @@ export default function GroupsPage() {
       if (data.success) {
         alert(editingGroup ? "קבוצה עודכנה בהצלחה!" : "קבוצה נוספה בהצלחה!");
         setShowModal(false);
-        fetchGroups();
+        await fetchGroups();
       } else {
         alert("שגיאה: " + data.error);
       }
@@ -169,6 +227,7 @@ export default function GroupsPage() {
     try {
       const res = await fetch(`/api/groups/update?id=${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
       const data = await res.json();
 
@@ -184,41 +243,83 @@ export default function GroupsPage() {
     }
   };
 
+  const getSeasonLabel = (group: GroupWithSurfers) => {
+    if (group.season_name) {
+      return `${group.season_name} · ${group.season_year || ""}`.trim();
+    }
+
+    const match = seasons.find((season) => season.id === group.season_id);
+    if (match) {
+      return `${match.name} · ${match.year}`;
+    }
+    return `עונה ${group.season_id}`;
+  };
+
+  const seasonOptions = useMemo(
+    () =>
+      seasons.map((season) => ({
+        value: season.id.toString(),
+        label: `${season.name} · ${season.year}`,
+      })),
+    [seasons]
+  );
+
+  const getSeasonLabelById = (id?: number | null) => {
+    if (!id) return null;
+    const match = seasons.find((season) => season.id === id);
+    return match ? `${match.name} · ${match.year}` : `עונה ${id}`;
+  };
+
+  const getAdditionalSeasonLabels = (value?: string | null) => {
+    const ids = parseAdditionalSeasonsValue(value).map((seasonId) =>
+      parseInt(seasonId, 10)
+    );
+    return ids
+      .map((seasonId) => getSeasonLabelById(seasonId))
+      .filter((label): label is string => Boolean(label));
+  };
+
+  const viewingGroupStartSeasonLabel = viewingGroup
+    ? getSeasonLabelById(viewingGroup.start_season_id)
+    : null;
+
+  const viewingGroupAdditionalSeasonLabels = viewingGroup
+    ? getAdditionalSeasonLabels(viewingGroup.additional_seasons)
+    : [];
+
   if (loading) {
     return (
-      <div style={{ padding: 20, textAlign: "center" }}>
+      <div style={{ padding: spacing.xl, textAlign: "center" }}>
         <div>טוען קבוצות...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      {/* Header */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+    <div style={{ padding: spacing.xl }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
               👥 ניהול קבוצות
             </h2>
-            <div style={{ color: muted, fontSize: 13, marginTop: 4 }}>
+            <div style={{ color: muted, fontSize: 13, marginTop: px(2) }}>
               סה״כ {groups.length} קבוצות במערכת
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
-            + הוסף קבוצה
-          </button>
+          <Button onClick={handleAdd}>+ הוסף קבוצה</Button>
         </div>
-      </div>
+      </Card>
 
-      {/* Groups Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -227,7 +328,7 @@ export default function GroupsPage() {
               borderSpacing: "0 8px",
             }}
           >
-            <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
+            <thead style={{ borderBottom: `2px solid ${colors.borderMuted}` }}>
               <tr style={{ color: muted, fontSize: 13 }}>
                 <th style={{ textAlign: "right", padding: 8 }}>שם הקבוצה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>עונה</th>
@@ -240,74 +341,74 @@ export default function GroupsPage() {
               </tr>
             </thead>
             <tbody>
-              {groups.map((g) => (
+              {groups.map((group) => (
                 <tr
-                  key={g.id}
-                  style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
+                  key={group.id}
+                  style={{ borderTop: `1px solid ${colors.borderMuted}` }}
                 >
-                  <td style={{ padding: 8, fontWeight: 600 }}>{g.name}</td>
+                  <td style={{ padding: 8, fontWeight: 600 }}>{group.name}</td>
                   <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {g.season_name || `עונה ${g.season_id}`}
+                    {getSeasonLabel(group)}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <span className="font-bold text-blue-600">
-                      {g.current_participants}
+                    <span style={{ fontWeight: 700, color: colors.primary }}>
+                      {group.current_participants ?? 0}
                     </span>
                   </td>
                   <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {g.min_participants}
+                    {group.min_participants}
                   </td>
                   <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {g.max_participants}
+                    {group.max_participants}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     <span
                       style={{
-                        padding: "4px 8px",
-                        borderRadius: 6,
+                        display: "inline-block",
+                        padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+                        borderRadius: radii.button,
                         fontSize: 12,
                         fontWeight: 600,
-                        background:
-                          g.status === "פעיל"
-                            ? "rgba(34, 197, 94, 0.1)"
-                            : g.status === "מלא"
-                            ? "rgba(59, 130, 246, 0.1)"
-                            : g.status === "סגור"
-                            ? "rgba(239, 68, 68, 0.1)"
-                            : "rgba(251, 191, 36, 0.1)",
-                        color:
-                          g.status === "פעיל"
-                            ? "#16a34a"
-                            : g.status === "מלא"
-                            ? "#2563eb"
-                            : g.status === "סגור"
-                            ? "#dc2626"
-                            : "#d97706",
+                        ...(statusStyles[group.status] || {
+                          background: colors.borderMuted,
+                          color: colors.textPrimary,
+                        }),
                       }}
                     >
-                      {g.status}
+                      {group.status}
                     </span>
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    {g.is_active ? "✅" : "❌"}
+                    {group.is_active ? "✅" : "❌"}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
-                      onClick={() => handleEdit(g)}
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: spacing.xs }}
+                      onClick={() => handleView(group)}
+                      title="צפייה בקבוצה"
+                      aria-label="צפייה"
+                    >
+                      👁️
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: spacing.xs }}
+                      onClick={() => handleEdit(group)}
+                      title="עריכת קבוצה"
+                      aria-label="עריכה"
                     >
                       ✏️
-                    </button>
-                    <button
-                      style={{
-                        ...btnSecondary,
-                        color: "#dc2626",
-                        fontSize: 12,
-                      }}
-                      onClick={() => handleDelete(g.id)}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, color: colors.danger }}
+                      onClick={() => handleDelete(group.id)}
+                      title="מחיקת קבוצה"
+                      aria-label="מחיקה"
                     >
                       🗑️
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -324,187 +425,389 @@ export default function GroupsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
-      {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowModal(false)}
-        >
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(720px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
+          {editingGroup ? "ערוך קבוצה" : "הוסף קבוצה חדשה"}
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+          <div>
+            <label style={labelStyle}>
+              שם הקבוצה <span style={{ color: colors.danger }}>*</span>
+            </label>
+            <input
+              type="text"
+              style={inputStyle}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="למשל: קבוצת ילדים א׳"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>תיאור</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="תיאור הקבוצה..."
+            />
+          </div>
+
           <div
             style={{
-              ...cardStyle,
-              width: "min(700px, 90vw)",
-              padding: 24,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: spacing.md,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingGroup ? "ערוך קבוצה" : "הוסף קבוצה חדשה"}
-            </h3>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>
-                  שם הקבוצה <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="למשל: קבוצת ילדים א׳"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>תיאור</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="תיאור הקבוצה..."
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: 12,
+            <div>
+              <label style={labelStyle}>
+                עונה <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <select
+                style={inputStyle}
+                value={formData.season_id}
+                onChange={(e) => {
+                  const nextSeason = e.target.value;
+                  setFormData((prev) => ({
+                    ...prev,
+                    season_id: nextSeason,
+                    additional_seasons: filterAdditionalSelection(
+                      prev.additional_seasons,
+                      nextSeason
+                    ),
+                  }));
                 }}
               >
-                <div>
-                  <label style={labelStyle}>
-                    מזהה עונה <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    style={inputStyle}
-                    value={formData.season_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, season_id: e.target.value })
-                    }
-                    placeholder="1"
-                  />
-                </div>
+                <option value="">
+                  {seasonLoading ? "טוען עונות..." : "בחר עונה"}
+                </option>
+                {seasonOptions.map((season) => (
+                  <option key={season.value} value={season.value}>
+                    {season.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>מינימום משתתפים</label>
+              <input
+                type="number"
+                style={inputStyle}
+                min="0"
+                value={formData.min_participants}
+                onChange={(e) =>
+                  setFormData({ ...formData, min_participants: e.target.value })
+                }
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>מקסימום משתתפים</label>
+              <input
+                type="number"
+                style={inputStyle}
+                min="0"
+                value={formData.max_participants}
+                onChange={(e) =>
+                  setFormData({ ...formData, max_participants: e.target.value })
+                }
+                placeholder="30"
+              />
+            </div>
+          </div>
 
-                <div>
-                  <label style={labelStyle}>מינימום משתתפים</label>
-                  <input
-                    type="number"
-                    style={inputStyle}
-                    value={formData.min_participants}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        min_participants: e.target.value,
-                      })
-                    }
-                    placeholder="5"
-                    min="0"
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>מקסימום משתתפים</label>
-                  <input
-                    type="number"
-                    style={inputStyle}
-                    value={formData.max_participants}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        max_participants: e.target.value,
-                      })
-                    }
-                    placeholder="20"
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>סטטוס הקבוצה</label>
-                <select
-                  style={inputStyle}
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                >
-                  {GROUP_STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: spacing.md,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>עונת תחילת פעילות</label>
+              <select
+                style={inputStyle}
+                value={formData.start_season_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, start_season_id: e.target.value })
+                }
+              >
+                <option value="">לא נבחר</option>
+                {seasonOptions.map((season) => (
+                  <option key={season.value} value={season.value}>
+                    {season.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>עונות נוספות</label>
+              <select
+                multiple
+                style={{ ...inputStyle, minHeight: 110 }}
+                value={formData.additional_seasons}
+                onChange={handleAdditionalSeasonsChange}
+              >
+                {seasonOptions
+                  .filter((season) => season.value !== formData.season_id)
+                  .map((season) => (
+                    <option key={season.value} value={season.value}>
+                      {season.label}
                     </option>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>הערות</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="הערות נוספות..."
-                />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  id="active"
-                  checked={formData.is_active}
-                  onChange={(e) =>
-                    setFormData({ ...formData, is_active: e.target.checked })
-                  }
-                />
-                <label
-                  htmlFor="active"
-                  style={{ fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-                >
-                  קבוצה פעילה
-                </label>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 8,
-                  justifyContent: "flex-end",
-                }}
-              >
-                <button
-                  style={btnSecondary}
-                  onClick={() => setShowModal(false)}
-                >
-                  ביטול
-                </button>
-                <button style={btnPrimary} onClick={handleSubmit}>
-                  {editingGroup ? "עדכן" : "הוסף"}
-                </button>
+              </select>
+              <div style={{ fontSize: 12, color: muted, marginTop: px(4) }}>
+                ניתן לבחור כמה עונות נוספות (Ctrl / Cmd + קליק).
               </div>
             </div>
           </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
+            }}
+          >
+            <div>
+              <label style={labelStyle}>סטטוס</label>
+              <select
+                style={inputStyle}
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({ ...formData, status: e.target.value })
+                }
+              >
+                {GROUP_STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacing.sm,
+                marginTop: spacing.xl,
+              }}
+            >
+              <input
+                type="checkbox"
+                id="group_active"
+                checked={formData.is_active}
+                onChange={(e) =>
+                  setFormData({ ...formData, is_active: e.target.checked })
+                }
+              />
+              <label
+                htmlFor="group_active"
+                style={{ fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                קבוצה פעילה
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>הערות</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="הערות נוספות..."
+            />
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.md,
+              marginTop: spacing.sm,
+              justifyContent: "flex-end",
+            }}
+          >
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setShowModal(false)}
+            >
+              ביטול
+            </Button>
+            <Button type="button" onClick={handleSubmit}>
+              {editingGroup ? "עדכן" : "הוסף"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
+
+      <Modal
+        open={showViewModal && !!viewingGroup}
+        onClose={closeViewModal}
+        width="min(720px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        {viewingGroup && (
+          <>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: spacing.md,
+                marginBottom: spacing.md,
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                פרטי קבוצה – {viewingGroup.name}
+              </h3>
+              <Button variant="secondary" type="button" onClick={closeViewModal}>
+                ✕ סגור
+              </Button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+              <div style={sectionBoxStyle}>
+                <h4 style={{ margin: "0 0 8px 0", color: muted }}>פרטים כלליים</h4>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: spacing.md,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>עונה</div>
+                    <div>{getSeasonLabel(viewingGroup)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginTop: px(4),
+                        padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+                        borderRadius: radii.button,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        ...(statusStyles[viewingGroup.status] || {
+                          background: colors.borderMuted,
+                          color: colors.textPrimary,
+                        }),
+                      }}
+                    >
+                      {viewingGroup.status}
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>עונת תחילת פעילות</div>
+                    <div>{viewingGroupStartSeasonLabel || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>עונות נוספות</div>
+                    <div>
+                      {viewingGroupAdditionalSeasonLabels.length > 0 ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: spacing.xs,
+                            marginTop: px(4),
+                          }}
+                        >
+                          {viewingGroupAdditionalSeasonLabels.map((label) => (
+                            <span
+                              key={label}
+                              style={{
+                                padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+                                borderRadius: radii.button,
+                                background: colors.surfaceAlt,
+                                border: `1px solid ${colors.borderMuted}`,
+                                fontSize: 12,
+                              }}
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>משתתפים (נוכחי)</div>
+                    <div style={{ fontWeight: 700 }}>
+                      {viewingGroup.current_participants ?? 0}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>טווח משתתפים</div>
+                    <div>
+                      {viewingGroup.min_participants} - {viewingGroup.max_participants}
+                    </div>
+                  </div>
+                </div>
+                {viewingGroup.description && (
+                  <p style={{ marginTop: spacing.md }}>{viewingGroup.description}</p>
+                )}
+              </div>
+
+              <div style={sectionBoxStyle}>
+                <h4 style={{ margin: "0 0 8px 0", color: muted }}>
+                  גולשים משויכים ({viewingGroup.surfers?.length || 0})
+                </h4>
+                {viewingGroup.surfers && viewingGroup.surfers.length > 0 ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: spacing.sm,
+                    }}
+                  >
+                    {viewingGroup.surfers.map((surfer) => (
+                      <div
+                        key={surfer.national_id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: spacing.sm,
+                          padding: `${px(spacing.xs)} 0`,
+                          borderBottom: `1px solid ${colors.borderMuted}`,
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>{surfer.full_name}</div>
+                        <div style={{ fontSize: 12, color: muted }}>
+                          {surfer.phone || "—"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: muted, fontSize: 13 }}>
+                    אין גולשים משויכים לקבוצה זו.
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
-

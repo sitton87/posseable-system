@@ -52,6 +52,7 @@ type EmailPayload = {
   nationalId?: string;
   inviteUrl?: string;
   isTest?: boolean;
+  context?: "welcome" | "reset";
 };
 
 function buildHtmlBody({
@@ -61,13 +62,18 @@ function buildHtmlBody({
   inviteUrl,
   isTest,
   to,
+  context = "welcome",
 }: EmailPayload) {
   const headline = isTest
     ? "בדיקת שליחה - מערכת Posseable"
+    : context === "reset"
+    ? "איפוס סיסמה למערכת Posseable"
     : "ברוכים הבאים למערכת Posseable";
 
   const instructions = isTest
     ? "זהו מייל בדיקה כדי לוודא שהחיבור ל-Gmail פועל."
+    : context === "reset"
+    ? "קיבלנו בקשה לאפס את הסיסמה שלך. מצורפת סיסמה זמנית חדשה שתאפשר כניסה ראשונית."
     : "סיימנו להקים עבורך משתמש חדש במערכת Posseable.";
 
   return `

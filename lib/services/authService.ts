@@ -5,7 +5,7 @@ export async function findUserByCredentials(
   email: string
 ) {
   return await query(
-    `SELECT national_id, full_name, email, password_hash, must_reset, role
+    `SELECT national_id, full_name, email, password_hash, must_reset, role, role_group_code
      FROM app_user
      WHERE national_id = @id AND email = @mail`,
     { id: national_id, mail: email }
@@ -23,7 +23,7 @@ export async function updatePassword(national_id: string, hash: string) {
 
 export async function getUserBasicInfo(national_id: string) {
   return await query(
-    `SELECT national_id, full_name, role
+    `SELECT national_id, full_name, role, role_group_code
      FROM app_user
      WHERE national_id = @id`,
     { id: national_id }

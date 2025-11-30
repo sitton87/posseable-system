@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function POST(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("groups", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const {
       name,
       description,
       season_id,
+      start_season_id,
+      additional_seasons,
       min_participants,
       max_participants,
       status,
@@ -24,13 +30,31 @@ export async function POST(req: Request) {
     }
 
     const sql = `
-      INSERT INTO [groups] (
-        name, description, season_id, min_participants, max_participants,
-        current_participants, status, is_active, notes
+      INSERT INTO [group] (
+        name,
+        description,
+        season_id,
+        start_season_id,
+        additional_seasons,
+        min_participants,
+        max_participants,
+        current_participants,
+        status,
+        is_active,
+        notes
       )
       VALUES (
-        @name, @description, @season_id, @min_participants, @max_participants,
-        0, @status, @is_active, @notes
+        @name,
+        @description,
+        @season_id,
+        @start_season_id,
+        @additional_seasons,
+        @min_participants,
+        @max_participants,
+        0,
+        @status,
+        @is_active,
+        @notes
       )
     `;
 
@@ -38,6 +62,11 @@ export async function POST(req: Request) {
       name,
       description,
       season_id,
+      start_season_id,
+      additional_seasons:
+        Array.isArray(additional_seasons) && additional_seasons.length > 0
+          ? JSON.stringify(additional_seasons)
+          : additional_seasons || null,
       min_participants: min_participants || 0,
       max_participants: max_participants || 0,
       status: status || "פעיל",

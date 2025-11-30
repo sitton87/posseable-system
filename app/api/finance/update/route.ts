@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { Buffer } from "buffer";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 type DonorShareInput = { donor_id: string; amount: number };
 
 export async function PUT(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("finance", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const {
       id,
@@ -163,6 +167,9 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("finance", "write");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 

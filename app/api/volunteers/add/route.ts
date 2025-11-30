@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function POST(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("volunteers", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const {
       national_id,

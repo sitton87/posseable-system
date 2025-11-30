@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function PUT(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("groups", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const {
       id,
       name,
       description,
       season_id,
+      start_season_id,
+      additional_seasons,
       min_participants,
       max_participants,
       status,
@@ -24,11 +30,13 @@ export async function PUT(req: Request) {
     }
 
     const sql = `
-      UPDATE [groups]
+      UPDATE [group]
       SET
         name = @name,
         description = @description,
         season_id = @season_id,
+        start_season_id = @start_season_id,
+        additional_seasons = @additional_seasons,
         min_participants = @min_participants,
         max_participants = @max_participants,
         status = @status,
@@ -43,6 +51,11 @@ export async function PUT(req: Request) {
       name,
       description,
       season_id,
+      start_season_id,
+      additional_seasons:
+        Array.isArray(additional_seasons) && additional_seasons.length > 0
+          ? JSON.stringify(additional_seasons)
+          : additional_seasons || null,
       min_participants,
       max_participants,
       status,
@@ -62,6 +75,9 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("groups", "write");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -73,7 +89,7 @@ export async function DELETE(req: Request) {
     }
 
     // Soft delete - mark as inactive
-    const sql = `UPDATE [groups] SET is_active = 0, updated_at = GETDATE() WHERE id = @id`;
+    const sql = `UPDATE [group] SET is_active = 0, updated_at = GETDATE() WHERE id = @id`;
     await query(sql, { id });
 
     return NextResponse.json({ success: true });

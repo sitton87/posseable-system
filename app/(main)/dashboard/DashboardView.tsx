@@ -1,22 +1,110 @@
-"use client";
+﻿"use client";
 
-import React, { useState, useEffect } from "react";
-import clsx from "clsx";
+import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
+import { Card } from "@/app/components/ui";
+import { colors, spacing, radii, shadows } from "@/app/styles/foundations";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 20,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+
+const layoutStyle: CSSProperties = {
+  padding: spacing.xl,
+  display: "flex",
+  flexDirection: "column",
+  gap: spacing.lg,
+};
+
+const headerStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: px(spacing.xs),
+};
+
+const headingStyle: CSSProperties = {
+  margin: 0,
+  fontSize: px(28),
+  fontWeight: 800,
+  color: colors.textPrimary,
+};
+
+const statGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  gap: spacing.lg,
+};
+
+const detailGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: spacing.lg,
+};
+
+const statCardStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: spacing.md,
+  padding: spacing.lg,
+};
+
+const statValueStyle: CSSProperties = {
+  fontSize: px(28),
+  fontWeight: 800,
+};
+
+const statMetaStyle: CSSProperties = {
+  fontSize: px(13),
+  color: muted,
+  display: "flex",
+  justifyContent: "space-between",
+  marginBottom: px(4),
+};
+
+const detailListStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: spacing.sm,
+};
+
+const detailItemStyle: CSSProperties = {
+  padding: spacing.md,
+  borderRadius: radii.card,
+  border: `1px solid ${colors.borderMuted}`,
+  background: colors.surfaceAlt,
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+};
+
+const quickActionsGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+  gap: spacing.md,
+  marginTop: spacing.md,
+};
+
+const quickActionStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: px(spacing.xs),
+  padding: spacing.lg,
+  borderRadius: radii.card,
+  border: `1px solid ${colors.borderMuted}`,
+  textDecoration: "none",
+  fontWeight: 600,
+  transition: "transform 0.15s ease, box-shadow 0.15s ease",
 };
 
 type DashboardStats = {
   volunteers: { total: number; active: number };
   surfers: { total: number; active: number; byProgram: Record<string, number> };
-  activities: { total: number; upcoming: number; byKind: Record<string, number> };
+  activities: {
+    total: number;
+    upcoming: number;
+    byKind: Record<string, number>;
+  };
   equipment: { total: number; needsRepair: number };
   donors: { total: number; active: number };
   suppliers: { total: number; active: number };
@@ -45,262 +133,339 @@ export default function DashboardView() {
     }
   };
 
+  const quickActions = [
+    {
+      href: "/volunteers",
+      label: "הוסף מתנדב",
+      icon: "👥",
+      background: colors.primarySoft,
+      color: colors.primary,
+    },
+    {
+      href: "/surfers",
+      label: "הוסף גולש",
+      icon: "🏄",
+      background: colors.surfaceAlt,
+      color: colors.accent,
+    },
+    {
+      href: "/activities",
+      label: "תזמן פעילות",
+      icon: "📅",
+      background: colors.primarySoft,
+      color: colors.primary,
+    },
+    {
+      href: "/equipment",
+      label: "נהל ציוד",
+      icon: "🛠️",
+      background: colors.successSoft,
+      color: colors.success,
+    },
+  ];
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center">טוען נתונים...</div>
+      <div style={layoutStyle}>
+        <div style={{ textAlign: "center", color: muted }}>טוען נתונים...</div>
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="p-6">
-        <div className="text-center text-red-600">שגיאה בטעינת נתונים</div>
+      <div style={layoutStyle}>
+        <div style={{ textAlign: "center", color: colors.danger }}>
+          שגיאה בטעינת נתונים
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          ברוך הבא למערכת Posseable! 👋
-        </h1>
-        <p className="text-gray-600 mt-2">סקירה כללית של המערכת</p>
+    <div style={layoutStyle}>
+      <div style={headerStyle}>
+        <h1 style={headingStyle}>ברוך הבא למערכת PosSEAble</h1>
+        <p style={{ margin: 0, color: muted }}>סקירה כללית של המערכת</p>
       </div>
 
-      {/* Main Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {/* Volunteers */}
-        <div style={cardStyle}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">🏃 מתנדבים</h3>
-            <span className="text-3xl font-bold text-blue-600">
+      <div style={statGridStyle}>
+        <Card style={statCardStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
+              🏃 מתנדבים
+            </h3>
+            <span style={{ ...statValueStyle, color: colors.primary }}>
               {stats.volunteers.total}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between mb-1">
+          <div>
+            <div style={statMetaStyle}>
               <span>פעילים:</span>
-              <span className="font-semibold text-green-600">
+              <span style={{ color: colors.success, fontWeight: 700 }}>
                 {stats.volunteers.active}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div style={statMetaStyle}>
               <span>לא פעילים:</span>
-              <span className="font-semibold text-gray-500">
-                {stats.volunteers.total - stats.volunteers.active}
-              </span>
+              <span>{stats.volunteers.total - stats.volunteers.active}</span>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Surfers */}
-        <div style={cardStyle}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">🏄 גולשים</h3>
-            <span className="text-3xl font-bold text-cyan-600">
+        <Card style={statCardStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
+              🏄 גולשים
+            </h3>
+            <span style={{ ...statValueStyle, color: colors.accent }}>
               {stats.surfers.total}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between mb-1">
+          <div>
+            <div style={statMetaStyle}>
               <span>פעילים:</span>
-              <span className="font-semibold text-green-600">
+              <span style={{ color: colors.success, fontWeight: 700 }}>
                 {stats.surfers.active}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div style={statMetaStyle}>
               <span>לא פעילים:</span>
-              <span className="font-semibold text-gray-500">
-                {stats.surfers.total - stats.surfers.active}
-              </span>
+              <span>{stats.surfers.total - stats.surfers.active}</span>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Activities */}
-        <div style={cardStyle}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">📅 פעילויות</h3>
-            <span className="text-3xl font-bold text-purple-600">
+        <Card style={statCardStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
+              📅 פעילויות
+            </h3>
+            <span style={{ ...statValueStyle, color: colors.primary }}>
               {stats.activities.total}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between mb-1">
+          <div>
+            <div style={statMetaStyle}>
               <span>קרובות:</span>
-              <span className="font-semibold text-orange-600">
+              <span style={{ color: colors.warning, fontWeight: 700 }}>
                 {stats.activities.upcoming}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span>סה"כ:</span>
-              <span className="font-semibold">{stats.activities.total}</span>
+            <div style={statMetaStyle}>
+              <span>סה&quot;כ:</span>
+              <span>{stats.activities.total}</span>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Equipment */}
-        <div style={cardStyle}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">🛠️ ציוד</h3>
-            <span className="text-3xl font-bold text-green-600">
+        <Card style={statCardStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
+              🛠️ ציוד
+            </h3>
+            <span style={{ ...statValueStyle, color: colors.success }}>
               {stats.equipment.total}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between mb-1">
+          <div>
+            <div style={statMetaStyle}>
               <span>תקין:</span>
-              <span className="font-semibold text-green-600">
+              <span style={{ color: colors.success, fontWeight: 700 }}>
                 {stats.equipment.total - stats.equipment.needsRepair}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div style={statMetaStyle}>
               <span>דורש תיקון:</span>
-              <span className="font-semibold text-red-600">
+              <span style={{ color: colors.danger }}>
                 {stats.equipment.needsRepair}
               </span>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Donors */}
-        <div style={cardStyle}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">❤️ תורמים</h3>
-            <span className="text-3xl font-bold text-pink-600">
+        <Card style={statCardStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
+              ❤️ תורמים
+            </h3>
+            <span style={{ ...statValueStyle, color: colors.danger }}>
               {stats.donors.total}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between mb-1">
+          <div>
+            <div style={statMetaStyle}>
               <span>פעילים:</span>
-              <span className="font-semibold text-green-600">
+              <span style={{ color: colors.success, fontWeight: 700 }}>
                 {stats.donors.active}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div style={statMetaStyle}>
               <span>לא פעילים:</span>
-              <span className="font-semibold text-gray-500">
-                {stats.donors.total - stats.donors.active}
-              </span>
+              <span>{stats.donors.total - stats.donors.active}</span>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Suppliers */}
-        <div style={cardStyle}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">🤝 ספקים</h3>
-            <span className="text-3xl font-bold text-indigo-600">
+        <Card style={statCardStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
+              🤝 ספקים
+            </h3>
+            <span style={{ ...statValueStyle, color: colors.primary }}>
               {stats.suppliers.total}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between mb-1">
+          <div>
+            <div style={statMetaStyle}>
               <span>פעילים:</span>
-              <span className="font-semibold text-green-600">
+              <span style={{ color: colors.success, fontWeight: 700 }}>
                 {stats.suppliers.active}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div style={statMetaStyle}>
               <span>לא פעילים:</span>
-              <span className="font-semibold text-gray-500">
-                {stats.suppliers.total - stats.suppliers.active}
-              </span>
+              <span>{stats.suppliers.total - stats.suppliers.active}</span>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Detailed Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Surfers by Program */}
-        <div style={cardStyle}>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+      <div style={detailGridStyle}>
+        <Card
+          style={{
+            padding: spacing.lg,
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>
             גולשים לפי תוכנית
           </h3>
-          <div className="space-y-3">
+          <div style={detailListStyle}>
             {Object.entries(stats.surfers.byProgram).map(([program, count]) => (
-              <div
-                key={program}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <span className="font-medium text-gray-700">{program}</span>
-                <span className="text-lg font-bold text-cyan-600">{count}</span>
+              <div key={program} style={detailItemStyle}>
+                <span style={{ fontWeight: 600, color: colors.textPrimary }}>
+                  {program}
+                </span>
+                <span
+                  style={{
+                    fontSize: px(18),
+                    fontWeight: 800,
+                    color: colors.accent,
+                  }}
+                >
+                  {count}
+                </span>
               </div>
             ))}
             {Object.keys(stats.surfers.byProgram).length === 0 && (
-              <div className="text-center text-gray-500 py-4">
+              <div style={{ textAlign: "center", color: muted }}>
                 אין נתונים זמינים
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        {/* Activities by Kind */}
-        <div style={cardStyle}>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+        <Card
+          style={{
+            padding: spacing.lg,
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>
             פעילויות לפי סוג
           </h3>
-          <div className="space-y-3">
+          <div style={detailListStyle}>
             {Object.entries(stats.activities.byKind).map(([kind, count]) => (
-              <div
-                key={kind}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <span className="font-medium text-gray-700">{kind}</span>
-                <span className="text-lg font-bold text-purple-600">
+              <div key={kind} style={detailItemStyle}>
+                <span style={{ fontWeight: 600, color: colors.textPrimary }}>
+                  {kind}
+                </span>
+                <span
+                  style={{
+                    fontSize: px(18),
+                    fontWeight: 800,
+                    color: colors.primary,
+                  }}
+                >
                   {count}
                 </span>
               </div>
             ))}
             {Object.keys(stats.activities.byKind).length === 0 && (
-              <div className="text-center text-gray-500 py-4">
+              <div style={{ textAlign: "center", color: muted }}>
                 אין נתונים זמינים
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div style={{ ...cardStyle, marginTop: 24 }}>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">פעולות מהירות</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <a
-            href="/volunteers"
-            className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition"
-          >
-            <div className="text-2xl mb-2">👥</div>
-            <div className="font-semibold text-blue-900">הוסף מתנדב</div>
-          </a>
-          <a
-            href="/surfers"
-            className="p-4 bg-cyan-50 hover:bg-cyan-100 rounded-lg text-center transition"
-          >
-            <div className="text-2xl mb-2">🏄</div>
-            <div className="font-semibold text-cyan-900">הוסף גולש</div>
-          </a>
-          <a
-            href="/activities"
-            className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition"
-          >
-            <div className="text-2xl mb-2">📅</div>
-            <div className="font-semibold text-purple-900">תזמן פעילות</div>
-          </a>
-          <a
-            href="/equipment"
-            className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition"
-          >
-            <div className="text-2xl mb-2">🛠️</div>
-            <div className="font-semibold text-green-900">נהל ציוד</div>
-          </a>
+      <Card style={{ padding: spacing.lg }}>
+        <h3 style={{ margin: "0 0 8px 0", fontSize: px(16), fontWeight: 800 }}>
+          פעולות מהירות
+        </h3>
+        <p style={{ margin: 0, color: muted }}>
+          גישה מהירה למסכים המרכזיים של המערכת
+        </p>
+        <div style={quickActionsGridStyle}>
+          {quickActions.map((action) => (
+            <a
+              key={action.href}
+              href={action.href}
+              style={{
+                ...quickActionStyle,
+                background: action.background,
+                color: action.color,
+                boxShadow: shadows.card,
+              }}
+            >
+              <div style={{ fontSize: px(28) }}>{action.icon}</div>
+              <div>{action.label}</div>
+            </a>
+          ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

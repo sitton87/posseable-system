@@ -18,7 +18,8 @@ import {
   UsersRound,
   Settings,
 } from "lucide-react";
-import { isAdminRole } from "@/lib/utils/roles";
+import { hasSystemAdminAccess } from "@/lib/utils/roles";
+import { usePermissions } from "@/app/hooks/usePagePermission";
 
 const NAV_EXPANDED_WIDTH = 224; // Tailwind w-56
 const NAV_COLLAPSED_WIDTH = 64; // Tailwind w-16
@@ -32,6 +33,7 @@ export default function Navbar() {
   const [userInfo, setUserInfo] = useState<{
     full_name: string;
     role: string;
+    role_group_code?: string | null;
   } | null>(null);
 
   // קריאה מ-localStorage
@@ -50,6 +52,7 @@ export default function Navbar() {
           setUserInfo({
             full_name: data.user.full_name,
             role: data.user.role || "חבר צוות",
+            role_group_code: data.user.role_group_code,
           });
         }
       } catch (err) {
@@ -94,31 +97,45 @@ export default function Navbar() {
     window.location.href = "/reset-password";
   };
 
-  const isAdmin = userInfo?.role ? isAdminRole(userInfo.role) : false;
+  const isAdmin = userInfo
+    ? hasSystemAdminAccess(userInfo.role, userInfo.role_group_code)
+    : false;
 
   const baseMenuItems = [
-    { href: "/dashboard", icon: <Home size={22} />, label: "דף הבית" },
-    { href: "/volunteers", icon: <Users size={22} />, label: "מתנדבים" },
-    { href: "/surfers", icon: <UserCircle size={22} />, label: "גולשים" },
-    { href: "/groups", icon: <UsersRound size={22} />, label: "קבוצות" },
-    { href: "/activities", icon: <Calendar size={22} />, label: "פעילויות" },
-    { href: "/seasons", icon: <CalendarRange size={22} />, label: "עונות" },
-    { href: "/equipment", icon: <Wrench size={22} />, label: "ציוד" },
-    { href: "/suppliers", icon: <Handshake size={22} />, label: "ספקים" },
-    { href: "/donors", icon: <Heart size={22} />, label: "תורמים" },
-    { href: "/finance", icon: <Wallet size={22} />, label: "כספים" },
+    { pageKey: "dashboard", href: "/dashboard", icon: <Home size={22} />, label: "דף הבית" },
+    { pageKey: "volunteers", href: "/volunteers", icon: <Users size={22} />, label: "מתנדבים" },
+    { pageKey: "surfers", href: "/surfers", icon: <UserCircle size={22} />, label: "גולשים" },
+    { pageKey: "groups", href: "/groups", icon: <UsersRound size={22} />, label: "קבוצות" },
+    { pageKey: "activities", href: "/activities", icon: <Calendar size={22} />, label: "פעילויות" },
+    { pageKey: "seasons", href: "/seasons", icon: <CalendarRange size={22} />, label: "עונות" },
+    { pageKey: "equipment", href: "/equipment", icon: <Wrench size={22} />, label: "ציוד" },
+    { pageKey: "suppliers", href: "/suppliers", icon: <Handshake size={22} />, label: "ספקים" },
+    { pageKey: "donors", href: "/donors", icon: <Heart size={22} />, label: "תורמים" },
+    { pageKey: "finance", href: "/finance", icon: <Wallet size={22} />, label: "כספים" },
   ];
 
-  const menuItems = isAdmin
+  const { permissions, loading: permissionsLoading } = usePermissions();
+
+  const filteredMenuItems = (isAdmin
     ? [
         ...baseMenuItems,
         {
+          pageKey: "system-settings",
           href: "/system-settings",
           icon: <Settings size={22} />,
           label: "הגדרות מערכת",
         },
       ]
-    : baseMenuItems;
+    : baseMenuItems
+  ).filter((item) => {
+    if (item.pageKey === "system-settings") {
+      return isAdmin;
+    }
+    if (permissionsLoading) {
+      return true;
+    }
+    return (permissions[item.pageKey] ?? "none") !== "none";
+  });
 
   return (
     <div
@@ -146,7 +163,7 @@ export default function Navbar() {
         {/* Menu */}
         <div className="flex-1 overflow-y-auto px-2 py-3">
           <nav className="flex flex-col gap-1">
-            {menuItems.map((item) => {
+            {filteredMenuItems.map((item) => {
               const isActive =
                 item.href === "/"
                   ? pathname === "/"

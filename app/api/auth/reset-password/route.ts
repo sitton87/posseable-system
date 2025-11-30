@@ -24,7 +24,9 @@ export async function POST(req: Request) {
 
     // שליפת המשתמש
     const result = await query(
-      "SELECT national_id, password_hash, must_reset FROM app_user WHERE national_id = @id",
+      `SELECT national_id, password_hash, must_reset, role, role_group_code
+       FROM app_user
+       WHERE national_id = @id`,
       { id: national_id }
     );
 
@@ -55,7 +57,8 @@ export async function POST(req: Request) {
     // יצירת session חדש
     const sessionData = {
       national_id: user.national_id,
-      role: "User",
+      role: user.role,
+      role_group_code: user.role_group_code ?? null,
     };
 
     const cookieStore = await cookies();

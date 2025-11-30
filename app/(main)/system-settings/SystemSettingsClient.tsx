@@ -6,13 +6,30 @@ import { Button } from "@/app/components/ui/Button";
 import Input from "@/app/components/ui/Input";
 import clsx from "clsx";
 
+type PermissionLevel = "none" | "read" | "write";
+
 type AppUser = {
   national_id: string;
   full_name: string;
   email: string;
   role: string;
+  role_group_code?: string | null;
   must_reset: boolean;
   created_at: string;
+};
+
+type RoleGroupOption = {
+  code: string;
+  name: string;
+  description?: string | null;
+  is_default?: boolean;
+};
+
+type AppPageRow = {
+  page_key: string;
+  display_name: string;
+  route_path: string;
+  category?: string | null;
 };
 
 type FieldAccessRule = {
@@ -29,6 +46,18 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "מנהל מערכת",
   staff: "צוות תפעול",
   viewer: "קריאה בלבד",
+};
+
+const PERMISSION_LABELS: Record<PermissionLevel, string> = {
+  none: "ללא גישה",
+  read: "קריאה",
+  write: "עריכה",
+};
+
+const PERMISSION_HELP: Record<PermissionLevel, string> = {
+  none: "הדף מוסתר לחלוטין מהמשתמשים בקבוצה זו.",
+  read: "המשתמשים יכולים לצפות בדף אך לא לבצע שינויים.",
+  write: "המשתמשים יכולים גם לערוך ולמחוק מידע בדף.",
 };
 
 const FIELD_RULES: FieldAccessRule[] = [
@@ -91,6 +120,7 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     full_name: "",
     email: "",
     role: "staff",
+    role_group_code: "management",
   });
   const [createLoading, setCreateLoading] = useState(false);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
@@ -100,6 +130,7 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     full_name: "",
     email: "",
     role: "",
+    role_group_code: "",
     must_reset: false,
     reset_password: "",
   });
@@ -112,6 +143,20 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     message: string;
   } | null>(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [roleGroups, setRoleGroups] = useState<RoleGroupOption[]>([]);
+  const [pages, setPages] = useState<AppPageRow[]>([]);
+  const [selectedRoleGroup, setSelectedRoleGroup] = useState("");
+  const [pagePermissions, setPagePermissions] = useState<
+    Record<string, PermissionLevel>
+  >({});
+  const [initialPagePermissions, setInitialPagePermissions] = useState<
+    Record<string, PermissionLevel>
+  >({});
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsSaving, setPermissionsSaving] = useState(false);
+  const [permissionsMessage, setPermissionsMessage] = useState<string | null>(
+    null
+  );
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -139,12 +184,28 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     fetchUsers();
   }, []);
 
+  const roleGroupOptionsMemo = useMemo(
+    () =>
+      roleGroups.map((group) => ({
+        code: group.code,
+        name: group.name,
+        description: group.description,
+      })),
+    [roleGroups]
+  );
+
+  const formatRoleGroupLabel = (code?: string | null) => {
+    if (!code) return "ללא";
+    return roleGroupOptionsMemo.find((group) => group.code === code)?.name || code;
+  };
+
   useEffect(() => {
     if (!selectedUserId) {
       setUpdateForm({
         full_name: "",
         email: "",
         role: "",
+        role_group_code: roleGroupOptionsMemo[0]?.code || "management",
         must_reset: false,
         reset_password: "",
       });
@@ -152,15 +213,20 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     }
     const selected = users.find((user) => user.national_id === selectedUserId);
     if (selected) {
+      const fallbackRoleGroup =
+        selected.role_group_code ||
+        roleGroupOptionsMemo[0]?.code ||
+        "management";
       setUpdateForm({
         full_name: selected.full_name,
         email: selected.email,
         role: selected.role,
+        role_group_code: fallbackRoleGroup,
         must_reset: selected.must_reset,
         reset_password: "",
       });
     }
-  }, [selectedUserId, users]);
+  }, [selectedUserId, users, roleGroupOptionsMemo]);
 
   const roleOptions = useMemo(() => {
     const unique = new Set<string>([
@@ -179,6 +245,155 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     return { total, needsReset, admins };
   }, [users]);
 
+  const loadRoleGroupPermissions = async (roleGroupCode?: string) => {
+    setPermissionsLoading(true);
+    setPermissionsMessage(null);
+    try {
+      const params = new URLSearchParams();
+      if (roleGroupCode) {
+        params.set("roleGroupCode", roleGroupCode);
+      }
+      const queryString = params.toString();
+      const res = await fetch(
+        `/api/system-settings/access${queryString ? `?${queryString}` : ""}`,
+        { cache: "no-store" }
+      );
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || "שגיאה בטעינת ההרשאות");
+      }
+      const nextRoleGroup =
+        data.roleGroupCode ||
+        roleGroupCode ||
+        data.roleGroups?.find((group: RoleGroupOption) => group.is_default)?.code ||
+        data.roleGroups?.[0]?.code ||
+        "";
+
+      setRoleGroups(data.roleGroups ?? []);
+      setPages(data.pages ?? []);
+      setSelectedRoleGroup(nextRoleGroup);
+
+      const permissionMap: Record<string, PermissionLevel> = {};
+      (data.pages ?? []).forEach((page: AppPageRow) => {
+        const record = (data.permissions ?? []).find(
+          (permission: { page_key: string; permission_level: PermissionLevel }) =>
+            permission.page_key === page.page_key
+        );
+        permissionMap[page.page_key] = (record?.permission_level ??
+          "none") as PermissionLevel;
+      });
+      setPagePermissions(permissionMap);
+      setInitialPagePermissions(permissionMap);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "שגיאה בטעינת ההרשאות";
+      setPermissionsMessage(message);
+      console.error("Failed to load permissions", err);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRoleGroupPermissions();
+  }, []);
+
+  useEffect(() => {
+    if (roleGroups.length) {
+      setCreateForm((prev) => ({
+        ...prev,
+        role_group_code: prev.role_group_code || roleGroups[0].code,
+      }));
+    }
+  }, [roleGroups]);
+
+  const hasPermissionChanges = useMemo(() => {
+    if (!pages.length) return false;
+    return pages.some((page) => {
+      const current = pagePermissions[page.page_key] || "none";
+      const initial = initialPagePermissions[page.page_key] || "none";
+      return current !== initial;
+    });
+  }, [pages, pagePermissions, initialPagePermissions]);
+
+  const handlePermissionChange = (
+    pageKey: string,
+    level: PermissionLevel
+  ) => {
+    setPermissionsMessage(null);
+    setPagePermissions((prev) => ({
+      ...prev,
+      [pageKey]: level,
+    }));
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedRoleGroup) return;
+    setPermissionsSaving(true);
+    setPermissionsMessage(null);
+    try {
+      const payload = {
+        roleGroupCode: selectedRoleGroup,
+        permissions: pages.map((page) => ({
+          page_key: page.page_key,
+          permission_level: pagePermissions[page.page_key] || "none",
+        })),
+      };
+      const res = await fetch("/api/system-settings/access", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || "שגיאה בשמירת ההרשאות");
+      }
+      setInitialPagePermissions(pagePermissions);
+      setPermissionsMessage("ההרשאות נשמרו בהצלחה");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "שגיאה בשמירת ההרשאות";
+      setPermissionsMessage(message);
+      console.error("Failed to save permissions", err);
+    } finally {
+      setPermissionsSaving(false);
+    }
+  };
+
+  const selectedRoleGroupInfo = useMemo(
+    () => roleGroups.find((group) => group.code === selectedRoleGroup),
+    [roleGroups, selectedRoleGroup]
+  );
+
+  const permissionSaveDisabled =
+    !selectedRoleGroup ||
+    permissionsLoading ||
+    permissionsSaving ||
+    !hasPermissionChanges;
+
+  const renderPermissionButton = (
+    pageKey: string,
+    level: PermissionLevel
+  ) => {
+    const isSelected = (pagePermissions[pageKey] || "none") === level;
+    return (
+      <button
+        type="button"
+        onClick={() => handlePermissionChange(pageKey, level)}
+        disabled={permissionsLoading || permissionsSaving}
+        className={clsx(
+          "w-full rounded-md border px-2 py-1 text-sm font-semibold transition",
+          isSelected
+            ? "border-sky-500 bg-sky-50 text-sky-700"
+            : "border-gray-200 text-gray-600 hover:bg-gray-50"
+        )}
+        title={PERMISSION_HELP[level]}
+      >
+        {PERMISSION_LABELS[level]}
+      </button>
+    );
+  };
+
   const formatRoleLabel = (role: string) => ROLE_LABELS[role] ?? role;
   const normalizedCurrentRole =
     currentRole?.trim().toLowerCase() || "admin";
@@ -191,10 +406,17 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     setCreateMessage(null);
     setError(null);
     try {
+      const payload = {
+        ...createForm,
+        role_group_code:
+          createForm.role_group_code ||
+          roleGroupOptionsMemo[0]?.code ||
+          "management",
+      };
       const res = await fetch("/api/system-users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -206,6 +428,7 @@ export default function SystemSettingsClient({ currentRole }: Props) {
         full_name: "",
         email: "",
         role: createForm.role,
+        role_group_code: payload.role_group_code,
       });
       await fetchUsers();
     } catch (err) {
@@ -229,6 +452,10 @@ export default function SystemSettingsClient({ currentRole }: Props) {
       const payload = {
         national_id: selectedUserId,
         ...updateForm,
+        role_group_code:
+          updateForm.role_group_code ||
+          roleGroupOptionsMemo[0]?.code ||
+          "management",
       };
       const res = await fetch("/api/system-users", {
         method: "PATCH",
@@ -315,6 +542,9 @@ export default function SystemSettingsClient({ currentRole }: Props) {
                 תפקיד
               </th>
               <th className="px-4 py-2 text-right font-semibold text-gray-600">
+                קבוצת ניהול
+              </th>
+              <th className="px-4 py-2 text-right font-semibold text-gray-600">
                 חובת החלפת סיסמה
               </th>
               <th className="px-4 py-2 text-right font-semibold text-gray-600">
@@ -332,6 +562,9 @@ export default function SystemSettingsClient({ currentRole }: Props) {
                 <td className="px-4 py-2 text-gray-700">{user.email}</td>
                 <td className="px-4 py-2 text-gray-700">
                   {formatRoleLabel(user.role)}
+                </td>
+                <td className="px-4 py-2 text-gray-700">
+                  {formatRoleGroupLabel(user.role_group_code)}
                 </td>
                 <td className="px-4 py-2">
                   <span
@@ -441,6 +674,31 @@ export default function SystemSettingsClient({ currentRole }: Props) {
                 ))}
               </select>
             </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-medium text-sm text-gray-700">
+                קבוצת ניהול
+              </label>
+              <select
+                className="rounded-md border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                value={createForm.role_group_code}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    role_group_code: e.target.value,
+                  }))
+                }
+                disabled={!roleGroupOptionsMemo.length}
+              >
+                {roleGroupOptionsMemo.map((group) => (
+                  <option key={group.code} value={group.code}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500">
+                {formatRoleGroupLabel(createForm.role_group_code)}
+              </p>
+            </div>
             <div className="rounded-md bg-sky-50 p-3 text-sm text-sky-900">
               לאחר יצירת המשתמש המערכת תשלח אליו מייל עם שם המשתמש והסיסמה
               הזמנית שנוצרה עבורו.
@@ -539,6 +797,29 @@ export default function SystemSettingsClient({ currentRole }: Props) {
                     ))}
                   </select>
                 </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium text-sm text-gray-700">
+                    קבוצת ניהול
+                  </label>
+                  <select
+                    className="rounded-md border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    value={updateForm.role_group_code}
+                    onChange={(e) =>
+                      setUpdateForm((prev) => ({
+                        ...prev,
+                        role_group_code: e.target.value,
+                      }))
+                    }
+                    disabled={!roleGroupOptionsMemo.length}
+                  >
+                    <option value="">בחר...</option>
+                    {roleGroupOptionsMemo.map((group) => (
+                      <option key={group.code} value={group.code}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     id="must-reset"
@@ -589,6 +870,134 @@ export default function SystemSettingsClient({ currentRole }: Props) {
       </div>
 
       <Card className="space-y-4 p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              הרשאות דפי מערכת
+            </h2>
+            <p className="text-sm text-gray-500">
+              קבע אילו דפים זמינים לכל קבוצת ניהול ומה רמת הגישה שלהם.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2 lg:w-64">
+            <label className="text-sm font-medium text-gray-700">
+              קבוצת ניהול
+            </label>
+            <select
+              className="rounded-md border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+              value={selectedRoleGroup}
+              onChange={(e) => loadRoleGroupPermissions(e.target.value)}
+              disabled={!roleGroupOptionsMemo.length || permissionsLoading}
+            >
+              {roleGroupOptionsMemo.map((group) => (
+                <option key={group.code} value={group.code}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            {selectedRoleGroupInfo?.description && (
+              <p className="text-xs text-gray-500">
+                {selectedRoleGroupInfo.description}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {permissionsMessage && (
+          <p
+            className={clsx(
+              "text-sm",
+              permissionsMessage.includes("שגיאה")
+                ? "text-red-600"
+                : "text-emerald-700"
+            )}
+          >
+            {permissionsMessage}
+          </p>
+        )}
+
+        <div className="overflow-x-auto">
+          {permissionsLoading ? (
+            <p className="text-sm text-gray-500">טוען הגדרות הרשאה...</p>
+          ) : !roleGroupOptionsMemo.length ? (
+            <p className="text-sm text-gray-500">
+              אין קבוצות ניהול זמינות. צור לפחות קבוצה אחת כדי להגדיר הרשאות.
+            </p>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-right font-semibold text-gray-600">
+                    דף
+                  </th>
+                  <th className="px-4 py-2 text-right font-semibold text-gray-600">
+                    קטגוריה
+                  </th>
+                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+                    ללא גישה
+                  </th>
+                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+                    קריאה
+                  </th>
+                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+                    עריכה
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {pages.map((page) => (
+                  <tr key={page.page_key}>
+                    <td className="px-4 py-3 font-semibold text-gray-900">
+                      <div>{page.display_name}</div>
+                      <div className="text-xs text-gray-500">
+                        {page.route_path}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {page.category || "-"}
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      {renderPermissionButton(page.page_key, "none")}
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      {renderPermissionButton(page.page_key, "read")}
+                    </td>
+                    <td className="px-2 py-3 text-center">
+                      {renderPermissionButton(page.page_key, "write")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="text-xs text-gray-500">
+            בחירה ב"עריכה" כוללת גם הרשאות צפייה. "ללא גישה" מסתיר את הדף
+            לחלוטין מהתפריט ומכל קיצור אחר.
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => loadRoleGroupPermissions(selectedRoleGroup)}
+              disabled={permissionsLoading || permissionsSaving}
+            >
+              אפס שינויים
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSavePermissions}
+              disabled={permissionSaveDisabled}
+            >
+              {permissionsSaving ? "שומר..." : "שמור הרשאות"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="space-y-4 p-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             שליחת מייל בדיקה
@@ -631,57 +1040,6 @@ export default function SystemSettingsClient({ currentRole }: Props) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
-              מדיניות שדות והרשאות
-            </h2>
-            <p className="text-sm text-gray-500">
-              הגדרה ברורה של אילו תפקידים מורשים לצפות או לערוך כל שדה.
-            </p>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-right font-semibold text-gray-600">
-                  שדה
-                </th>
-                <th className="px-4 py-2 text-right font-semibold text-gray-600">
-                  תיאור
-                </th>
-                <th className="px-4 py-2 text-right font-semibold text-gray-600">
-                  צפייה
-                </th>
-                <th className="px-4 py-2 text-right font-semibold text-gray-600">
-                  עריכה
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {FIELD_RULES.map((rule) => (
-                <tr key={rule.field}>
-                  <td className="px-4 py-3 font-semibold text-gray-900">
-                    {rule.label}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {rule.description}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {rule.viewableBy.map(formatRoleLabel).join(", ")}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {rule.editableBy.map(formatRoleLabel).join(", ")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card className="space-y-4 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
               משתמשים קיימים
             </h2>
             <p className="text-sm text-gray-500">
@@ -699,4 +1057,5 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     </div>
   );
 }
+
 

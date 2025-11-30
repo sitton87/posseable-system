@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function PUT(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("seasons", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const { id, name, year, start_date, end_date, notes } = body;
 
@@ -45,6 +49,9 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("seasons", "write");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 

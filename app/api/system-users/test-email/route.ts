@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sendTestEmail } from "@/lib/services/emailService";
-import { isAdminRole } from "@/lib/utils/roles";
+import { hasSystemAdminAccess } from "@/lib/utils/roles";
 
 type SessionPayload = {
   national_id: string;
   role?: string;
+  role_group_code?: string | null;
 };
 
 async function getSession(): Promise<SessionPayload | null> {
@@ -32,7 +33,10 @@ function generatePassword() {
 
 export async function POST(req: Request) {
   const session = await getSession();
-  if (!session || !isAdminRole(session.role)) {
+  if (
+    !session ||
+    !hasSystemAdminAccess(session.role, session.role_group_code)
+  ) {
     return forbiddenResponse();
   }
 
@@ -61,4 +65,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

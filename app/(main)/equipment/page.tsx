@@ -1,53 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Equipment } from "@/type";
+import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
+import type { Equipment } from "@/type";
+import { Button, Card, Modal } from "@/app/components/ui";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, radii, spacing } from "@/app/styles/foundations";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+
+const filtersContainerStyle: CSSProperties = {
+  display: "flex",
+  gap: spacing.md,
+  flexWrap: "wrap",
 };
 
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
+const badgeStyle = (background: string, color: string): CSSProperties => ({
+  display: "inline-block",
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+  borderRadius: radii.button,
+  fontSize: 12,
   fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
+  background,
+  color,
+});
+
+const smallButtonStyle: CSSProperties = {
+  fontSize: 12,
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+};
+
+const conditionBadgeMap: Record<
+  string,
+  { background: string; color: string }
+> = {
+  חדש: { background: colors.successSoft, color: colors.success },
+  טוב: { background: colors.successSoft, color: colors.success },
+  בינוני: { background: "rgba(251, 191, 36, 0.15)", color: "#d97706" },
+  "דורש תיקון": { background: colors.warningSoft, color: colors.warning },
+  "לא תקין": { background: colors.dangerSoft, color: colors.danger },
 };
 
 const EQUIPMENT_CATEGORIES = [
@@ -68,6 +60,10 @@ export default function EquipmentPage() {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(
     null
   );
+  const [viewingEquipment, setViewingEquipment] = useState<Equipment | null>(
+    null
+  );
+  const [showViewModal, setShowViewModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [filterCondition, setFilterCondition] = useState<string>("");
 
@@ -128,6 +124,16 @@ export default function EquipmentPage() {
       notes: eq.notes || "",
     });
     setShowModal(true);
+  };
+
+  const handleView = (eq: Equipment) => {
+    setViewingEquipment(eq);
+    setShowViewModal(true);
+  };
+
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setViewingEquipment(null);
   };
 
   const handleSubmit = async () => {
@@ -199,7 +205,7 @@ export default function EquipmentPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 20, textAlign: "center" }}>
+      <div style={{ padding: spacing.xl, textAlign: "center" }}>
         <div>טוען ציוד...</div>
       </div>
     );
@@ -214,33 +220,33 @@ export default function EquipmentPage() {
   });
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: spacing.xl }}>
       {/* Header */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 16,
+            marginBottom: spacing.md,
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
               🛠️ ניהול ציוד
             </h2>
-            <div style={{ color: muted, fontSize: 13, marginTop: 4 }}>
+            <div style={{ color: muted, fontSize: 13, marginTop: px(2) }}>
               סה״כ {equipment.length} פריטי ציוד במערכת
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
-            + הוסף ציוד
-          </button>
+          <Button onClick={handleAdd}>+ הוסף ציוד</Button>
         </div>
 
         {/* Filters */}
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ flex: 1 }}>
+        <div style={filtersContainerStyle}>
+          <div style={{ flex: 1, minWidth: 200 }}>
             <select
               style={inputStyle}
               value={filterCategory}
@@ -254,7 +260,7 @@ export default function EquipmentPage() {
               ))}
             </select>
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
             <select
               style={inputStyle}
               value={filterCondition}
@@ -269,10 +275,10 @@ export default function EquipmentPage() {
             </select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -306,61 +312,54 @@ export default function EquipmentPage() {
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     <span
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background:
-                          eq.condition === "חדש" || eq.condition === "טוב"
-                            ? "rgba(34, 197, 94, 0.1)"
-                            : eq.condition === "בינוני"
-                            ? "rgba(251, 191, 36, 0.1)"
-                            : "rgba(239, 68, 68, 0.1)",
-                        color:
-                          eq.condition === "חדש" || eq.condition === "טוב"
-                            ? "#16a34a"
-                            : eq.condition === "בינוני"
-                            ? "#d97706"
-                            : "#dc2626",
-                      }}
+                      style={badgeStyle(
+                        conditionBadgeMap[eq.condition || ""]?.background ||
+                          colors.borderMuted,
+                        conditionBadgeMap[eq.condition || ""]?.color ||
+                          colors.textPrimary
+                      )}
                     >
                       {eq.condition || "—"}
                     </span>
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     <span
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: eq.active
-                          ? "rgba(34, 197, 94, 0.1)"
-                          : "rgba(239, 68, 68, 0.1)",
-                        color: eq.active ? "#16a34a" : "#dc2626",
-                      }}
+                      style={badgeStyle(
+                        eq.active ? colors.successSoft : colors.dangerSoft,
+                        eq.active ? colors.success : colors.danger
+                      )}
                     >
                       {eq.active ? "פעיל" : "לא פעיל"}
                     </span>
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: spacing.xs }}
+                      onClick={() => handleView(eq)}
+                      title="צפייה בפרטי ציוד"
+                      aria-label="צפייה"
+                    >
+                      👁️
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: spacing.xs }}
                       onClick={() => handleEdit(eq)}
+                      title="עריכת ציוד"
+                      aria-label="עריכת ציוד"
                     >
                       ✏️
-                    </button>
-                    <button
-                      style={{
-                        ...btnSecondary,
-                        color: "#dc2626",
-                        fontSize: 12,
-                      }}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, color: colors.danger }}
                       onClick={() => handleDelete(eq.id)}
+                      title="מחיקת ציוד"
+                      aria-label="מחיקת ציוד"
                     >
                       🗑️
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -377,156 +376,218 @@ export default function EquipmentPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
-      {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowModal(false)}
-        >
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(620px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
+          {editingEquipment ? "ערוך ציוד" : "הוסף ציוד חדש"}
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+          <div>
+            <label style={labelStyle}>
+              שם הציוד <span style={{ color: colors.danger }}>*</span>
+            </label>
+            <input
+              type="text"
+              style={inputStyle}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="למשל: גלשן 8 רגל"
+            />
+          </div>
+
           <div
             style={{
-              ...cardStyle,
-              width: "min(600px, 90vw)",
-              padding: 24,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingEquipment ? "ערוך ציוד" : "הוסף ציוד חדש"}
-            </h3>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>
-                  שם הציוד <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="למשל: גלשן 8 רגל"
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
+            <div>
+              <label style={labelStyle}>קטגוריה</label>
+              <select
+                style={inputStyle}
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
               >
-                <div>
-                  <label style={labelStyle}>קטגוריה</label>
-                  <select
-                    style={inputStyle}
-                    value={formData.category}
-                    onChange={(e) =>
-                      setFormData({ ...formData, category: e.target.value })
-                    }
-                  >
-                    <option value="">בחר קטגוריה...</option>
-                    {EQUIPMENT_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <option value="">בחר קטגוריה...</option>
+                {EQUIPMENT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                <div>
-                  <label style={labelStyle}>מידה</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.size}
-                    onChange={(e) =>
-                      setFormData({ ...formData, size: e.target.value })
-                    }
-                    placeholder="למשל: L, 8', 42"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>מצב הציוד</label>
-                <select
-                  style={inputStyle}
-                  value={formData.condition}
-                  onChange={(e) =>
-                    setFormData({ ...formData, condition: e.target.value })
-                  }
-                >
-                  {EQUIPMENT_CONDITIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>הערות</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="הערות נוספות..."
-                />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  id="active"
-                  checked={formData.active}
-                  onChange={(e) =>
-                    setFormData({ ...formData, active: e.target.checked })
-                  }
-                />
-                <label
-                  htmlFor="active"
-                  style={{ fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-                >
-                  ציוד פעיל
-                </label>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 8,
-                  justifyContent: "flex-end",
-                }}
-              >
-                <button
-                  style={btnSecondary}
-                  onClick={() => setShowModal(false)}
-                >
-                  ביטול
-                </button>
-                <button style={btnPrimary} onClick={handleSubmit}>
-                  {editingEquipment ? "עדכן" : "הוסף"}
-                </button>
-              </div>
+            <div>
+              <label style={labelStyle}>מידה</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.size}
+                onChange={(e) =>
+                  setFormData({ ...formData, size: e.target.value })
+                }
+                placeholder="למשל: L, 8', 42"
+              />
             </div>
           </div>
+
+          <div>
+            <label style={labelStyle}>מצב הציוד</label>
+            <select
+              style={inputStyle}
+              value={formData.condition}
+              onChange={(e) =>
+                setFormData({ ...formData, condition: e.target.value })
+              }
+            >
+              {EQUIPMENT_CONDITIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>הערות</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              placeholder="הערות נוספות..."
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
+            <input
+              type="checkbox"
+              id="active"
+              checked={formData.active}
+              onChange={(e) =>
+                setFormData({ ...formData, active: e.target.checked })
+              }
+            />
+            <label
+              htmlFor="active"
+              style={{ fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              ציוד פעיל
+            </label>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.md,
+              marginTop: spacing.sm,
+              justifyContent: "flex-end",
+            }}
+          >
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setShowModal(false)}
+            >
+              ביטול
+            </Button>
+            <Button type="button" onClick={handleSubmit}>
+              {editingEquipment ? "עדכן" : "הוסף"}
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
+
+      <Modal
+        open={showViewModal && !!viewingEquipment}
+        onClose={closeViewModal}
+        width="min(520px, 90vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        {viewingEquipment && (
+          <>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: spacing.md,
+                gap: spacing.md,
+                flexWrap: "wrap",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
+                פרטי ציוד – {viewingEquipment.name}
+              </h3>
+              <Button variant="secondary" type="button" onClick={closeViewModal}>
+                ✕ סגור
+              </Button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: spacing.md,
+                marginBottom: spacing.md,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>קטגוריה</div>
+                <div>{viewingEquipment.category || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>מידה</div>
+                <div>{viewingEquipment.size || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>מצב</div>
+                <span
+                  style={badgeStyle(
+                    conditionBadgeMap[viewingEquipment.condition || ""]?.background ||
+                      colors.borderMuted,
+                    conditionBadgeMap[viewingEquipment.condition || ""]?.color ||
+                      colors.textPrimary
+                  )}
+                >
+                  {viewingEquipment.condition || "—"}
+                </span>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
+                <span
+                  style={badgeStyle(
+                    viewingEquipment.active ? colors.successSoft : colors.dangerSoft,
+                    viewingEquipment.active ? colors.success : colors.danger
+                  )}
+                >
+                  {viewingEquipment.active ? "פעיל" : "לא פעיל"}
+                </span>
+              </div>
+            </div>
+
+            {viewingEquipment.notes && (
+              <div>
+                <div style={{ fontSize: 12, color: muted, marginBottom: spacing.xs }}>
+                  הערות
+                </div>
+                <div style={{ whiteSpace: "pre-wrap" }}>{viewingEquipment.notes}</div>
+              </div>
+            )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

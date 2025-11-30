@@ -3,12 +3,17 @@ import { query } from "@/db/connection";
 
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const includeSurfers = searchParams.get("includeSurfers") === "true";
+
     const sql = `
       SELECT 
         g.id,
         g.name,
         g.description,
         g.season_id,
+        g.start_season_id,
+        g.additional_seasons,
         g.min_participants,
         g.max_participants,
         g.current_participants,
@@ -19,16 +24,51 @@ export async function GET(req: Request) {
         g.updated_at,
         s.name as season_name,
         s.year as season_year
-      FROM [groups] g
+      FROM [group] g
       LEFT JOIN season_plan s ON g.season_id = s.id
       ORDER BY g.created_at DESC
     `;
 
     const result = await query(sql);
+    let groups = result.recordset;
+
+    if (includeSurfers) {
+      const surfersResult = await query(`
+        SELECT
+          national_id,
+          full_name,
+          phone,
+          email,
+          status,
+          group_id
+        FROM surfer
+        WHERE group_id IS NOT NULL
+      `);
+
+      const surfersByGroup = surfersResult.recordset.reduce(
+        (acc: Record<string, any[]>, surfer: any) => {
+          if (!surfer.group_id) return acc;
+          const key = surfer.group_id.toLowerCase?.() ?? surfer.group_id;
+          const list = acc[key] || [];
+          list.push(surfer);
+          acc[key] = list;
+          return acc;
+        },
+        {}
+      );
+
+      groups = groups.map((group: any) => {
+        const key = group.id?.toLowerCase?.() ?? group.id;
+        return {
+          ...group,
+          surfers: surfersByGroup[key] || [],
+        };
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      groups: result.recordset,
+      groups,
     });
   } catch (err: any) {
     console.error("Error fetching groups:", err);

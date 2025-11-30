@@ -8,7 +8,8 @@ export async function GET(req: Request) {
 
     let sql = `
       SELECT 
-        id,
+        supplier_identifier,
+        identifier_type,
         name,
         contact_name,
         phone,

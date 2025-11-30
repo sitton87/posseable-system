@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { Buffer } from "buffer";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 type DonorShareInput = { donor_id: string; amount: number };
 
 export async function POST(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("finance", "write");
+    if (!permission.allowed) return permission.response;
+
     const body = await req.json();
     const {
       transaction_date,

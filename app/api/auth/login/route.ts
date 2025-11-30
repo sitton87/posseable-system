@@ -43,6 +43,7 @@ export async function POST(req: Request) {
     const sessionData = {
       national_id: user.national_id,
       role: user.role,
+      role_group_code: user.role_group_code ?? "management",
     };
 
     // שמירת session בתוך cookie

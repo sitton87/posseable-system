@@ -1,54 +1,48 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useState, useEffect } from "react";
 import type { Activity, SeasonPlan, Donor } from "@/type";
+import { Button, Card, Modal } from "@/app/components/ui";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, radii, spacing } from "@/app/styles/foundations";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+const sectionBoxStyle: CSSProperties = {
+  marginBottom: spacing.lg,
+  padding: spacing.lg,
+  background: colors.surfaceAlt,
+  borderRadius: radii.card,
 };
-
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
+const smallButtonStyle: CSSProperties = {
+  fontSize: 12,
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
 };
-
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
+const typePillStyle = (type: "income" | "expense"): CSSProperties => ({
+  padding: "4px 8px",
+  borderRadius: radii.button,
+  fontSize: 12,
   fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
+  background: type === "income" ? colors.successSoft : colors.dangerSoft,
+  color: type === "income" ? colors.success : colors.danger,
+});
+const summaryCardStyle = (bg: string, color: string): CSSProperties => ({
+  padding: spacing.lg,
+  background: bg,
+  borderRadius: radii.card,
+  color,
+});
+const dashedBoxStyle: CSSProperties = {
+  padding: spacing.md,
+  borderRadius: radii.card,
+  background: colors.surfaceAlt,
+  border: `1px dashed ${colors.borderMuted}`,
 };
+const formatDate = (value?: string | null) =>
+  value ? new Date(value).toLocaleDateString("he-IL") : "—";
+const formatCurrency = (value?: number | null) =>
+  typeof value === "number" ? `₪${value.toLocaleString()}` : "—";
 
 type Transaction = {
   id: string;
@@ -97,7 +91,10 @@ export default function FinancePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [viewingTransaction, setViewingTransaction] =
     useState<Transaction | null>(null);
   const [filterType, setFilterType] = useState<string>("");
   const [filterFromDate, setFilterFromDate] = useState<string>("");
@@ -358,7 +355,10 @@ export default function FinancePage() {
       return;
     }
 
-    if (formData.linkToActivity && (!formData.season_id || !formData.activity_id)) {
+    if (
+      formData.linkToActivity &&
+      (!formData.season_id || !formData.activity_id)
+    ) {
       alert("בחר עונה ופעילות לשיוך הכנסה/הוצאה");
       return;
     }
@@ -378,7 +378,9 @@ export default function FinancePage() {
         amount: parseFloat(share.amount || "0"),
       }));
 
-      if (donorSharesPayload.some((share) => !share.amount || share.amount <= 0)) {
+      if (
+        donorSharesPayload.some((share) => !share.amount || share.amount <= 0)
+      ) {
         alert("סכום תרומה לכל תורם חייב להיות חיובי");
         return;
       }
@@ -395,7 +397,9 @@ export default function FinancePage() {
     }
 
     try {
-      const url = editingTransaction ? "/api/finance/update" : "/api/finance/add";
+      const url = editingTransaction
+        ? "/api/finance/update"
+        : "/api/finance/add";
       const method = editingTransaction ? "PUT" : "POST";
 
       const activityId =
@@ -481,6 +485,14 @@ export default function FinancePage() {
       alert("שגיאה במחיקת תנועה");
     }
   };
+  const handleView = (transaction: Transaction) => {
+    setViewingTransaction(transaction);
+    setShowViewModal(true);
+  };
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setViewingTransaction(null);
+  };
 
   const handleAttachmentFile = (file: File | null) => {
     if (!file) {
@@ -555,7 +567,7 @@ export default function FinancePage() {
 
   if (loading) {
     return (
-      <div style={{ padding: 20, textAlign: "center" }}>
+      <div style={{ padding: spacing.xl, textAlign: "center" }}>
         <div>טוען תנועות...</div>
       </div>
     );
@@ -571,15 +583,16 @@ export default function FinancePage() {
   const balance = totalIncome - totalExpense;
 
   return (
-    <div style={{ padding: 20 }}>
-      {/* Header with Stats */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+    <div style={{ padding: spacing.xl }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 16,
+            marginBottom: spacing.md,
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <div>
@@ -590,79 +603,53 @@ export default function FinancePage() {
               סה״כ {transactions.length} תנועות במערכת
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
-            + הוסף תנועה
-          </button>
+          <Button onClick={handleAdd}>+ הוסף תנועה</Button>
         </div>
 
-        {/* Summary Cards */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 12,
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: spacing.md,
           }}
         >
-          <div
-            style={{
-              padding: 16,
-              background: "rgba(34, 197, 94, 0.1)",
-              borderRadius: 8,
-            }}
-          >
+          <div style={summaryCardStyle(colors.successSoft, colors.success)}>
             <div style={{ fontSize: 13, color: muted, marginBottom: 4 }}>
               סה״כ הכנסות
             </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#16a34a" }}>
+            <div style={{ fontSize: 24, fontWeight: 800 }}>
               ₪{totalIncome.toLocaleString()}
             </div>
           </div>
-          <div
-            style={{
-              padding: 16,
-              background: "rgba(239, 68, 68, 0.1)",
-              borderRadius: 8,
-            }}
-          >
+          <div style={summaryCardStyle(colors.dangerSoft, colors.danger)}>
             <div style={{ fontSize: 13, color: muted, marginBottom: 4 }}>
               סה״כ הוצאות
             </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#dc2626" }}>
+            <div style={{ fontSize: 24, fontWeight: 800 }}>
               ₪{totalExpense.toLocaleString()}
             </div>
           </div>
           <div
-            style={{
-              padding: 16,
-              background:
-                balance >= 0
-                  ? "rgba(59, 130, 246, 0.1)"
-                  : "rgba(251, 191, 36, 0.1)",
-              borderRadius: 8,
-            }}
+            style={summaryCardStyle(
+              balance >= 0 ? colors.primarySoft : "rgba(251, 191, 36, 0.2)",
+              balance >= 0 ? colors.primary : "#d97706"
+            )}
           >
             <div style={{ fontSize: 13, color: muted, marginBottom: 4 }}>
               יתרה
             </div>
-            <div
-              style={{
-                fontSize: 24,
-                fontWeight: 800,
-                color: balance >= 0 ? "#2563eb" : "#d97706",
-              }}
-            >
+            <div style={{ fontSize: 24, fontWeight: 800 }}>
               ₪{balance.toLocaleString()}
             </div>
           </div>
         </div>
 
-        {/* Filter */}
         <div
           style={{
-            marginTop: 16,
+            marginTop: spacing.lg,
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 12,
+            gap: spacing.md,
           }}
         >
           <div>
@@ -745,12 +732,9 @@ export default function FinancePage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "flex-end" }}>
-            <button
-              style={{
-                ...btnSecondary,
-                width: "100%",
-                fontSize: 14,
-              }}
+            <Button
+              variant="secondary"
+              style={{ width: "100%" }}
               onClick={() => {
                 setFilterType("");
                 setFilterFromDate("");
@@ -760,13 +744,12 @@ export default function FinancePage() {
               }}
             >
               איפוס סינונים
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Transactions Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -798,19 +781,7 @@ export default function FinancePage() {
                     {new Date(t.transaction_date).toLocaleDateString("he-IL")}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <span
-                      style={{
-                        padding: "4px 8px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background:
-                          t.type === "income"
-                            ? "rgba(34, 197, 94, 0.1)"
-                            : "rgba(239, 68, 68, 0.1)",
-                        color: t.type === "income" ? "#16a34a" : "#dc2626",
-                      }}
-                    >
+                    <span style={typePillStyle(t.type)}>
                       {t.type === "income" ? "הכנסה" : "הוצאה"}
                     </span>
                   </td>
@@ -862,7 +833,7 @@ export default function FinancePage() {
                             t.attachment_mime || "application/octet-stream"
                           };base64,${t.attachment_data}`}
                           download={t.attachment_name}
-                          style={{ color: "#0ea5e9", fontSize: 12 }}
+                          style={{ color: colors.accent, fontSize: 12 }}
                         >
                           הורדת קובץ
                         </a>
@@ -875,29 +846,35 @@ export default function FinancePage() {
                       padding: 8,
                       fontWeight: 700,
                       fontSize: 16,
-                      color: t.type === "income" ? "#16a34a" : "#dc2626",
+                      color:
+                        t.type === "income" ? colors.success : colors.danger,
                     }}
                   >
                     {t.type === "income" ? "+" : "-"}₪
                     {t.amount.toLocaleString()}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    <button
-                      style={{ ...btnSecondary, marginLeft: 4, fontSize: 12 }}
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: 4 }}
+                      onClick={() => handleView(t)}
+                    >
+                      👁️
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, marginLeft: 4 }}
                       onClick={() => handleEdit(t)}
                     >
                       ✏️
-                    </button>
-                    <button
-                      style={{
-                        ...btnSecondary,
-                        color: "#dc2626",
-                        fontSize: 12,
-                      }}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, color: colors.danger }}
                       onClick={() => handleDelete(t.id)}
                     >
                       🗑️
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -914,663 +891,893 @@ export default function FinancePage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
-      {/* Modal */}
-      {showModal && (
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(640px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
+          {editingTransaction ? "ערוך תנועה" : "הוסף תנועה חדשה"}
+        </h3>
+
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-          onClick={() => setShowModal(false)}
+          style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
         >
-          <div
-            style={{
-              ...cardStyle,
-              width: "min(600px, 90vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingTransaction ? "ערוך תנועה" : "הוסף תנועה חדשה"}
-            </h3>
+          <div style={sectionBoxStyle}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: spacing.md,
+              }}
+            >
+              <div>
+                <label style={labelStyle}>
+                  תאריך <span style={{ color: colors.danger }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  style={inputStyle}
+                  value={formData.transaction_date}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      transaction_date: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>
+                  סוג תנועה <span style={{ color: colors.danger }}>*</span>
+                </label>
+                <select
+                  style={inputStyle}
+                  value={formData.type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      type: e.target.value as "income" | "expense",
+                      category: "",
+                      donor_shares:
+                        e.target.value === "income"
+                          ? formData.donor_shares
+                          : [],
+                    })
+                  }
+                >
+                  <option value="expense">הוצאה</option>
+                  <option value="income">הכנסה</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>
-                    תאריך <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.transaction_date}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        transaction_date: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>
-                    סוג תנועה <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <select
-                    style={inputStyle}
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        type: e.target.value as "income" | "expense",
-                        category: "", // Reset category on type change
-                        donor_shares:
-                          e.target.value === "income"
-                            ? formData.donor_shares
-                            : [],
-                      })
-                    }
-                  >
-                    <option value="expense">הוצאה</option>
-                    <option value="income">הכנסה</option>
-                  </select>
-                </div>
+          <div style={sectionBoxStyle}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: isDonation ? "1fr 1fr" : "1fr",
+                gap: spacing.md,
+                alignItems: "start",
+              }}
+            >
+              <div>
+                <label style={labelStyle}>
+                  קטגוריה <span style={{ color: colors.danger }}>*</span>
+                </label>
+                <select
+                  style={inputStyle}
+                  value={formData.category}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      category: value,
+                      donor_shares:
+                        prev.type === "income" && value === "תרומה"
+                          ? prev.donor_shares
+                          : [],
+                    }));
+                  }}
+                >
+                  <option value="">בחר קטגוריה...</option>
+                  {(formData.type === "income"
+                    ? INCOME_CATEGORIES
+                    : EXPENSE_CATEGORIES
+                  ).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
 
+              {isDonation && (
+                <div>
+                  <label style={labelStyle}>תורמים ושיוך סכומים</label>
+                  {formData.donor_shares.length === 0 && (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: muted,
+                        marginBottom: spacing.xs,
+                      }}
+                    >
+                      לא נבחרו תורמים. לחץ על "הוסף תורם".
+                    </div>
+                  )}
+                  {formData.donor_shares.map((share) => {
+                    const donor = donors.find(
+                      (d) => d.national_id === share.donor_id
+                    );
+                    return (
+                      <div
+                        key={share.donor_id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: spacing.sm,
+                          marginBottom: spacing.sm,
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600 }}>
+                            {donor?.full_name || "תורם לא נמצא"}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: muted,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {share.donor_id}
+                          </div>
+                        </div>
+                        <div style={{ width: 140 }}>
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={share.amount}
+                            onChange={(e) =>
+                              updateDonorShareAmount(
+                                share.donor_id,
+                                e.target.value
+                              )
+                            }
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <Button
+                          variant="secondary"
+                          style={{ ...smallButtonStyle, color: colors.danger }}
+                          onClick={() => removeDonorShare(share.donor_id)}
+                          type="button"
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    style={{ marginTop: spacing.xs }}
+                    onClick={() => setShowDonorModal(true)}
+                  >
+                    + הוסף תורם
+                  </Button>
+                  <div
+                    style={{
+                      marginTop: spacing.xs,
+                      fontSize: 12,
+                      color: donorShareMismatch ? colors.danger : muted,
+                      fontWeight: donorShareMismatch ? 600 : 400,
+                    }}
+                  >
+                    סה״כ משויך: ₪
+                    {totalDonorShareAmount.toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
+                    {donorShareMismatch &&
+                      ` (נדרש ₪${donationAmount.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })})`}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={dashedBoxStyle}>
+            <label style={labelStyle}>שיוך לפעילות</label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: spacing.sm,
+                marginBottom: spacing.md,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={formData.linkToActivity}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setFormData((prev) => ({
+                    ...prev,
+                    linkToActivity: checked,
+                    season_id: "",
+                    activity_id: "",
+                  }));
+                  if (!checked) setFormSeasonActivities([]);
+                }}
+              />
+              <span style={{ fontSize: 13, color: muted }}>
+                לקשר הכנסה/הוצאה לפעילות ספציפית בעונה
+              </span>
+            </div>
+
+            {formData.linkToActivity && (
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: isDonation ? "1fr 1fr" : "1fr",
-                  gap: 12,
-                  alignItems: "start",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: spacing.md,
                 }}
               >
                 <div>
                   <label style={labelStyle}>
-                    קטגוריה <span style={{ color: "#ef4444" }}>*</span>
+                    בחר עונה <span style={{ color: colors.danger }}>*</span>
                   </label>
                   <select
                     style={inputStyle}
-                    value={formData.category}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    value={formData.season_id}
+                    onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        category: value,
-                        donor_shares:
-                          prev.type === "income" && value === "תרומה"
-                            ? prev.donor_shares
-                            : [],
-                      }));
-                    }}
+                        season_id: e.target.value,
+                        activity_id: "",
+                      }))
+                    }
                   >
-                    <option value="">בחר קטגוריה...</option>
-                    {(formData.type === "income"
-                      ? INCOME_CATEGORIES
-                      : EXPENSE_CATEGORIES
-                    ).map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                    <option value="">בחר עונה...</option>
+                    {seasons.map((season) => (
+                      <option key={season.id} value={season.id}>
+                        {season.name} · {season.year}
                       </option>
                     ))}
                   </select>
                 </div>
-                {isDonation && (
-                  <div>
-                    <label style={labelStyle}>תורמים ושיוך סכומים</label>
-                    {formData.donor_shares.length === 0 && (
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: muted,
-                          marginBottom: 8,
-                        }}
-                      >
-                        לא נבחרו תורמים. לחץ על "הוסף תורם".
-                      </div>
-                    )}
-                    {formData.donor_shares.map((share) => {
-                      const donor = donors.find(
-                        (d) => d.national_id === share.donor_id
-                      );
-                      return (
-                        <div
-                          key={share.donor_id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            marginBottom: 8,
-                          }}
-                        >
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 600 }}>
-                              {donor?.full_name || "תורם לא נמצא"}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: muted,
-                                fontFamily: "monospace",
-                              }}
-                            >
-                              {share.donor_id}
-                            </div>
-                          </div>
-                          <div style={{ width: 140 }}>
-                            <input
-                              type="number"
-                              style={inputStyle}
-                              value={share.amount}
-                              onChange={(e) =>
-                                updateDonorShareAmount(
-                                  share.donor_id,
-                                  e.target.value
-                                )
-                              }
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            style={{
-                              ...btnSecondary,
-                              padding: "4px 8px",
-                              color: "#dc2626",
-                            }}
-                            onClick={() => removeDonorShare(share.donor_id)}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      style={{
-                        ...btnSecondary,
-                        marginTop: 4,
-                        padding: "6px 12px",
-                      }}
-                      onClick={() => setShowDonorModal(true)}
-                    >
-                      + הוסף תורם
-                    </button>
-                    <div
-                      style={{
-                        marginTop: 8,
-                        fontSize: 12,
-                        color: donorShareMismatch ? "#dc2626" : muted,
-                        fontWeight: donorShareMismatch ? 600 : 400,
-                      }}
-                    >
-                      סה״כ משויך: ₪
-                      {totalDonorShareAmount.toLocaleString(undefined, {
-                        maximumFractionDigits: 2,
-                      })}
-                      {donorShareMismatch &&
-                        ` (נדרש ₪${donationAmount.toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })})`}
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              <div
-                style={{
-                  marginTop: 4,
-                  padding: 12,
-                  borderRadius: 8,
-                  background: "#f9fafb",
-                  border: "1px dashed #d1d5db",
-                }}
-              >
-                <label style={labelStyle}>שיוך לפעילות</label>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 12,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.linkToActivity}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
+                <div>
+                  <label style={labelStyle}>
+                    בחר פעילות <span style={{ color: colors.danger }}>*</span>
+                  </label>
+                  <select
+                    style={inputStyle}
+                    value={formData.activity_id}
+                    onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        linkToActivity: checked,
-                        season_id: "",
-                        activity_id: "",
-                      }));
-                      if (!checked) {
-                        setFormSeasonActivities([]);
-                      }
-                    }}
-                  />
-                  <span style={{ fontSize: 13, color: muted }}>
-                    לקשר הכנסה/הוצאה לפעילות ספציפית בעונה
-                  </span>
-                </div>
-
-                {formData.linkToActivity && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 12,
-                    }}
-                  >
-                    <div>
-                      <label style={labelStyle}>
-                        בחר עונה <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <select
-                        style={inputStyle}
-                        value={formData.season_id}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            season_id: e.target.value,
-                            activity_id: "",
-                          }))
-                        }
-                      >
-                        <option value="">בחר עונה...</option>
-                        {seasons.map((season) => (
-                          <option key={season.id} value={season.id}>
-                            {season.name} · {season.year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>
-                        בחר פעילות <span style={{ color: "#ef4444" }}>*</span>
-                      </label>
-                      <select
-                        style={inputStyle}
-                        value={formData.activity_id}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            activity_id: e.target.value,
-                          }))
-                        }
-                        disabled={
-                          !formData.season_id ||
-                          formActivitiesLoading ||
-                          formSeasonActivities.length === 0
-                        }
-                      >
-                        <option value="">
-                          {formActivitiesLoading
-                            ? "טוען פעילויות..."
-                            : formSeasonActivities.length
-                            ? "בחר פעילות..."
-                            : "אין פעילויות זמינות לעונה זו"}
-                        </option>
-                        {formSeasonActivities.map((activity) => (
-                          <option key={activity.id} value={activity.id}>
-                            {activity.kind} ·{" "}
-                            {new Date(
-                              activity.activity_date
-                            ).toLocaleDateString("he-IL")}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label style={labelStyle}>
-                  סכום (₪) <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  style={inputStyle}
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>
-                  תיאור <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="תיאור התנועה"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>מי שילם / מקור התשלום</label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={formData.paid_by}
-                  onChange={(e) =>
-                    setFormData({ ...formData, paid_by: e.target.value })
-                  }
-                  placeholder="שם האדם או הגורם שביצע את התשלום"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>פרטי התשלום</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
-                  value={formData.payment_details}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      payment_details: e.target.value,
-                    })
-                  }
-                  placeholder="לדוגמה: כרטיס אשראי, סוף 1234, תשלום ב-3 תשלומים"
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  id="has_invoice"
-                  checked={formData.has_invoice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      has_invoice: e.target.checked,
-                    })
-                  }
-                />
-                <label htmlFor="has_invoice" style={{ fontWeight: 600 }}>
-                  הוצאה חשבונית כנגד
-                </label>
-              </div>
-
-              {formData.has_invoice && (
-                <div>
-                  <label style={labelStyle}>מספר חשבונית</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={formData.invoice_number}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        invoice_number: e.target.value,
-                      })
+                        activity_id: e.target.value,
+                      }))
                     }
-                    placeholder="לדוגמה: INV-2025-001"
-                  />
-                </div>
-              )}
-
-              <div
-                style={{
-                  border: "1px dashed #d1d5db",
-                  borderRadius: 8,
-                  padding: 12,
-                  background: "#f9fafb",
-                }}
-              >
-                <label style={labelStyle}>צרף מסמך (PDF / תמונה)</label>
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  onChange={(e) =>
-                    handleAttachmentFile(e.target.files?.[0] || null)
-                  }
-                />
-                {(currentAttachment || formData.attachment) && (
-                  <div
-                    style={{
-                      marginTop: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 8,
-                      flexWrap: "wrap",
-                    }}
+                    disabled={
+                      !formData.season_id ||
+                      formActivitiesLoading ||
+                      formSeasonActivities.length === 0
+                    }
                   >
-                    <a
-                      href={`data:${
-                        formData.attachment?.mime ||
-                        currentAttachment?.mime ||
-                        "application/octet-stream"
-                      };base64,${
-                        formData.attachment?.data || currentAttachment?.data
-                      }`}
-                      download={
-                        formData.attachment?.name ||
-                        currentAttachment?.name ||
-                        "attachment"
-                      }
-                      style={{ color: "#0ea5e9", fontSize: 13 }}
-                    >
-                      הורד/י קובץ מצורף
-                    </a>
-                    <button
-                      type="button"
-                      style={{
-                        ...btnSecondary,
-                        fontSize: 12,
-                        padding: "4px 10px",
-                      }}
-                      onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          attachment: null,
-                          remove_attachment: true,
-                        }));
-                        setCurrentAttachment(null);
-                      }}
-                    >
-                      הסר קובץ
-                    </button>
-                  </div>
-                )}
+                    <option value="">
+                      {formActivitiesLoading
+                        ? "טוען פעילויות..."
+                        : formSeasonActivities.length
+                        ? "בחר פעילות..."
+                        : "אין פעילויות זמינות לעונה זו"}
+                    </option>
+                    {formSeasonActivities.map((activity) => (
+                      <option key={activity.id} value={activity.id}>
+                        {activity.kind} ·{" "}
+                        {new Date(activity.activity_date).toLocaleDateString(
+                          "he-IL"
+                        )}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+            )}
+          </div>
 
-              <div>
-                <label style={labelStyle}>הערות</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="הערות נוספות..."
-                />
-              </div>
+          <div style={sectionBoxStyle}>
+            <div>
+              <label style={labelStyle}>
+                סכום (₪) <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="number"
+                style={inputStyle}
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 8,
-                  justifyContent: "flex-end",
-                }}
-              >
-                <button
-                  style={btnSecondary}
-                  onClick={() => setShowModal(false)}
-                >
-                  ביטול
-                </button>
-                <button style={btnPrimary} onClick={handleSubmit}>
-                  {editingTransaction ? "עדכן" : "הוסף"}
-                </button>
-              </div>
+            <div>
+              <label style={labelStyle}>
+                תיאור <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="תיאור התנועה"
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>מי שילם / מקור התשלום</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.paid_by}
+                onChange={(e) =>
+                  setFormData({ ...formData, paid_by: e.target.value })
+                }
+                placeholder="שם האדם או הגורם שביצע את התשלום"
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>פרטי התשלום</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+                value={formData.payment_details}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    payment_details: e.target.value,
+                  })
+                }
+                placeholder="לדוגמה: כרטיס אשראי, סוף 1234, תשלום ב-3 תשלומים"
+              />
+            </div>
+
+            <div
+              style={{ display: "flex", alignItems: "center", gap: spacing.sm }}
+            >
+              <input
+                type="checkbox"
+                id="has_invoice"
+                checked={formData.has_invoice}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    has_invoice: e.target.checked,
+                  })
+                }
+              />
+              <label htmlFor="has_invoice" style={{ fontWeight: 600 }}>
+                הוצאה חשבונית כנגד
+              </label>
             </div>
           </div>
-        </div>
-      )}
 
-      {showDonorModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            padding: 20,
-          }}
-          onClick={() => setShowDonorModal(false)}
-        >
+          {formData.has_invoice && (
+            <div style={sectionBoxStyle}>
+              <label style={labelStyle}>מספר חשבונית</label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.invoice_number}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    invoice_number: e.target.value,
+                  })
+                }
+                placeholder="לדוגמה: INV-2025-001"
+              />
+            </div>
+          )}
+
+          <div style={dashedBoxStyle}>
+            <label style={labelStyle}>צרף מסמך (PDF / תמונה)</label>
+            <input
+              type="file"
+              accept="application/pdf,image/*"
+              onChange={(e) =>
+                handleAttachmentFile(e.target.files?.[0] || null)
+              }
+            />
+            {(currentAttachment || formData.attachment) && (
+              <div
+                style={{
+                  marginTop: spacing.xs,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: spacing.sm,
+                  flexWrap: "wrap",
+                }}
+              >
+                <a
+                  href={`data:${
+                    formData.attachment?.mime ||
+                    currentAttachment?.mime ||
+                    "application/octet-stream"
+                  };base64,${
+                    formData.attachment?.data || currentAttachment?.data
+                  }`}
+                  download={
+                    formData.attachment?.name ||
+                    currentAttachment?.name ||
+                    "attachment"
+                  }
+                  style={{ color: colors.accent, fontSize: 13 }}
+                >
+                  הורד/י קובץ מצורף
+                </a>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  style={{ ...smallButtonStyle }}
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      attachment: null,
+                      remove_attachment: true,
+                    }));
+                    setCurrentAttachment(null);
+                  }}
+                >
+                  הסר קובץ
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div style={sectionBoxStyle}>
+            <label style={labelStyle}>הערות</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              placeholder="הערות נוספות..."
+            />
+          </div>
+
           <div
             style={{
-              ...cardStyle,
-              width: "min(720px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflowY: "auto",
+              display: "flex",
+              gap: spacing.md,
+              justifyContent: "flex-end",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
+            <Button
+              variant="secondary"
+              onClick={() => setShowModal(false)}
+              type="button"
+            >
+              ביטול
+            </Button>
+            <Button onClick={handleSubmit} type="button">
+              {editingTransaction ? "עדכן" : "הוסף"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showViewModal && !!viewingTransaction}
+        onClose={closeViewModal}
+        width="min(700px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        {viewingTransaction && (
+          <>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: 16,
+                marginBottom: spacing.md,
+                gap: spacing.md,
+                flexWrap: "wrap",
               }}
             >
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
-                בחר תורם
+                פרטי תנועה – {viewingTransaction.description}
               </h3>
-              <button
-                style={btnSecondary}
-                onClick={() => setShowDonorModal(false)}
+              <Button
+                variant="secondary"
+                onClick={closeViewModal}
+                type="button"
               >
                 ✕ סגור
-              </button>
+              </Button>
             </div>
-          <div style={{ marginBottom: 12 }}>
-            <input
-              type="text"
-              style={inputStyle}
-              placeholder="חפש לפי שם או ת.ז"
-              value={donorSearch}
-              onChange={(e) => setDonorSearch(e.target.value)}
-            />
-          </div>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: "0 8px",
-              }}
-            >
-              <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
-                <tr style={{ color: muted, fontSize: 13 }}>
-                  <th style={{ textAlign: "right", padding: 8 }}>שם</th>
-                  <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
-                  <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
-                  <th style={{ textAlign: "center", padding: 8 }}>פעולה</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDonors.map((donor) => (
-                  <tr
-                    key={donor.national_id}
-                    style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
+
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+              <h4
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: 14,
+                  color: muted,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.xs,
+                }}
+              >
+                יסודות
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: spacing.md,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>תאריך</div>
+                  <div>{formatDate(viewingTransaction.transaction_date)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>סוג</div>
+                  <span
+                    style={{
+                      ...typePillStyle(viewingTransaction.type),
+                      marginTop: spacing.xs,
+                    }}
                   >
-                    <td style={{ padding: 8 }}>
-                      <div style={{ fontWeight: 600 }}>{donor.full_name}</div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: muted,
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {donor.national_id}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
-                      {donor.phone || "—"}
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
-                      {donor.email || "—"}
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
-                      <button
-                        style={{ ...btnSecondary, padding: "6px 12px" }}
-                        onClick={() => handleSelectDonor(donor)}
-                        disabled={formData.donor_shares.some(
-                          (share) => share.donor_id === donor.national_id
-                        )}
-                      >
-                        {formData.donor_shares.some(
-                          (share) => share.donor_id === donor.national_id
-                        )
-                          ? "נבחר"
-                          : "בחר"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {filteredDonors.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      style={{ textAlign: "center", padding: 20, color: muted }}
+                    {viewingTransaction.type === "income" ? "הכנסה" : "הוצאה"}
+                  </span>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>קטגוריה</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {viewingTransaction.category}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>סכום</div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      color:
+                        viewingTransaction.type === "income"
+                          ? colors.success
+                          : colors.danger,
+                    }}
+                  >
+                    {formatCurrency(viewingTransaction.amount)}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: spacing.md }}>
+                <div style={{ fontSize: 12, color: muted }}>תיאור</div>
+                <div style={{ fontWeight: 600 }}>
+                  {viewingTransaction.description}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+              <h4
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: 14,
+                  color: muted,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.xs,
+                }}
+              >
+                שיוך לפעילות
+              </h4>
+              {viewingTransaction.activity_id ? (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                    gap: spacing.md,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>פעילות</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {viewingTransaction.activity_kind ||
+                        `פעילות #${viewingTransaction.activity_id}`}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>
+                      תאריך פעילות
+                    </div>
+                    <div>{formatDate(viewingTransaction.activity_date)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: muted }}>עונה</div>
+                    <div>
+                      {viewingTransaction.season_name
+                        ? `${viewingTransaction.season_name} · ${
+                            viewingTransaction.season_year ?? ""
+                          }`
+                        : "—"}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: muted }}>
+                  לא משויכת לפעילות
+                </div>
+              )}
+            </div>
+
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+              <h4
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: 14,
+                  color: muted,
+                  borderBottom: `2px solid ${colors.borderMuted}`,
+                  paddingBottom: spacing.xs,
+                }}
+              >
+                פרטי תשלום
+              </h4>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: spacing.md,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>שולם על ידי</div>
+                  <div>{viewingTransaction.paid_by || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: muted }}>חשבונית</div>
+                  <div>
+                    {viewingTransaction.has_invoice
+                      ? viewingTransaction.invoice_number
+                        ? `#${viewingTransaction.invoice_number}`
+                        : "קיימת"
+                      : "—"}
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: spacing.sm }}>
+                <div style={{ fontSize: 12, color: muted }}>פרטי תשלום</div>
+                <div style={{ whiteSpace: "pre-wrap" }}>
+                  {viewingTransaction.payment_details || "—"}
+                </div>
+              </div>
+            </div>
+
+            {viewingTransaction.donor_shares?.length ? (
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+                <h4
+                  style={{
+                    margin: "0 0 12px 0",
+                    fontSize: 14,
+                    color: muted,
+                    borderBottom: `2px solid ${colors.borderMuted}`,
+                    paddingBottom: spacing.xs,
+                  }}
+                >
+                  תורמים משויכים
+                </h4>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: spacing.sm,
+                  }}
+                >
+                  {viewingTransaction.donor_shares.map((share) => (
+                    <div
+                      key={share.donor_id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: spacing.sm,
+                        borderRadius: radii.card,
+                        border: `1px solid ${colors.borderMuted}`,
+                        background: colors.surfaceAlt,
+                      }}
                     >
-                      {donorSearch
-                        ? "לא נמצאו תורמים תואמים לחיפוש."
-                        : "אין תורמים פעילים להצגה."}
-                    </td>
-                  </tr>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>
+                          {share.donor_name || "—"}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: muted,
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          {share.donor_id}
+                        </div>
+                      </div>
+                      <div style={{ fontWeight: 700 }}>
+                        {formatCurrency(share.amount)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {(viewingTransaction.attachment_name &&
+              viewingTransaction.attachment_data) ||
+            viewingTransaction.notes ? (
+              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+                {viewingTransaction.notes && (
+                  <>
+                    <h4
+                      style={{
+                        margin: "0 0 12px 0",
+                        fontSize: 14,
+                        color: muted,
+                        borderBottom: `2px solid ${colors.borderMuted}`,
+                        paddingBottom: spacing.xs,
+                      }}
+                    >
+                      הערות
+                    </h4>
+                    <div
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        marginBottom: viewingTransaction.attachment_name
+                          ? spacing.md
+                          : 0,
+                      }}
+                    >
+                      {viewingTransaction.notes}
+                    </div>
+                  </>
                 )}
-              </tbody>
-            </table>
-          </div>
+                {viewingTransaction.attachment_name &&
+                  viewingTransaction.attachment_data && (
+                    <a
+                      href={`data:${
+                        viewingTransaction.attachment_mime ||
+                        "application/octet-stream"
+                      };base64,${viewingTransaction.attachment_data}`}
+                      download={viewingTransaction.attachment_name}
+                      style={{ color: colors.accent, fontSize: 13 }}
+                    >
+                      הורד/י קובץ מצורף ({viewingTransaction.attachment_name})
+                    </a>
+                  )}
+              </div>
+            ) : null}
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={showDonorModal}
+        onClose={() => setShowDonorModal(false)}
+        width="min(720px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: spacing.md,
+            gap: spacing.md,
+            flexWrap: "wrap",
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>בחר תורם</h3>
+          <Button
+            variant="secondary"
+            onClick={() => setShowDonorModal(false)}
+            type="button"
+          >
+            ✕ סגור
+          </Button>
         </div>
-      )}
+        <div style={{ marginBottom: spacing.sm }}>
+          <input
+            type="text"
+            style={inputStyle}
+            placeholder="חפש לפי שם או ת.ז"
+            value={donorSearch}
+            onChange={(e) => setDonorSearch(e.target.value)}
+          />
+        </div>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "separate",
+            borderSpacing: "0 8px",
+          }}
+        >
+          <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
+            <tr style={{ color: muted, fontSize: 13 }}>
+              <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+              <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
+              <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
+              <th style={{ textAlign: "center", padding: 8 }}>פעולה</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredDonors.map((donor) => {
+              const alreadySelected = formData.donor_shares.some(
+                (share) => share.donor_id === donor.national_id
+              );
+              return (
+                <tr
+                  key={donor.national_id}
+                  style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
+                >
+                  <td style={{ padding: 8 }}>
+                    <div style={{ fontWeight: 600 }}>{donor.full_name}</div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: muted,
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {donor.national_id}
+                    </div>
+                  </td>
+                  <td style={{ textAlign: "center", padding: 8 }}>
+                    {donor.phone || "—"}
+                  </td>
+                  <td style={{ textAlign: "center", padding: 8 }}>
+                    {donor.email || "—"}
+                  </td>
+                  <td style={{ textAlign: "center", padding: 8 }}>
+                    <Button
+                      variant="secondary"
+                      style={{ ...smallButtonStyle, padding: "6px 12px" }}
+                      onClick={() => handleSelectDonor(donor)}
+                      disabled={alreadySelected}
+                    >
+                      {alreadySelected ? "נבחר" : "בחר"}
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredDonors.length === 0 && (
+              <tr>
+                <td
+                  colSpan={4}
+                  style={{ textAlign: "center", padding: 20, color: muted }}
+                >
+                  {donorSearch
+                    ? "לא נמצאו תורמים תואמים לחיפוש."
+                    : "אין תורמים פעילים להצגה."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Modal>
     </div>
   );
 }

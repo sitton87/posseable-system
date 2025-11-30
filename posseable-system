@@ -1,0 +1,537 @@
+warning: in the working copy of 'app/(main)/dashboard/DashboardView.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/app/(main)/dashboard/DashboardView.tsx b/app/(main)/dashboard/DashboardView.tsx[m
+[1mindex f10fc9a..f6434dd 100644[m
+[1m--- a/app/(main)/dashboard/DashboardView.tsx[m
+[1m+++ b/app/(main)/dashboard/DashboardView.tsx[m
+[36m@@ -1,22 +1,110 @@[m
+[31m-"use client";[m
+[32m+[m[32m﻿"use client";[m
+ [m
+[31m-import React, { useState, useEffect } from "react";[m
+[31m-import clsx from "clsx";[m
+[32m+[m[32mimport type { CSSProperties } from "react";[m
+[32m+[m[32mimport { useEffect, useState } from "react";[m
+[32m+[m[32mimport { Card } from "@/app/components/ui";[m
+[32m+[m[32mimport { colors, spacing, radii, shadows } from "@/app/styles/foundations";[m
+ [m
+[31m-// Styles[m
+[31m-const muted = "#6b7280";[m
+[31m-const cardStyle: React.CSSProperties = {[m
+[31m-  background: "#fff",[m
+[31m-  borderRadius: 12,[m
+[31m-  padding: 20,[m
+[31m-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",[m
+[31m-  border: "1px solid rgba(15,23,42,0.06)",[m
+[32m+[m[32mconst px = (value: number) => `${value}px`;[m
+[32m+[m[32mconst muted = colors.textMuted;[m
+[32m+[m
+[32m+[m[32mconst layoutStyle: CSSProperties = {[m
+[32m+[m[32m  padding: spacing.xl,[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  flexDirection: "column",[m
+[32m+[m[32m  gap: spacing.lg,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst headerStyle: CSSProperties = {[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  flexDirection: "column",[m
+[32m+[m[32m  gap: px(spacing.xs),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst headingStyle: CSSProperties = {[m
+[32m+[m[32m  margin: 0,[m
+[32m+[m[32m  fontSize: px(28),[m
+[32m+[m[32m  fontWeight: 800,[m
+[32m+[m[32m  color: colors.textPrimary,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst statGridStyle: CSSProperties = {[m
+[32m+[m[32m  display: "grid",[m
+[32m+[m[32m  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",[m
+[32m+[m[32m  gap: spacing.lg,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst detailGridStyle: CSSProperties = {[m
+[32m+[m[32m  display: "grid",[m
+[32m+[m[32m  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",[m
+[32m+[m[32m  gap: spacing.lg,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst statCardStyle: CSSProperties = {[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  flexDirection: "column",[m
+[32m+[m[32m  gap: spacing.md,[m
+[32m+[m[32m  padding: spacing.lg,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst statValueStyle: CSSProperties = {[m
+[32m+[m[32m  fontSize: px(28),[m
+[32m+[m[32m  fontWeight: 800,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst statMetaStyle: CSSProperties = {[m
+[32m+[m[32m  fontSize: px(13),[m
+[32m+[m[32m  color: muted,[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  justifyContent: "space-between",[m
+[32m+[m[32m  marginBottom: px(4),[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst detailListStyle: CSSProperties = {[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  flexDirection: "column",[m
+[32m+[m[32m  gap: spacing.sm,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst detailItemStyle: CSSProperties = {[m
+[32m+[m[32m  padding: spacing.md,[m
+[32m+[m[32m  borderRadius: radii.card,[m
+[32m+[m[32m  border: `1px solid ${colors.borderMuted}`,[m
+[32m+[m[32m  background: colors.surfaceAlt,[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  justifyContent: "space-between",[m
+[32m+[m[32m  alignItems: "center",[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst quickActionsGridStyle: CSSProperties = {[m
+[32m+[m[32m  display: "grid",[m
+[32m+[m[32m  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",[m
+[32m+[m[32m  gap: spacing.md,[m
+[32m+[m[32m  marginTop: spacing.md,[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32mconst quickActionStyle: CSSProperties = {[m
+[32m+[m[32m  display: "flex",[m
+[32m+[m[32m  flexDirection: "column",[m
+[32m+[m[32m  alignItems: "center",[m
+[32m+[m[32m  justifyContent: "center",[m
+[32m+[m[32m  gap: px(spacing.xs),[m
+[32m+[m[32m  padding: spacing.lg,[m
+[32m+[m[32m  borderRadius: radii.card,[m
+[32m+[m[32m  border: `1px solid ${colors.borderMuted}`,[m
+[32m+[m[32m  textDecoration: "none",[m
+[32m+[m[32m  fontWeight: 600,[m
+[32m+[m[32m  transition: "transform 0.15s ease, box-shadow 0.15s ease",[m
+ };[m
+ [m
+ type DashboardStats = {[m
+   volunteers: { total: number; active: number };[m
+   surfers: { total: number; active: number; byProgram: Record<string, number> };[m
+[31m-  activities: { total: number; upcoming: number; byKind: Record<string, number> };[m
+[32m+[m[32m  activities: {[m
+[32m+[m[32m    total: number;[m
+[32m+[m[32m    upcoming: number;[m
+[32m+[m[32m    byKind: Record<string, number>;[m
+[32m+[m[32m  };[m
+   equipment: { total: number; needsRepair: number };[m
+   donors: { total: number; active: number };[m
+   suppliers: { total: number; active: number };[m
+[36m@@ -45,262 +133,257 @@[m [mexport default function DashboardView() {[m
+     }[m
+   };[m
+ [m
+[32m+[m[32m  const quickActions = [[m
+[32m+[m[32m    {[m
+[32m+[m[32m      href: "/volunteers",[m
+[32m+[m[32m      label: "הוסף מתנדב",[m
+[32m+[m[32m      icon: "👥",[m
+[32m+[m[32m      background: colors.primarySoft,[m
+[32m+[m[32m      color: colors.primary,[m
+[32m+[m[32m    },[m
+[32m+[m[32m    {[m
+[32m+[m[32m      href: "/surfers",[m
+[32m+[m[32m      label: "הוסף גולש",[m
+[32m+[m[32m      icon: "🏄",[m
+[32m+[m[32m      background: colors.surfaceAlt,[m
+[32m+[m[32m      color: colors.accent,[m
+[32m+[m[32m    },[m
+[32m+[m[32m    {[m
+[32m+[m[32m      href: "/activities",[m
+[32m+[m[32m      label: "תזמן פעילות",[m
+[32m+[m[32m      icon: "📅",[m
+[32m+[m[32m      background: colors.primarySoft,[m
+[32m+[m[32m      color: colors.primary,[m
+[32m+[m[32m    },[m
+[32m+[m[32m    {[m
+[32m+[m[32m      href: "/equipment",[m
+[32m+[m[32m      label: "נהל ציוד",[m
+[32m+[m[32m      icon: "🛠️",[m
+[32m+[m[32m      background: colors.successSoft,[m
+[32m+[m[32m      color: colors.success,[m
+[32m+[m[32m    },[m
+[32m+[m[32m  ];[m
+[32m+[m
+   if (loading) {[m
+     return ([m
+[31m-      <div className="p-6">[m
+[31m-        <div className="text-center">טוען נתונים...</div>[m
+[32m+[m[32m      <div style={layoutStyle}>[m
+[32m+[m[32m        <div style={{ textAlign: "center", color: muted }}>טוען נתונים...</div>[m
+       </div>[m
+     );[m
+   }[m
+ [m
+   if (!stats) {[m
+     return ([m
+[31m-      <div className="p-6">[m
+[31m-        <div className="text-center text-red-600">שגיאה בטעינת נתונים</div>[m
+[32m+[m[32m      <div style={layoutStyle}>[m
+[32m+[m[32m        <div style={{ textAlign: "center", color: colors.danger }}>[m
+[32m+[m[32m          שגיאה בטעינת נתונים[m
+[32m+[m[32m        </div>[m
+       </div>[m
+     );[m
+   }[m
+ [m
+   return ([m
+[31m-    <div className="p-6">[m
+[31m-      {/* Header */}[m
+[31m-      <div className="mb-6">[m
+[31m-        <h1 className="text-3xl font-bold text-gray-900">[m
+[31m-          ברוך הבא למערכת Posseable! 👋[m
+[31m-        </h1>[m
+[31m-        <p className="text-gray-600 mt-2">סקירה כללית של המערכת</p>[m
+[32m+[m[32m    <div style={layoutStyle}>[m
+[32m+[m[32m      <div style={headerStyle}>[m
+[32m+[m[32m        <h1 style={headingStyle}>ברוך הבא למערכת PosSEAble</h1>[m
+[32m+[m[32m        <p style={{ margin: 0, color: muted }}>סקירה כללית של המערכת</p>[m
+       </div>[m
+ [m
+[31m-      {/* Main Stats Cards */}[m
+[31m-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">[m
+[31m-        {/* Volunteers */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <div className="flex items-center justify-between mb-4">[m
+[31m-            <h3 className="text-lg font-bold text-gray-900">🏃 מתנדבים</h3>[m
+[31m-            <span className="text-3xl font-bold text-blue-600">[m
+[32m+[m[32m      <div style={statGridStyle}>[m
+[32m+[m[32m        <Card style={statCardStyle}>[m
+[32m+[m[32m          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>[m
+[32m+[m[32m            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>🏃 מתנדבים</h3>[m
+[32m+[m[32m            <span style={{ ...statValueStyle, color: colors.primary }}>[m
+               {stats.volunteers.total}[m
+             </span>[m
+           </div>[m
+[31m-          <div className="text-sm text-gray-600">[m
+[31m-            <div className="flex justify-between mb-1">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>פעילים:</span>[m
+[31m-              <span className="font-semibold text-green-600">[m
+[32m+[m[32m              <span style={{ color: colors.success, fontWeight: 700 }}>[m
+                 {stats.volunteers.active}[m
+               </span>[m
+             </div>[m
+[31m-            <div className="flex justify-between">[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>לא פעילים:</span>[m
+[31m-              <span className="font-semibold text-gray-500">[m
+[31m-                {stats.volunteers.total - stats.volunteers.active}[m
+[31m-              </span>[m
+[32m+[m[32m              <span>{stats.volunteers.total - stats.volunteers.active}</span>[m
+             </div>[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+ [m
+[31m-        {/* Surfers */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <div className="flex items-center justify-between mb-4">[m
+[31m-            <h3 className="text-lg font-bold text-gray-900">🏄 גולשים</h3>[m
+[31m-            <span className="text-3xl font-bold text-cyan-600">[m
+[32m+[m[32m        <Card style={statCardStyle}>[m
+[32m+[m[32m          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>[m
+[32m+[m[32m            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>🏄 גולשים</h3>[m
+[32m+[m[32m            <span style={{ ...statValueStyle, color: colors.accent }}>[m
+               {stats.surfers.total}[m
+             </span>[m
+           </div>[m
+[31m-          <div className="text-sm text-gray-600">[m
+[31m-            <div className="flex justify-between mb-1">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>פעילים:</span>[m
+[31m-              <span className="font-semibold text-green-600">[m
+[32m+[m[32m              <span style={{ color: colors.success, fontWeight: 700 }}>[m
+                 {stats.surfers.active}[m
+               </span>[m
+             </div>[m
+[31m-            <div className="flex justify-between">[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>לא פעילים:</span>[m
+[31m-              <span className="font-semibold text-gray-500">[m
+[31m-                {stats.surfers.total - stats.surfers.active}[m
+[31m-              </span>[m
+[32m+[m[32m              <span>{stats.surfers.total - stats.surfers.active}</span>[m
+             </div>[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+ [m
+[31m-        {/* Activities */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <div className="flex items-center justify-between mb-4">[m
+[31m-            <h3 className="text-lg font-bold text-gray-900">📅 פעילויות</h3>[m
+[31m-            <span className="text-3xl font-bold text-purple-600">[m
+[32m+[m[32m        <Card style={statCardStyle}>[m
+[32m+[m[32m          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>[m
+[32m+[m[32m            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>📅 פעילויות</h3>[m
+[32m+[m[32m            <span style={{ ...statValueStyle, color: colors.primary }}>[m
+               {stats.activities.total}[m
+             </span>[m
+           </div>[m
+[31m-          <div className="text-sm text-gray-600">[m
+[31m-            <div className="flex justify-between mb-1">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>קרובות:</span>[m
+[31m-              <span className="font-semibold text-orange-600">[m
+[32m+[m[32m              <span style={{ color: colors.warning, fontWeight: 700 }}>[m
+                 {stats.activities.upcoming}[m
+               </span>[m
+             </div>[m
+[31m-            <div className="flex justify-between">[m
+[31m-              <span>סה"כ:</span>[m
+[31m-              <span className="font-semibold">{stats.activities.total}</span>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+[32m+[m[32m              <span>סה&quot;כ:</span>[m
+[32m+[m[32m              <span>{stats.activities.total}</span>[m
+             </div>[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+ [m
+[31m-        {/* Equipment */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <div className="flex items-center justify-between mb-4">[m
+[31m-            <h3 className="text-lg font-bold text-gray-900">🛠️ ציוד</h3>[m
+[31m-            <span className="text-3xl font-bold text-green-600">[m
+[32m+[m[32m        <Card style={statCardStyle}>[m
+[32m+[m[32m          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>[m
+[32m+[m[32m            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>🛠️ ציוד</h3>[m
+[32m+[m[32m            <span style={{ ...statValueStyle, color: colors.success }}>[m
+               {stats.equipment.total}[m
+             </span>[m
+           </div>[m
+[31m-          <div className="text-sm text-gray-600">[m
+[31m-            <div className="flex justify-between mb-1">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>תקין:</span>[m
+[31m-              <span className="font-semibold text-green-600">[m
+[32m+[m[32m              <span style={{ color: colors.success, fontWeight: 700 }}>[m
+                 {stats.equipment.total - stats.equipment.needsRepair}[m
+               </span>[m
+             </div>[m
+[31m-            <div className="flex justify-between">[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>דורש תיקון:</span>[m
+[31m-              <span className="font-semibold text-red-600">[m
+[32m+[m[32m              <span style={{ color: colors.danger }}>[m
+                 {stats.equipment.needsRepair}[m
+               </span>[m
+             </div>[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+ [m
+[31m-        {/* Donors */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <div className="flex items-center justify-between mb-4">[m
+[31m-            <h3 className="text-lg font-bold text-gray-900">❤️ תורמים</h3>[m
+[31m-            <span className="text-3xl font-bold text-pink-600">[m
+[32m+[m[32m        <Card style={statCardStyle}>[m
+[32m+[m[32m          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>[m
+[32m+[m[32m            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>❤️ תורמים</h3>[m
+[32m+[m[32m            <span style={{ ...statValueStyle, color: colors.danger }}>[m
+               {stats.donors.total}[m
+             </span>[m
+           </div>[m
+[31m-          <div className="text-sm text-gray-600">[m
+[31m-            <div className="flex justify-between mb-1">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>פעילים:</span>[m
+[31m-              <span className="font-semibold text-green-600">[m
+[32m+[m[32m              <span style={{ color: colors.success, fontWeight: 700 }}>[m
+                 {stats.donors.active}[m
+               </span>[m
+             </div>[m
+[31m-            <div className="flex justify-between">[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>לא פעילים:</span>[m
+[31m-              <span className="font-semibold text-gray-500">[m
+[31m-                {stats.donors.total - stats.donors.active}[m
+[31m-              </span>[m
+[32m+[m[32m              <span>{stats.donors.total - stats.donors.active}</span>[m
+             </div>[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+ [m
+[31m-        {/* Suppliers */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <div className="flex items-center justify-between mb-4">[m
+[31m-            <h3 className="text-lg font-bold text-gray-900">🤝 ספקים</h3>[m
+[31m-            <span className="text-3xl font-bold text-indigo-600">[m
+[32m+[m[32m        <Card style={statCardStyle}>[m
+[32m+[m[32m          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>[m
+[32m+[m[32m            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>🤝 ספקים</h3>[m
+[32m+[m[32m            <span style={{ ...statValueStyle, color: colors.primary }}>[m
+               {stats.suppliers.total}[m
+             </span>[m
+           </div>[m
+[31m-          <div className="text-sm text-gray-600">[m
+[31m-            <div className="flex justify-between mb-1">[m
+[32m+[m[32m          <div>[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>פעילים:</span>[m
+[31m-              <span className="font-semibold text-green-600">[m
+[32m+[m[32m              <span style={{ color: colors.success, fontWeight: 700 }}>[m
+                 {stats.suppliers.active}[m
+               </span>[m
+             </div>[m
+[31m-            <div className="flex justify-between">[m
+[32m+[m[32m            <div style={statMetaStyle}>[m
+               <span>לא פעילים:</span>[m
+[31m-              <span className="font-semibold text-gray-500">[m
+[31m-                {stats.suppliers.total - stats.suppliers.active}[m
+[31m-              </span>[m
+[32m+[m[32m              <span>{stats.suppliers.total - stats.suppliers.active}</span>[m
+             </div>[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+       </div>[m
+ [m
+[31m-      {/* Detailed Breakdown */}[m
+[31m-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">[m
+[31m-        {/* Surfers by Program */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <h3 className="text-lg font-bold text-gray-900 mb-4">[m
+[32m+[m[32m      <div style={detailGridStyle}>[m
+[32m+[m[32m        <Card style={{ padding: spacing.lg, display: "flex", flexDirection: "column", gap: spacing.md }}>[m
+[32m+[m[32m          <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>[m
+             גולשים לפי תוכנית[m
+           </h3>[m
+[31m-          <div className="space-y-3">[m
+[32m+[m[32m          <div style={detailListStyle}>[m
+             {Object.entries(stats.surfers.byProgram).map(([program, count]) => ([m
+[31m-              <div[m
+[31m-                key={program}[m
+[31m-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"[m
+[31m-              >[m
+[31m-                <span className="font-medium text-gray-700">{program}</span>[m
+[31m-                <span className="text-lg font-bold text-cyan-600">{count}</span>[m
+[32m+[m[32m              <div key={program} style={detailItemStyle}>[m
+[32m+[m[32m                <span style={{ fontWeight: 600, color: colors.textPrimary }}>[m
+[32m+[m[32m                  {program}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m                <span style={{ fontSize: px(18), fontWeight: 800, color: colors.accent }}>[m
+[32m+[m[32m                  {count}[m
+[32m+[m[32m                </span>[m
+               </div>[m
+             ))}[m
+             {Object.keys(stats.surfers.byProgram).length === 0 && ([m
+[31m-              <div className="text-center text-gray-500 py-4">[m
+[31m-                אין נתונים זמינים[m
+[31m-              </div>[m
+[32m+[m[32m              <div style={{ textAlign: "center", color: muted }}>אין נתונים זמינים</div>[m
+             )}[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+ [m
+[31m-        {/* Activities by Kind */}[m
+[31m-        <div style={cardStyle}>[m
+[31m-          <h3 className="text-lg font-bold text-gray-900 mb-4">[m
+[32m+[m[32m        <Card style={{ padding: spacing.lg, display: "flex", flexDirection: "column", gap: spacing.md }}>[m
+[32m+[m[32m          <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>[m
+             פעילויות לפי סוג[m
+           </h3>[m
+[31m-          <div className="space-y-3">[m
+[32m+[m[32m          <div style={detailListStyle}>[m
+             {Object.entries(stats.activities.byKind).map(([kind, count]) => ([m
+[31m-              <div[m
+[31m-                key={kind}[m
+[31m-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"[m
+[31m-              >[m
+[31m-                <span className="font-medium text-gray-700">{kind}</span>[m
+[31m-                <span className="text-lg font-bold text-purple-600">[m
+[32m+[m[32m              <div key={kind} style={detailItemStyle}>[m
+[32m+[m[32m                <span style={{ fontWeight: 600, color: colors.textPrimary }}>[m
+[32m+[m[32m                  {kind}[m
+[32m+[m[32m                </span>[m
+[32m+[m[32m                <span style={{ fontSize: px(18), fontWeight: 800, color: colors.primary }}>[m
+                   {count}[m
+                 </span>[m
+               </div>[m
+             ))}[m
+             {Object.keys(stats.activities.byKind).length === 0 && ([m
+[31m-              <div className="text-center text-gray-500 py-4">[m
+[31m-                אין נתונים זמינים[m
+[31m-              </div>[m
+[32m+[m[32m              <div style={{ textAlign: "center", color: muted }}>אין נתונים זמינים</div>[m
+             )}[m
+           </div>[m
+[31m-        </div>[m
+[32m+[m[32m        </Card>[m
+       </div>[m
+ [m
+[31m-      {/* Quick Actions */}[m
+[31m-      <div style={{ ...cardStyle, marginTop: 24 }}>[m
+[31m-        <h3 className="text-lg font-bold text-gray-900 mb-4">פעולות מהירות</h3>[m
+[31m-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">[m
+[31m-          <a[m
+[31m-            href="/volunteers"[m
+[31m-            className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition"[m
+[31m-          >[m
+[31m-            <div className="text-2xl mb-2">👥</div>[m
+[31m-            <div className="font-semibold text-blue-900">הוסף מתנדב</div>[m
+[31m-          </a>[m
+[31m-          <a[m
+[31m-            href="/surfers"[m
+[31m-            className="p-4 bg-cyan-50 hover:bg-cyan-100 rounded-lg text-center transition"[m
+[31m-          >[m
+[31m-            <div className="text-2xl mb-2">🏄</div>[m
+[31m-            <div className="font-semibold text-cyan-900">הוסף גולש</div>[m
+[31m-          </a>[m
+[31m-          <a[m
+[31m-            href="/activities"[m
+[31m-            className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition"[m
+[31m-          >[m
+[31m-            <div className="text-2xl mb-2">📅</div>[m
+[31m-            <div className="font-semibold text-purple-900">תזמן פעילות</div>[m
+[31m-          </a>[m
+[31m-          <a[m
+[31m-            href="/equipment"[m
+[31m-            className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition"[m
+[31m-          >[m
+[31m-            <div className="text-2xl mb-2">🛠️</div>[m
+[31m-            <div className="font-semibold text-green-900">נהל ציוד</div>[m
+[31m-          </a>[m
+[32m+[m[32m      <Card style={{ padding: spacing.lg }}>[m
+[32m+[m[32m        <h3 style={{ margin: "0 0 8px 0", fontSize: px(16), fontWeight: 800 }}>פעולות מהירות</h3>[m
+[32m+[m[32m        <p style={{ margin: 0, color: muted }}>גישה מהירה למסכים המרכזיים של המערכת</p>[m
+[32m+[m[32m        <div style={quickActionsGridStyle}>[m
+[32m+[m[32m          {quickActions.map((action) => ([m
+[32m+[m[32m            <a[m
+[32m+[m[32m              key={action.href}[m
+[32m+[m[32m              href={action.href}[m
+[32m+[m[32m              style={{[m
+[32m+[m[32m                ...quickActionStyle,[m
+[32m+[m[32m                background: action.background,[m
+[32m+[m[32m                color: action.color,[m
+[32m+[m[32m                boxShadow: shadows.card,[m
+[32m+[m[32m              }}[m
+[32m+[m[32m            >[m
+[32m+[m[32m              <div style={{ fontSize: px(28) }}>{action.icon}</div>[m
+[32m+[m[32m              <div>{action.label}</div>[m
+[32m+[m[32m            </a>[m
+[32m+[m[32m          ))}[m
+         </div>[m
+[31m-      </div>[m
+[32m+[m[32m      </Card>[m
+     </div>[m
+   );[m
+ }[m

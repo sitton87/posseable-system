@@ -1,20 +1,11 @@
 import { query } from "@/db/connection";
 
-type SqlParams = Record<string, string | number | boolean>;
-
-export type AppUserRecord = {
-  national_id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  must_reset: boolean;
-  created_at: string;
-};
+type SqlParams = Record<string, string | number | boolean | null>;
 
 export async function fetchAppUsers() {
   return query(
     `
-    SELECT national_id, full_name, email, role, must_reset, created_at
+    SELECT national_id, full_name, email, role, role_group_code, must_reset, created_at
     FROM app_user
     ORDER BY created_at DESC
   `
@@ -59,8 +50,10 @@ export async function insertAppUser(params: {
   password_hash: string;
   role: string;
   must_reset?: boolean;
+  role_group_code?: string | null;
 }) {
-  const { national_id, full_name, email, password_hash, role } = params;
+  const { national_id, full_name, email, password_hash, role, role_group_code } =
+    params;
 
   return query(
     `
@@ -71,6 +64,7 @@ export async function insertAppUser(params: {
         password_hash,
         must_reset,
         role,
+        role_group_code,
         created_at
       ) VALUES (
         @national_id,
@@ -79,6 +73,7 @@ export async function insertAppUser(params: {
         @password_hash,
         @must_reset,
         @role,
+        @role_group_code,
         GETDATE()
       )
     `,
@@ -89,6 +84,7 @@ export async function insertAppUser(params: {
       password_hash,
       role,
       must_reset: params.must_reset ?? true,
+      role_group_code: role_group_code ?? "management",
     }
   );
 }
@@ -99,6 +95,7 @@ export async function updateAppUser(
     full_name: string;
     email: string;
     role: string;
+    role_group_code: string | null;
     must_reset: boolean;
     password_hash: string;
   }>
@@ -119,6 +116,11 @@ export async function updateAppUser(
   if (typeof updates.role === "string") {
     fields.push("role = @role");
     parameters.role = updates.role;
+  }
+
+  if (typeof updates.role_group_code === "string") {
+    fields.push("role_group_code = @role_group_code");
+    parameters.role_group_code = updates.role_group_code;
   }
 
   if (typeof updates.must_reset === "boolean") {
@@ -144,3 +146,63 @@ export async function updateAppUser(
   );
 }
 
+export async function fetchRoleGroups() {
+  return query(
+    `
+    SELECT code, name, description, is_default, created_at
+    FROM app_role_group
+    ORDER BY CASE WHEN is_default = 1 THEN 0 ELSE 1 END, name
+  `
+  );
+}
+
+export async function fetchAppPages() {
+  return query(
+    `
+    SELECT page_key, display_name, route_path, category, is_active, created_at
+    FROM app_page
+    WHERE is_active = 1
+    ORDER BY category, display_name
+  `
+  );
+}
+
+export async function fetchPermissionsForRoleGroup(role_group_code: string) {
+  return query(
+    `
+    SELECT role_group_code, page_key, permission_level, updated_at, updated_by
+    FROM app_role_group_permission
+    WHERE role_group_code = @role_group_code
+  `,
+    { role_group_code }
+  );
+}
+
+export async function upsertRoleGroupPermissions(
+  role_group_code: string,
+  permissions: Array<{ page_key: string; permission_level: string }>,
+  updated_by?: string
+) {
+  for (const permission of permissions) {
+    await query(
+      `
+      MERGE app_role_group_permission AS target
+      USING (SELECT @role_group_code AS role_group_code, @page_key AS page_key) AS source
+      ON target.role_group_code = source.role_group_code AND target.page_key = source.page_key
+      WHEN MATCHED THEN
+        UPDATE SET permission_level = @permission_level,
+                   updated_at = SYSUTCDATETIME(),
+                   updated_by = @updated_by
+      WHEN NOT MATCHED THEN
+        INSERT (role_group_code, page_key, permission_level, updated_at, updated_by)
+        VALUES (@role_group_code, @page_key, @permission_level, SYSUTCDATETIME(), @updated_by);
+    `,
+      {
+        role_group_code,
+        page_key: permission.page_key,
+        permission_level: permission.permission_level,
+        updated_by: updated_by ?? null,
+      }
+    );
+  }
+}

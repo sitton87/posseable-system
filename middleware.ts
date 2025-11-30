@@ -10,7 +10,8 @@ export function middleware(req: NextRequest) {
     url.startsWith("/login") ||
     url.startsWith("/reset-password") ||
     url.startsWith("/api/auth/login") ||
-    url.startsWith("/api/auth/reset-password")
+    url.startsWith("/api/auth/reset-password") ||
+    url.startsWith("/api/auth/forgot-password")
   ) {
     return NextResponse.next();
   }

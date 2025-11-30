@@ -9,11 +9,13 @@ import {
   updateAppUser,
 } from "@/lib/services/systemUserService";
 import { sendWelcomeEmail } from "@/lib/services/emailService";
-import { isAdminRole } from "@/lib/utils/roles";
+import { hasSystemAdminAccess } from "@/lib/utils/roles";
+import { getUserBasicInfo } from "@/lib/services/authService";
 
 type SessionPayload = {
   national_id: string;
   role?: string;
+  role_group_code?: string | null;
 };
 
 async function getSession(): Promise<SessionPayload | null> {
@@ -31,17 +33,47 @@ async function getSession(): Promise<SessionPayload | null> {
   }
 }
 
+async function getAdminContext() {
+  const session = await getSession();
+  if (!session?.national_id) {
+    return null;
+  }
+
+  const userResult = await getUserBasicInfo(session.national_id);
+  if (!userResult.recordset.length) {
+    return null;
+  }
+
+  const user = userResult.recordset[0];
+  const allowed = hasSystemAdminAccess(user.role, user.role_group_code);
+  if (!allowed) {
+    return null;
+  }
+
+  return { session, user };
+}
+
 function forbiddenResponse() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
+const TEMP_PASSWORD_LENGTH = 8;
+const PASSWORD_PREFIX = "POS";
+const PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
 function generateTemporaryPassword() {
-  return `Pos-${crypto.randomBytes(4).toString("hex")}`;
+  let suffix = "";
+  const bytes = crypto.randomBytes(TEMP_PASSWORD_LENGTH);
+  for (let i = 0; i < bytes.length; i++) {
+    const index = bytes[i] % PASSWORD_CHARS.length;
+    suffix += PASSWORD_CHARS[index];
+  }
+  return `${PASSWORD_PREFIX}${suffix}`;
 }
 
 export async function GET() {
-  const session = await getSession();
-  if (!session || !isAdminRole(session.role)) {
+  const context = await getAdminContext();
+  if (!context) {
     return forbiddenResponse();
   }
 
@@ -62,8 +94,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session || !isAdminRole(session.role)) {
+  const context = await getAdminContext();
+  if (!context) {
     return forbiddenResponse();
   }
 
@@ -75,6 +107,7 @@ export async function POST(req: Request) {
       email,
       role,
       must_reset,
+      role_group_code,
     } = body;
 
     if (
@@ -111,6 +144,7 @@ export async function POST(req: Request) {
       password_hash,
       role,
       must_reset: must_reset ?? true,
+      role_group_code,
     });
 
     let emailSent = false;
@@ -138,8 +172,8 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const session = await getSession();
-  if (!session || !isAdminRole(session.role)) {
+  const context = await getAdminContext();
+  if (!context) {
     return forbiddenResponse();
   }
 
@@ -152,6 +186,7 @@ export async function PATCH(req: Request) {
       role,
       must_reset,
       reset_password,
+      role_group_code,
     } = body;
 
     if (!national_id) {
@@ -165,6 +200,7 @@ export async function PATCH(req: Request) {
       full_name?: string;
       email?: string;
       role?: string;
+      role_group_code?: string;
       must_reset?: boolean;
       password_hash?: string;
     } = {};
@@ -172,6 +208,10 @@ export async function PATCH(req: Request) {
     if (typeof full_name === "string") updates.full_name = full_name;
     if (typeof email === "string") updates.email = email;
     if (typeof role === "string") updates.role = role;
+    if (typeof role_group_code === "string") {
+      updates.role_group_code = role_group_code;
+    }
+
     if (typeof must_reset === "boolean") updates.must_reset = must_reset;
 
     if (typeof reset_password === "string" && reset_password.trim()) {
@@ -197,4 +237,3 @@ export async function PATCH(req: Request) {
     );
   }
 }
-

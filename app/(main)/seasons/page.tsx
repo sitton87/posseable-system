@@ -1,53 +1,38 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
-import { SeasonPlan, Activity, ActivitySeries } from "@/type";
+import type { CSSProperties } from "react";
+import { Fragment, useEffect, useState } from "react";
+import type { Activity, ActivitySeries, SeasonPlan } from "@/type";
+import { Button, Card, Modal } from "@/app/components/ui";
+import { inputStyle, labelStyle } from "@/app/styles/components";
+import { colors, radii, spacing } from "@/app/styles/foundations";
 
-// Styles
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
+const px = (value: number) => `${value}px`;
+const muted = colors.textMuted;
+
+const nestedCardStyle: CSSProperties = {
+  background: colors.surface,
+  borderRadius: radii.card,
+  border: `1px solid ${colors.borderMuted}`,
+  padding: spacing.lg,
 };
 
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
+const inlineBadgeStyle = (
+  background: string,
+  color: string
+): CSSProperties => ({
+  display: "inline-block",
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+  borderRadius: radii.button,
+  fontSize: 12,
   fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
+  background,
+  color,
+});
+
+const smallButtonStyle: CSSProperties = {
+  fontSize: 12,
+  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
 };
 
 const ACTIVITY_KINDS = [
@@ -498,32 +483,32 @@ export default function SeasonsPage() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: spacing.xl }}>
       {/* Header */}
-      <div style={{ ...cardStyle, marginBottom: 16 }}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: spacing.md,
+            flexWrap: "wrap",
           }}
         >
           <div>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
               🗓️ ניהול עונות
             </h2>
-            <div style={{ color: muted, fontSize: 13, marginTop: 4 }}>
+            <div style={{ color: muted, fontSize: 13, marginTop: px(2) }}>
               סה״כ {seasons.length} עונות במערכת
             </div>
           </div>
-          <button style={btnPrimary} onClick={handleAdd}>
-            + הוסף עונה
-          </button>
+          <Button onClick={handleAdd}>+ הוסף עונה</Button>
         </div>
-      </div>
+      </Card>
 
       {/* Seasons Table */}
-      <div style={cardStyle}>
+      <Card>
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
@@ -599,44 +584,56 @@ export default function SeasonsPage() {
                         <div
                           style={{
                             display: "flex",
-                            gap: 6,
+                            gap: spacing.xs,
                             justifyContent: "center",
+                            flexWrap: "wrap",
                           }}
                         >
-                          <button
-                            style={{ ...btnSecondary, fontSize: 12 }}
+                          <Button
+                            variant="secondary"
+                            style={{ ...smallButtonStyle }}
                             onClick={() => toggleSeasonExpand(s)}
+                            title={
+                              expandedSeasons[s.id]
+                                ? "הסתר פרטי עונה"
+                                : "צפייה בפרטי העונה"
+                            }
+                            aria-label={
+                              expandedSeasons[s.id] ? "הסתר עונה" : "צפייה בעונה"
+                            }
                           >
-                            {expandedSeasons[s.id] ? "הסתר" : "צפייה"}
-                          </button>
-                          <button
-                            style={{ ...btnSecondary, fontSize: 12 }}
+                            {expandedSeasons[s.id] ? "🙈" : "👁️"}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            style={{ ...smallButtonStyle }}
                             onClick={() => handleEdit(s)}
+                            title="עריכת עונה"
+                            aria-label="עריכת עונה"
                           >
                             ✏️
-                          </button>
-                          <button
-                            style={{
-                              ...btnSecondary,
-                              fontSize: 12,
-                              color: "#dc2626",
-                            }}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            style={{ ...smallButtonStyle, color: colors.danger }}
                             onClick={() => handleDelete(s.id)}
+                            title="מחיקת עונה"
+                            aria-label="מחיקת עונה"
                           >
                             🗑️
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
                     {expandedSeasons[s.id] && (
                       <tr>
-                        <td colSpan={6} style={{ background: "#f8fafc" }}>
+                        <td colSpan={6} style={{ background: colors.surfaceAlt }}>
                           <div
                             style={{
-                              padding: 16,
-                              borderRadius: 10,
-                              border: "1px solid rgba(15,23,42,0.08)",
-                              marginTop: -8,
+                              padding: spacing.lg,
+                              borderRadius: radii.card,
+                              border: `1px solid ${colors.borderMuted}`,
+                              marginTop: -spacing.sm,
                             }}
                           >
                             <div
@@ -644,7 +641,9 @@ export default function SeasonsPage() {
                                 display: "flex",
                                 justifyContent: "space-between",
                                 alignItems: "center",
-                                marginBottom: 12,
+                                marginBottom: spacing.md,
+                                gap: spacing.sm,
+                                flexWrap: "wrap",
                               }}
                             >
                               <div>
@@ -656,12 +655,9 @@ export default function SeasonsPage() {
                                   פעילות
                                 </div>
                               </div>
-                              <button
-                                style={btnPrimary}
-                                onClick={() => openSeriesModal(s)}
-                              >
+                              <Button onClick={() => openSeriesModal(s)}>
                                 + הוסף סדרת פעילויות
-                              </button>
+                              </Button>
                             </div>
                             {seriesLoading[s.id] ? (
                               <div style={{ textAlign: "center", padding: 20 }}>
@@ -684,10 +680,8 @@ export default function SeasonsPage() {
                                   <div
                                     key={series.id}
                                     style={{
-                                      background: "#fff",
-                                      borderRadius: 10,
-                                      border: "1px solid rgba(15,23,42,0.08)",
-                                      padding: 16,
+                                      ...nestedCardStyle,
+                                      background: colors.surface,
                                     }}
                                   >
                                     <div
@@ -732,55 +726,60 @@ export default function SeasonsPage() {
                                       >
                                         {series.is_default && (
                                           <span
-                                            style={{
-                                              padding: "4px 10px",
-                                              borderRadius: 999,
-                                              background:
-                                                "rgba(34,197,94,0.15)",
-                                              color: "#15803d",
-                                              fontSize: 12,
-                                              fontWeight: 600,
-                                            }}
+                                            style={inlineBadgeStyle(
+                                              colors.successSoft,
+                                              colors.success
+                                            )}
                                           >
                                             סדרת ברירת מחדל
                                           </span>
                                         )}
-                                        <button
-                                          style={{
-                                            ...btnSecondary,
-                                            fontSize: 12,
-                                          }}
+                                        <Button
+                                          variant="secondary"
+                                          style={{ ...smallButtonStyle }}
                                           onClick={() =>
                                             toggleSeriesExpand(series.id)
                                           }
+                                          title={
+                                            expandedSeries[series.id]
+                                              ? "הסתר פרטי סדרה"
+                                              : "צפייה בפרטי סדרה"
+                                          }
+                                          aria-label={
+                                            expandedSeries[series.id]
+                                              ? "הסתר סדרה"
+                                              : "צפייה בסדרה"
+                                          }
                                         >
                                           {expandedSeries[series.id]
-                                            ? "👁️ הסתר"
-                                            : "👁️ צפייה"}
-                                        </button>
-                                        <button
-                                          style={{
-                                            ...btnSecondary,
-                                            fontSize: 12,
-                                          }}
+                                            ? "🙈"
+                                            : "👁️"}
+                                        </Button>
+                                        <Button
+                                          variant="secondary"
+                                          style={{ ...smallButtonStyle }}
                                           onClick={() =>
                                             openSeriesModal(s, series)
                                           }
+                                          title="עריכת סדרה"
+                                          aria-label="עריכת סדרה"
                                         >
-                                          ✏️ עריכה
-                                        </button>
-                                        <button
+                                          ✏️
+                                        </Button>
+                                        <Button
+                                          variant="secondary"
                                           style={{
-                                            ...btnSecondary,
-                                            fontSize: 12,
-                                            color: "#dc2626",
+                                            ...smallButtonStyle,
+                                            color: colors.danger,
                                           }}
                                           onClick={() =>
                                             handleSeriesDelete(s, series)
                                           }
+                                          title="מחיקת סדרה"
+                                          aria-label="מחיקת סדרה"
                                         >
-                                          🗑️ מחיקה
-                                        </button>
+                                          🗑️
+                                        </Button>
                                       </div>
                                     </div>
                                     {expandedSeries[series.id] && (
@@ -791,7 +790,7 @@ export default function SeasonsPage() {
                                             justifyContent: "space-between",
                                             alignItems: "center",
                                             flexWrap: "wrap",
-                                            gap: 8,
+                                            gap: spacing.sm,
                                           }}
                                         >
                                           <div
@@ -802,14 +801,13 @@ export default function SeasonsPage() {
                                           >
                                             רשימת הפעילויות של הסדרה
                                           </div>
-                                          <button
-                                            style={btnPrimary}
+                                          <Button
                                             onClick={() =>
                                               openActivityModal(s, series)
                                             }
                                           >
                                             + הוסף פעילות לסדרה
-                                          </button>
+                                          </Button>
                                         </div>
                                         {series.activities &&
                                         series.activities.length > 0 ? (
@@ -1004,175 +1002,139 @@ export default function SeasonsPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
-      {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowModal(false)}
-        >
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        width="min(640px, 95vw)"
+        style={{ padding: spacing.xxl }}
+      >
+        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
+          {editingSeason ? "ערוך עונה" : "הוסף עונה חדשה"}
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+          <div>
+            <label style={labelStyle}>
+              שם העונה <span style={{ color: colors.danger }}>*</span>
+            </label>
+            <input
+              type="text"
+              style={inputStyle}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="למשל: קיץ 2024"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              שנה <span style={{ color: colors.danger }}>*</span>
+            </label>
+            <input
+              type="number"
+              style={inputStyle}
+              value={formData.year}
+              onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+              placeholder="2024"
+              min="2000"
+              max="2100"
+            />
+          </div>
+
           <div
             style={{
-              ...cardStyle,
-              width: "min(600px, 90vw)",
-              padding: 24,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingSeason ? "ערוך עונה" : "הוסף עונה חדשה"}
-            </h3>
+            <div>
+              <label style={labelStyle}>
+                תאריך התחלה <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="date"
+                style={inputStyle}
+                value={formData.start_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, start_date: e.target.value })
+                }
+              />
+            </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>
-                  שם העונה <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="למשל: קיץ 2024"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>
-                  שנה <span style={{ color: "#ef4444" }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  style={inputStyle}
-                  value={formData.year}
-                  onChange={(e) =>
-                    setFormData({ ...formData, year: e.target.value })
-                  }
-                  placeholder="2024"
-                  min="2000"
-                  max="2100"
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>
-                    תאריך התחלה <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.start_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, start_date: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>
-                    תאריך סיום <span style={{ color: "#ef4444" }}>*</span>
-                  </label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.end_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, end_date: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>הערות</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="הערות נוספות..."
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 8,
-                  justifyContent: "flex-end",
-                }}
-              >
-                <button
-                  style={btnSecondary}
-                  onClick={() => setShowModal(false)}
-                >
-                  ביטול
-                </button>
-                <button style={btnPrimary} onClick={handleSubmit}>
-                  {editingSeason ? "עדכן" : "הוסף"}
-                </button>
-              </div>
+            <div>
+              <label style={labelStyle}>
+                תאריך סיום <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="date"
+                style={inputStyle}
+                value={formData.end_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, end_date: e.target.value })
+                }
+              />
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Add Activity Modal */}
-      {activityModalSeason && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1100,
-            padding: 20,
-          }}
-          onClick={closeActivityModal}
-        >
+          <div>
+            <label style={labelStyle}>הערות</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              placeholder="הערות נוספות..."
+            />
+          </div>
+
           <div
             style={{
-              ...cardStyle,
-              width: "min(560px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflowY: "auto",
+              display: "flex",
+              gap: spacing.md,
+              marginTop: spacing.sm,
+              justifyContent: "flex-end",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => setShowModal(false)}
+            >
+              ביטול
+            </Button>
+            <Button type="button" onClick={handleSubmit}>
+              {editingSeason ? "עדכן" : "הוסף"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!activityModalSeason}
+        onClose={closeActivityModal}
+        width="min(580px, 95vw)"
+        style={{ padding: spacing.xxl, maxHeight: "90vh", overflowY: "auto" }}
+      >
+        {activityModalSeason && (
+          <>
             <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800 }}>
               פעילות חדשה לעונה {activityModalSeason.name}
             </h3>
             {activityModalSeries && (
-              <div style={{ marginBottom: 12, color: muted, fontSize: 13 }}>
+              <div style={{ marginBottom: spacing.sm, color: muted, fontSize: 13 }}>
                 סדרת פעילות: <strong>{activityModalSeries.name}</strong>
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
+                  gap: spacing.md,
                 }}
               >
                 <div>
@@ -1215,7 +1177,7 @@ export default function SeasonsPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>
-                    תאריך פעילות <span style={{ color: "#ef4444" }}>*</span>
+                    תאריך פעילות <span style={{ color: colors.danger }}>*</span>
                   </label>
                   <input
                     type="date"
@@ -1304,60 +1266,48 @@ export default function SeasonsPage() {
                 style={{
                   display: "flex",
                   justifyContent: "flex-end",
-                  gap: 8,
-                  marginTop: 8,
+                  gap: spacing.md,
+                  marginTop: spacing.sm,
                 }}
               >
-                <button style={btnSecondary} onClick={closeActivityModal}>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeActivityModal}
+                >
                   ביטול
-                </button>
-                <button
-                  style={{ ...btnPrimary, opacity: activitySaving ? 0.7 : 1 }}
+                </Button>
+                <Button
+                  type="button"
                   onClick={handleActivitySubmit}
                   disabled={activitySaving}
                 >
                   {activitySaving ? "שומר..." : "שמור פעילות"}
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
-      {/* Series Modal */}
-      {seriesModalSeason && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1200,
-            padding: 20,
-          }}
-          onClick={closeSeriesModal}
-        >
-          <div
-            style={{
-              ...cardStyle,
-              width: "min(520px, 95vw)",
-              padding: 24,
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Modal
+        open={!!seriesModalSeason}
+        onClose={closeSeriesModal}
+        width="min(540px, 95vw)"
+        style={{ padding: spacing.xxl, maxHeight: "90vh", overflowY: "auto" }}
+      >
+        {seriesModalSeason && (
+          <>
             <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800 }}>
               {editingSeries ? "ערוך סדרת פעילויות" : "הוסף סדרת פעילויות חדשה"}
             </h3>
-            <div style={{ color: muted, fontSize: 13, marginBottom: 12 }}>
+            <div style={{ color: muted, fontSize: 13, marginBottom: spacing.sm }}>
               עונה: <strong>{seriesModalSeason.name}</strong>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
               <div>
                 <label style={labelStyle}>
-                  שם הסדרה <span style={{ color: "#ef4444" }}>*</span>
+                  שם הסדרה <span style={{ color: colors.danger }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -1393,7 +1343,7 @@ export default function SeasonsPage() {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
+                  gap: spacing.md,
                 }}
               >
                 <div>
@@ -1455,7 +1405,7 @@ export default function SeasonsPage() {
                   placeholder="פרטים נוספים על הסדרה..."
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
                 <input
                   type="checkbox"
                   id="series_default"
@@ -1472,23 +1422,27 @@ export default function SeasonsPage() {
                 </label>
               </div>
               <div
-                style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+                style={{ display: "flex", gap: spacing.md, justifyContent: "flex-end" }}
               >
-                <button style={btnSecondary} onClick={closeSeriesModal}>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={closeSeriesModal}
+                >
                   ביטול
-                </button>
-                <button
-                  style={{ ...btnPrimary, opacity: seriesSaving ? 0.7 : 1 }}
+                </Button>
+                <Button
+                  type="button"
                   onClick={handleSeriesSubmit}
                   disabled={seriesSaving}
                 >
                   {seriesSaving ? "שומר..." : editingSeries ? "עדכן" : "הוסף"}
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
