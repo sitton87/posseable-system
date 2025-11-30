@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sendTestEmail } from "@/lib/services/emailService";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
+import { generateTemporaryPassword } from "@/lib/utils/password";
 
 type SessionPayload = {
   national_id: string;
@@ -27,10 +28,6 @@ function forbiddenResponse() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
-function generatePassword() {
-  return `Test-${Math.random().toString(36).slice(-6)}`;
-}
-
 export async function POST(req: Request) {
   const session = await getSession();
   if (
@@ -44,7 +41,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const email = String(body?.email || "").trim();
     const temporaryPassword =
-      String(body?.temporaryPassword || "").trim() || generatePassword();
+      String(body?.temporaryPassword || "").trim() ||
+      generateTemporaryPassword();
 
     if (!email) {
       return NextResponse.json(

@@ -1,22 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import { randomBytes } from "crypto";
 import { query } from "@/db/connection";
 import { sendWelcomeEmail } from "@/lib/services/emailService";
-
-const TEMP_PASSWORD_LENGTH = 8;
-const PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const PASSWORD_PREFIX = "POS";
-
-function generateTemporaryPassword() {
-  let suffix = "";
-  const bytes = randomBytes(TEMP_PASSWORD_LENGTH);
-  for (let i = 0; i < bytes.length; i++) {
-    const index = bytes[i] % PASSWORD_CHARS.length;
-    suffix += PASSWORD_CHARS[index];
-  }
-  return `${PASSWORD_PREFIX}${suffix}`;
-}
+import { generateTemporaryPassword } from "@/lib/utils/password";
 
 export async function POST(req: Request) {
   try {

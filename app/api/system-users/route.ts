@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 import {
   fetchAppUsers,
   findExistingAppUser,
@@ -11,6 +10,7 @@ import {
 import { sendWelcomeEmail } from "@/lib/services/emailService";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
 import { getUserBasicInfo } from "@/lib/services/authService";
+import { generateTemporaryPassword } from "@/lib/utils/password";
 
 type SessionPayload = {
   national_id: string;
@@ -55,20 +55,6 @@ async function getAdminContext() {
 
 function forbiddenResponse() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-}
-
-const TEMP_PASSWORD_LENGTH = 8;
-const PASSWORD_PREFIX = "POS";
-const PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-function generateTemporaryPassword() {
-  let suffix = "";
-  const bytes = crypto.randomBytes(TEMP_PASSWORD_LENGTH);
-  for (let i = 0; i < bytes.length; i++) {
-    const index = bytes[i] % PASSWORD_CHARS.length;
-    suffix += PASSWORD_CHARS[index];
-  }
-  return `${PASSWORD_PREFIX}${suffix}`;
 }
 
 export async function GET() {
