@@ -3,19 +3,23 @@
 import React from "react";
 import clsx from "clsx";
 
+type InputProps = {
+  label?: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  className?: string;
+  centered?: boolean;
+};
+
 export default function Input({
   label,
   value,
   onChange,
   type = "text",
   className,
-}: {
-  label?: string;
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type?: string;
-  className?: string;
-}) {
+  centered = false,
+}: InputProps) {
   return (
     <div className="flex flex-col gap-1">
       {label && <label className="font-medium">{label}</label>}
@@ -26,6 +30,7 @@ export default function Input({
         onChange={onChange}
         className={clsx(
           "border p-2 rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-400",
+          centered && "text-center",
           className
         )}
       />

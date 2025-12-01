@@ -4,11 +4,12 @@ import type { CSSProperties } from "react";
 import { useState, useEffect } from "react";
 import { Activity, SeasonPlan, ActivitySeries } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
+import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
+const filterControlStyle = withCenteredControl(inputStyle);
 const sectionBoxStyle: CSSProperties = {
   marginBottom: spacing.lg,
   padding: spacing.lg,
@@ -346,7 +347,7 @@ export default function ActivitiesPage() {
           <div>
             <label style={labelStyle}>סוג פעילות</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterKind}
               onChange={(e) => setFilterKind(e.target.value)}
             >
@@ -361,7 +362,7 @@ export default function ActivitiesPage() {
           <div>
             <label style={labelStyle}>סטטוס פעילות</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >

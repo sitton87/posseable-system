@@ -595,15 +595,15 @@ export default function SystemSettingsClient({ currentRole }: Props) {
         מחובר בתפקיד: {currentRoleLabel}
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-4">
+        <Card className="p-4 text-center">
           <p className="text-sm text-gray-500">סה&quot;כ משתמשים</p>
           <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 text-center">
           <p className="text-sm text-gray-500">מנהלי מערכת פעילים</p>
           <p className="text-3xl font-bold text-gray-900">{stats.admins}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 text-center">
           <p className="text-sm text-gray-500">ממתינים להחלפת סיסמה</p>
           <p className="text-3xl font-bold text-gray-900">
             {stats.needsReset}

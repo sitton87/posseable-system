@@ -4,11 +4,12 @@ import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import type { Equipment } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
+import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
+const filterControlStyle = withCenteredControl(inputStyle);
 
 const filtersContainerStyle: CSSProperties = {
   display: "flex",
@@ -248,7 +249,7 @@ export default function EquipmentPage() {
         <div style={filtersContainerStyle}>
           <div style={{ flex: 1, minWidth: 200 }}>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
             >
@@ -262,7 +263,7 @@ export default function EquipmentPage() {
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterCondition}
               onChange={(e) => setFilterCondition(e.target.value)}
             >

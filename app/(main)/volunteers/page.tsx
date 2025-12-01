@@ -9,13 +9,14 @@ import {
   MEDIA_SPECIALIZATION_OPTIONS,
 } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
+import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 import { usePagePermission } from "@/app/hooks/usePagePermission";
 import { AccessDenied } from "@/app/components/AccessDenied";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
+const filterControlStyle = withCenteredControl(inputStyle);
 
 const sectionBoxStyle: CSSProperties = {
   marginBottom: spacing.xl,
@@ -532,7 +533,7 @@ export default function VolunteersPage() {
           <div>
             <label style={labelStyle}>סוג מתנדב</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterKind}
               onChange={(e) => setFilterKind(e.target.value)}
             >
@@ -549,7 +550,7 @@ export default function VolunteersPage() {
           <div>
             <label style={labelStyle}>סטטוס</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterActive}
               onChange={(e) => setFilterActive(e.target.value)}
             >
@@ -563,7 +564,7 @@ export default function VolunteersPage() {
           <div>
             <label style={labelStyle}>תאריך הצטרפות</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterDateMode}
               onChange={(e) => setFilterDateMode(e.target.value)}
             >
@@ -579,7 +580,7 @@ export default function VolunteersPage() {
             <label style={labelStyle}>תאריך</label>
             <input
               type="date"
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
               disabled={!filterDateMode}

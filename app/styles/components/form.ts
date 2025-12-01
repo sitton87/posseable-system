@@ -20,6 +20,26 @@ export const inputStyle: CSSProperties = {
   background: colors.surface,
 };
 
+export const centeredControlStyle: CSSProperties = {
+  textAlign: "center",
+  textAlignLast: "center",
+};
+
+export const selectStyle: CSSProperties = {
+  ...inputStyle,
+  appearance: "none",
+  backgroundImage:
+    "linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%)",
+  backgroundPosition:
+    "calc(100% - 15px) calc(50% - 3px), calc(100% - 10px) calc(50% - 3px)",
+  backgroundSize: "5px 5px, 5px 5px",
+  backgroundRepeat: "no-repeat",
+};
+
+export function withCenteredControl(style: CSSProperties = {}) {
+  return { ...style, ...centeredControlStyle };
+}
+
 export const fieldRow: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",

@@ -7,13 +7,18 @@ import {
   STATUS_OPTIONS,
   PROGRAM_OPTIONS,
 } from "@/type";
-import { inputStyle, labelStyle } from "@/app/styles/components";
+import {
+  inputStyle,
+  labelStyle,
+  withCenteredControl,
+} from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import { Button, Card, Modal } from "@/app/components/ui";
 
 type GroupOption = { value: string; label: string };
 
 const muted = colors.textMuted;
+const filterControlStyle = withCenteredControl(inputStyle);
 
 export default function SurferPage() {
   const [surfers, setSurfers] = useState<Surfer[]>([]);
@@ -296,7 +301,7 @@ export default function SurferPage() {
         <div style={{ display: "flex", gap: 12 }}>
           <div style={{ flex: 1 }}>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterProgram}
               onChange={(e) => setFilterProgram(e.target.value)}
             >
@@ -310,7 +315,7 @@ export default function SurferPage() {
           </div>
           <div style={{ flex: 1 }}>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >

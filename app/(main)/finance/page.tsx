@@ -4,11 +4,12 @@ import type { CSSProperties } from "react";
 import { useState, useEffect } from "react";
 import type { Activity, SeasonPlan, Donor } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
+import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
+const filterControlStyle = withCenteredControl(inputStyle);
 const sectionBoxStyle: CSSProperties = {
   marginBottom: spacing.lg,
   padding: spacing.lg,
@@ -32,6 +33,7 @@ const summaryCardStyle = (bg: string, color: string): CSSProperties => ({
   background: bg,
   borderRadius: radii.card,
   color,
+  textAlign: "center",
 });
 const dashedBoxStyle: CSSProperties = {
   padding: spacing.md,
@@ -655,7 +657,7 @@ export default function FinancePage() {
           <div>
             <label style={labelStyle}>סוג תנועה</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
@@ -669,7 +671,7 @@ export default function FinancePage() {
             <label style={labelStyle}>מתאריך</label>
             <input
               type="date"
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterFromDate}
               onChange={(e) => setFilterFromDate(e.target.value)}
             />
@@ -679,7 +681,7 @@ export default function FinancePage() {
             <label style={labelStyle}>עד תאריך</label>
             <input
               type="date"
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterToDate}
               onChange={(e) => setFilterToDate(e.target.value)}
             />
@@ -688,7 +690,7 @@ export default function FinancePage() {
           <div>
             <label style={labelStyle}>עונה</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterSeasonId}
               onChange={(e) => {
                 setFilterSeasonId(e.target.value);
@@ -707,7 +709,7 @@ export default function FinancePage() {
           <div>
             <label style={labelStyle}>פעילות</label>
             <select
-              style={inputStyle}
+              style={filterControlStyle}
               value={filterActivityId}
               onChange={(e) => setFilterActivityId(e.target.value)}
               disabled={!filterSeasonId}

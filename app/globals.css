@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.filter-control {
+  text-align: center;
+  text-align-last: center;
+}
+
