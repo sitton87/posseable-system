@@ -4,7 +4,12 @@ import type { CSSProperties } from "react";
 import { useState, useEffect } from "react";
 import type { Activity, SeasonPlan, Donor } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
+import {
+  inputStyle,
+  labelStyle,
+  withCenteredControl,
+} from "@/app/styles/components";
+import { formatPhoneNumber } from "@/lib/utils/format";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
@@ -762,13 +767,13 @@ export default function FinancePage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>תאריך</th>
+                <th style={{ textAlign: "center", padding: 8 }}>תאריך</th>
                 <th style={{ textAlign: "center", padding: 8 }}>סוג</th>
                 <th style={{ textAlign: "center", padding: 8 }}>קטגוריה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>
                   פעילות משויכת
                 </th>
-                <th style={{ textAlign: "right", padding: 8 }}>תיאור</th>
+                <th style={{ textAlign: "center", padding: 8 }}>תיאור</th>
                 <th style={{ textAlign: "center", padding: 8 }}>סכום</th>
                 <th style={{ textAlign: "center", padding: 8 }}>פעולות</th>
               </tr>
@@ -779,7 +784,7 @@ export default function FinancePage() {
                   key={t.id}
                   style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
                 >
-                  <td style={{ padding: 8, fontSize: 13, color: muted }}>
+                  <td style={{ padding: 8, fontSize: 13, color: muted, textAlign: "center" }}>
                     {new Date(t.transaction_date).toLocaleDateString("he-IL")}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
@@ -815,7 +820,7 @@ export default function FinancePage() {
                       "—"
                     )}
                   </td>
-                  <td style={{ padding: 8, fontWeight: 600 }}>
+                  <td style={{ padding: 8, fontWeight: 600, textAlign: "center" }}>
                     <div>{t.description}</div>
                     <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
                       {t.paid_by && (
@@ -1718,7 +1723,7 @@ export default function FinancePage() {
         >
           <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
             <tr style={{ color: muted, fontSize: 13 }}>
-              <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+              <th style={{ textAlign: "center", padding: 8 }}>שם</th>
               <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
               <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
               <th style={{ textAlign: "center", padding: 8 }}>פעולה</th>
@@ -1747,7 +1752,7 @@ export default function FinancePage() {
                     </div>
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
-                    {donor.phone || "—"}
+                    {formatPhoneNumber(donor.phone)}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     {donor.email || "—"}

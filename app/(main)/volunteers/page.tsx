@@ -9,7 +9,12 @@ import {
   MEDIA_SPECIALIZATION_OPTIONS,
 } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
+import {
+  inputStyle,
+  labelStyle,
+  withCenteredControl,
+} from "@/app/styles/components";
+import { formatPhoneNumber } from "@/lib/utils/format";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 import { usePagePermission } from "@/app/hooks/usePagePermission";
 import { AccessDenied } from "@/app/components/AccessDenied";
@@ -601,8 +606,8 @@ export default function VolunteersPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>ת.ז.</th>
-                <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+                <th style={{ textAlign: "center", padding: 8 }}>ת.ז.</th>
+                <th style={{ textAlign: "center", padding: 8 }}>שם</th>
                 <th style={{ textAlign: "center", padding: 8 }}>סוג</th>
                 <th style={{ textAlign: "center", padding: 8 }}>עיר</th>
                 <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
@@ -626,11 +631,14 @@ export default function VolunteersPage() {
                       fontFamily: "monospace",
                       fontSize: 13,
                       color: muted,
+                      textAlign: "center",
                     }}
                   >
                     {v.national_id}
                   </td>
-                  <td style={{ padding: 8, fontWeight: 600 }}>{v.full_name}</td>
+                  <td style={{ padding: 8, fontWeight: 600, textAlign: "center" }}>
+                    {v.full_name}
+                  </td>
                   <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
                     {getVolunteerKindLabel(v) || "—"}
                   </td>
@@ -645,7 +653,7 @@ export default function VolunteersPage() {
                       fontSize: 13,
                     }}
                   >
-                    {v.phone || "—"}
+                    {formatPhoneNumber(v.phone)}
                   </td>
                   <td
                     style={{
@@ -1218,7 +1226,7 @@ export default function VolunteersPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>טלפון</div>
-                  <div>{viewingVolunteer.phone || "—"}</div>
+                  <div>{formatPhoneNumber(viewingVolunteer.phone)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>אימייל</div>

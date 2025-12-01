@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Supplier } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import { inputStyle, labelStyle } from "@/app/styles/components";
+import { formatPhoneNumber } from "@/lib/utils/format";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
@@ -62,15 +63,6 @@ const createEmptyFormState = (): FormState => ({
   notes: "",
   is_active: true,
 });
-
-const formatPhoneNumber = (value?: string | null) => {
-  if (!value) return "—";
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  return value;
-};
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -262,8 +254,8 @@ export default function SuppliersPage() {
             >
               <thead style={{ borderBottom: `2px solid ${colors.borderMuted}` }}>
                 <tr style={{ color: muted, fontSize: 13 }}>
-                  <th style={{ textAlign: "right", padding: 8 }}>מספר ספק</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>שם הספק</th>
+                  <th style={{ textAlign: "center", padding: 8 }}>מספר ספק</th>
+                  <th style={{ textAlign: "center", padding: 8 }}>שם הספק</th>
                   <th style={{ textAlign: "center", padding: 8 }}>סוג מזהה</th>
                   <th style={{ textAlign: "center", padding: 8 }}>איש קשר</th>
                   <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>

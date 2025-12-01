@@ -290,7 +290,7 @@ export default function EquipmentPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+                <th style={{ textAlign: "center", padding: 8 }}>שם</th>
                 <th style={{ textAlign: "center", padding: 8 }}>קטגוריה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>מידה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>מצב</th>

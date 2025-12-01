@@ -532,22 +532,22 @@ export default function SystemSettingsClient({ currentRole }: Props) {
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-2 text-right font-semibold text-gray-600">
+              <th className="px-4 py-2 text-center font-semibold text-gray-600">
                 שם מלא
               </th>
-              <th className="px-4 py-2 text-right font-semibold text-gray-600">
+              <th className="px-4 py-2 text-center font-semibold text-gray-600">
                 דוא&quot;ל
               </th>
-              <th className="px-4 py-2 text-right font-semibold text-gray-600">
+              <th className="px-4 py-2 text-center font-semibold text-gray-600">
                 תפקיד
               </th>
-              <th className="px-4 py-2 text-right font-semibold text-gray-600">
+              <th className="px-4 py-2 text-center font-semibold text-gray-600">
                 קבוצת ניהול
               </th>
-              <th className="px-4 py-2 text-right font-semibold text-gray-600">
+              <th className="px-4 py-2 text-center font-semibold text-gray-600">
                 חובת החלפת סיסמה
               </th>
-              <th className="px-4 py-2 text-right font-semibold text-gray-600">
+              <th className="px-4 py-2 text-center font-semibold text-gray-600">
                 נוצר בתאריך
               </th>
             </tr>
@@ -927,10 +927,10 @@ export default function SystemSettingsClient({ currentRole }: Props) {
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-right font-semibold text-gray-600">
+                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
                     דף
                   </th>
-                  <th className="px-4 py-2 text-right font-semibold text-gray-600">
+                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
                     קטגוריה
                   </th>
                   <th className="px-4 py-2 text-center font-semibold text-gray-600">

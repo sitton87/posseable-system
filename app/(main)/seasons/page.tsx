@@ -519,7 +519,7 @@ export default function SeasonsPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>שם העונה</th>
+                <th style={{ textAlign: "center", padding: 8 }}>שם העונה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>שנה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>תאריך התחלה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>תאריך סיום</th>
@@ -838,7 +838,7 @@ export default function SeasonsPage() {
                                                 >
                                                   <th
                                                     style={{
-                                                      textAlign: "right",
+                                                      textAlign: "center",
                                                       padding: 6,
                                                     }}
                                                   >

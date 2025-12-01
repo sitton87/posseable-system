@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Donor } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import { inputStyle, labelStyle } from "@/app/styles/components";
+import { formatPhoneNumber } from "@/lib/utils/format";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
@@ -213,8 +214,8 @@ export default function DonorsPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>ת.ז</th>
-                <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+                <th style={{ textAlign: "center", padding: 8 }}>ת.ז</th>
+                <th style={{ textAlign: "center", padding: 8 }}>שם</th>
                 <th style={{ textAlign: "center", padding: 8 }}>ארגון</th>
                 <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
                 <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
@@ -234,16 +235,19 @@ export default function DonorsPage() {
                       padding: 8,
                       color: muted,
                       fontFamily: "monospace",
+                      textAlign: "center",
                     }}
                   >
                     {d.national_id}
                   </td>
-                  <td style={{ padding: 8, fontWeight: 600 }}>{d.full_name}</td>
+                  <td style={{ padding: 8, fontWeight: 600, textAlign: "center" }}>
+                    {d.full_name}
+                  </td>
                   <td style={{ textAlign: "center", padding: 8, color: muted }}>
                     {d.organization || "—"}
                   </td>
                   <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {d.phone || "—"}
+                    {formatPhoneNumber(d.phone)}
                   </td>
                   <td style={{ textAlign: "center", padding: 8, color: muted }}>
                     {d.email || "—"}
@@ -565,7 +569,7 @@ export default function DonorsPage() {
               >
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>טלפון</div>
-                  <div>{viewingDonor.phone || "—"}</div>
+                  <div>{formatPhoneNumber(viewingDonor.phone)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>אימייל</div>

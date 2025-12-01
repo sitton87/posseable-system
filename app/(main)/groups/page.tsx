@@ -6,6 +6,7 @@ import type { Group, SeasonPlan, Surfer } from "@/type";
 import { GROUP_STATUS_OPTIONS } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import { inputStyle, labelStyle } from "@/app/styles/components";
+import { formatPhoneNumber } from "@/lib/utils/format";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 type GroupWithSurfers = Group & { surfers?: Surfer[] };
@@ -330,7 +331,7 @@ export default function GroupsPage() {
           >
             <thead style={{ borderBottom: `2px solid ${colors.borderMuted}` }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>שם הקבוצה</th>
+                <th style={{ textAlign: "center", padding: 8 }}>שם הקבוצה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>עונה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>משתתפים</th>
                 <th style={{ textAlign: "center", padding: 8 }}>מינימום</th>
@@ -793,7 +794,7 @@ export default function GroupsPage() {
                       >
                         <div style={{ fontWeight: 600 }}>{surfer.full_name}</div>
                         <div style={{ fontSize: 12, color: muted }}>
-                          {surfer.phone || "—"}
+                          {formatPhoneNumber(surfer.phone)}
                         </div>
                       </div>
                     ))}

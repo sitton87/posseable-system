@@ -4,12 +4,60 @@ import type { CSSProperties } from "react";
 import { useState, useEffect } from "react";
 import { Activity, SeasonPlan, ActivitySeries } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
+import {
+  inputStyle,
+  labelStyle,
+  withCenteredControl,
+} from "@/app/styles/components";
 import { colors, radii, spacing } from "@/app/styles/foundations";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
 const filterControlStyle = withCenteredControl(inputStyle);
+
+function parseTimeValue(value?: string | null) {
+  if (!value) return null;
+
+  let normalized = value;
+
+  if (!value.includes("T")) {
+    // Support HH:mm or HH:mm:ss formats
+    normalized = value.length === 5 ? `${value}:00` : value;
+    normalized = `1970-01-01T${normalized}`;
+  }
+
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDuration(start?: string | null, end?: string | null) {
+  const startDate = parseTimeValue(start);
+  const endDate = parseTimeValue(end);
+
+  if (!startDate || !endDate) {
+    return "—";
+  }
+
+  const diffMs = endDate.getTime() - startDate.getTime();
+
+  if (diffMs <= 0) {
+    return "—";
+  }
+
+  const totalMinutes = Math.round(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours} שעות ${minutes} דק'`;
+  }
+
+  if (hours > 0) {
+    return hours === 1 ? "שעה" : `${hours} שעות`;
+  }
+
+  return `${minutes} דק'`;
+}
 const sectionBoxStyle: CSSProperties = {
   marginBottom: spacing.lg,
   padding: spacing.lg,
@@ -389,10 +437,10 @@ export default function ActivitiesPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>סוג</th>
-                <th style={{ textAlign: "right", padding: 8 }}>סדרה</th>
-                <th style={{ textAlign: "right", padding: 8 }}>תאריך</th>
-                <th style={{ textAlign: "center", padding: 8 }}>שעה</th>
+                <th style={{ textAlign: "center", padding: 8 }}>סוג</th>
+                <th style={{ textAlign: "center", padding: 8 }}>סדרה</th>
+                <th style={{ textAlign: "center", padding: 8 }}>תאריך</th>
+                <th style={{ textAlign: "center", padding: 8 }}>משך</th>
                 <th style={{ textAlign: "center", padding: 8 }}>מיקום</th>
                 <th style={{ textAlign: "center", padding: 8 }}>קבוצה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>קיבולת</th>
@@ -421,9 +469,7 @@ export default function ActivitiesPage() {
                       color: muted,
                     }}
                   >
-                    {a.start_time && a.end_time
-                      ? `${a.start_time}-${a.end_time}`
-                      : a.start_time || "—"}
+                    {formatDuration(a.start_time, a.end_time)}
                   </td>
                   <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
                     {a.location || "—"}

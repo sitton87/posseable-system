@@ -12,6 +12,7 @@ import {
   labelStyle,
   withCenteredControl,
 } from "@/app/styles/components";
+import { formatPhoneNumber } from "@/lib/utils/format";
 import { colors, spacing } from "@/app/styles/foundations";
 import { Button, Card, Modal } from "@/app/components/ui";
 
@@ -342,8 +343,8 @@ export default function SurferPage() {
           >
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "right", padding: 8 }}>ת.ז.</th>
-                <th style={{ textAlign: "right", padding: 8 }}>שם</th>
+                <th style={{ textAlign: "center", padding: 8 }}>ת.ז.</th>
+                <th style={{ textAlign: "center", padding: 8 }}>שם</th>
                 <th style={{ textAlign: "center", padding: 8 }}>תוכנית</th>
                 <th style={{ textAlign: "center", padding: 8 }}>קבוצה</th>
                 <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
@@ -366,11 +367,12 @@ export default function SurferPage() {
                       fontFamily: "monospace",
                       fontSize: 13,
                       color: muted,
+                      textAlign: "center",
                     }}
                   >
                     {s.national_id}
                   </td>
-                  <td style={{ padding: 8, fontWeight: 600 }}>
+                  <td style={{ padding: 8, fontWeight: 600, textAlign: "center" }}>
                     {s.full_name}
                     {s.needs_wheelchair && (
                       <span style={{ marginRight: 6 }}>♿</span>
@@ -417,7 +419,7 @@ export default function SurferPage() {
                       fontSize: 13,
                     }}
                   >
-                    {s.phone || "—"}
+                    {formatPhoneNumber(s.phone)}
                   </td>
                   <td style={{ textAlign: "center", padding: 8 }}>
                     {s.medical_approval ? "✅" : "❌"}
@@ -899,7 +901,10 @@ export default function SurferPage() {
 
             <ViewSection title="📋 פרטים אישיים">
               <InfoRow label="תעודת זהות" value={viewingSurfer.national_id} />
-              <InfoRow label="טלפון" value={viewingSurfer.phone || "—"} />
+              <InfoRow
+                label="טלפון"
+                value={formatPhoneNumber(viewingSurfer.phone)}
+              />
               <InfoRow label="אימייל" value={viewingSurfer.email || "—"} />
               <InfoRow label="גיל" value={viewingSurfer.age?.toString() || "—"} />
               <InfoRow label="מגדר" value={viewingSurfer.gender || "—"} />
@@ -947,7 +952,7 @@ export default function SurferPage() {
               />
               <InfoRow
                 label="טלפון חירום"
-                value={viewingSurfer.emergency_contact_phone || "—"}
+                value={formatPhoneNumber(viewingSurfer.emergency_contact_phone)}
               />
             </ViewSection>
 
