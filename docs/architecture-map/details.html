@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Posseable System – תרשים מפורט</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <h1>תרשים מפורט לפי שלבים</h1>
+      <p>
+        חיבור בין התיעוד, שכבות השירות, ה-API והמסכים בפועל. כל תרשים ממוקד
+        בשאלה אחרת: מה דרוש להקמה, מי מטפל בהרשאות, ואיך הנתונים מגיעים עד למסך.
+      </p>
+      <a class="back-link" href="./index.html">חזרה למפת העל</a>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-heading">
+          <h2>שלב 1 – תיעוד והקמה</h2>
+          <span>קבצי מפתח: README, SETUP_GUIDE, database_schema.sql</span>
+        </div>
+        <p>
+          עוד לפני שנוגעים בקוד, עוברים על המסמכים הראשיים ומוודאים שה-DB וה-ENV
+          תואמים לדרישות. כך מבטיחים שכל שאר השלבים יתבססו על סביבה יציבה.
+        </p>
+        <div class="mermaid">
+          flowchart LR
+            Docs[(README / SETUP_GUIDE)] --> Env[.env.local\nDB credentials]
+            Env --> Schema[database_schema.sql]
+            Schema --> SQL[(SQL Server)]
+            Env --> Install[npm install]
+            Install --> DevServer[npm run dev]
+            DevServer --> Ready[מערכת מוכנה לבדיקה]
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>שלב 2 – תשתיות ושירותים</h2>
+          <span>lib/, db/, middleware, hooks</span>
+        </div>
+        <p>
+          שכבת התשתיות מספקת שירותים רוחביים: התחברות למסד הנתונים, הרשאות,
+          שליחת אימיילים, יצירת סיסמאות ועוד. זוהי הליבה של ה-domain logic.
+        </p>
+        <div class="mermaid">
+          flowchart TD
+            subgraph Backend
+              DBConn[db/connection.ts\nquery()]
+              Services[lib/services/*]
+              AccessCtrl[lib/server/accessControl.ts]
+              Utils[lib/utils/*]
+            end
+
+            Middleware[middleware.ts] --> AccessCtrl
+            AccessCtrl --> Services
+            Services --> DBConn
+            DBConn --> SQL[(SQL Server)]
+            Utils --> Services
+            Services --> Hooks[app/hooks/usePagePermission]
+            Hooks --> UI
+        </div>
+        <ul>
+          <li>`lib/services/authService.ts` – גישה לטבלת `app_user`</li>
+          <li>`lib/services/systemUserService.ts` – Role groups והרשאות</li>
+          <li>`lib/services/emailService.ts` – חיבור Gmail OAuth</li>
+          <li>`lib/utils/password.ts` – סיסמה זמנית עם prefix `PoS_`</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>שלב 3 – API וזרימת נתונים</h2>
+          <span>app/api/** → lib/services → SQL</span>
+        </div>
+        <p>
+          כל מודול עסקי מקבל סט ראוטים קבוע (GET, POST add, PUT update, DELETE).
+          ה-Route Handlers מחברים את ה-HTTP לשירותים שבודקים הרשאות ומריצים
+          שאילתות.
+        </p>
+        <div class="mermaid">
+          sequenceDiagram
+            participant Client as דפדפן / fetch
+            participant Route as Route Handler\napp/api/.../route.ts
+            participant AccessCtrl as Access control
+            participant Service as Service Layer\nlib/services/*
+            participant DB as SQL Server
+            Client->>Route: בקשת HTTP (GET/POST/PUT/DELETE)
+            Route->>AccessCtrl: ensurePermissionResponse()
+            Route->>Service: לוגיקה עסקית
+            Service->>DB: query(sql, params)
+            DB-->>Service: recordset
+            Service-->>Route: Normalized data
+            Route-->>Client: JSON response
+        </div>
+        <p>
+          דוגמה: `/api/equipment` → `app/api/equipment/route.ts` → קריאה
+          ל-`query` דרך שירות מותאם → חזרה לטבלה
+          ב-`app/(main)/equipment/page.tsx`.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>שלב 4 – UI, Layout והרשאות</h2>
+          <span>app/(main)/**/* + components</span>
+        </div>
+        <p>
+          כאן הדפדפן מציג את הכל: Main layout עוטף את כל העמודים ב-Navbar ובגייט
+          הרשאות. ה-Narbar משתמש ב-`usePermissions` כדי להסתיר קישורים שאין
+          אליהם גישה, וה-PagePermissionGate מגן על התוכן עצמו.
+        </p>
+        <div class="mermaid">
+          flowchart LR
+            RootLayout[app/layout.tsx\n<html dir="rtl">] --> MainLayout[app/(main)/layout.tsx]
+            MainLayout --> Navbar[Navbar.tsx]
+            MainLayout --> Gate[PagePermissionGate]
+            Gate --> Page[עמוד CRUD (equipment/donors...)]
+            Navbar --> usePerm[usePermissions hook]
+            usePerm --> APIperm[/api/auth/permissions]
+            Page --> APIModule[/api/{module}/*]
+        </div>
+        <ul>
+          <li>`app/components/Navbar.tsx` – קישורים + פאנל משתמש + pin</li>
+          <li>
+            `app/components/PagePermissionGate.tsx` – טוען הרשאות לפני render
+          </li>
+          <li>`app/components/AccessDenied.tsx` – מסך fallback</li>
+          <li>
+            `app/(main)/.../page.tsx` – כל מודול מציג טבלאות, מודלים וגרפים
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>חיבור ההרשאות מקצה לקצה</h2>
+          <span>Session cookie → Permissions API → UI</span>
+        </div>
+        <div class="mermaid">
+          flowchart TD
+            Login[/api/auth/login/] --> SessionCookie[(session)]
+            SessionCookie --> Middleware
+            Middleware --> AppPages[PagePermissionGate]
+            AppPages --> PermissionsAPI[/api/auth/permissions]
+            PermissionsAPI --> SystemService[fetchPermissionsForRoleGroup]
+            SystemService --> DBPerm[(app_role_group_permission)]
+            PermissionsAPI --> UIHook[usePermissions]
+            UIHook --> Navbar
+            UIHook --> PageComponents
+        </div>
+        <p>
+          כך מבטיחים שכל פעולה – גם ב-UI וגם ב-API – תיבדק מול אותה שכבת הרשאה
+          ותהיה עקבית עבור כל גולש.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="./mermaid-init.js"></script>
+  </body>
+</html>

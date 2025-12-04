@@ -142,15 +142,99 @@ export type Registration = {
   created_at: Date | string;
 };
 
-export type Equipment = {
-  id: string;
+export type EquipmentFamily = {
+  code: string;
   name: string;
-  category?: string | null;
-  size?: string | null;
-  condition?: string | null;
-  active: boolean;
-  notes?: string | null;
+  description?: string | null;
+  equipment_type: string;
+  allow_item_images: boolean;
+  allow_consumables: boolean;
+  is_active: boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 };
+
+export type EquipmentCategory = {
+  family_code: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  enforce_sku: boolean;
+  require_image: boolean;
+  is_active: boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
+};
+
+export type Warehouse = {
+  id: string;
+  code: string;
+  name: string;
+  city?: string | null;
+  address_line?: string | null;
+  postal_code?: string | null;
+  manager_name?: string | null;
+  manager_phone?: string | null;
+  manager_email?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  rent_cost?: number | null;
+  rent_currency?: string | null;
+  rent_expiry?: string | null;
+  lease_notes?: string | null;
+  general_notes?: string | null;
+  is_active: boolean;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+};
+
+export type EquipmentWarehouseStock = {
+  warehouse_id: string;
+  warehouse_name: string;
+  warehouse_code?: string | null;
+  quantity: number;
+};
+
+export type EquipmentMedia = {
+  id: string;
+  file_url: string;
+  caption?: string | null;
+  is_primary: boolean;
+};
+
+export type EquipmentItem = {
+  id: string;
+  family_code: string;
+  family_name?: string;
+  category_code: string;
+  category_name?: string;
+  serial_number: number;
+  internal_sku?: string | null;
+  manufacturer_sku?: string | null;
+  name: string;
+  description?: string | null;
+  equipment_type: string; // sea / support
+  condition: string;
+  is_consumable: boolean;
+  is_sku_tracked: boolean;
+  min_stock?: number | null;
+  max_stock?: number | null;
+  is_rental: boolean;
+  rental_expiry?: string | null;
+  manufacturer_name?: string | null;
+  default_image_url?: string | null;
+  purchase_cost?: number | null;
+  notes?: string | null;
+  is_active: boolean;
+  created_at: Date | string;
+  updated_at: Date | string;
+  total_units?: number;
+  warehouse_stock?: EquipmentWarehouseStock[];
+  media?: EquipmentMedia[];
+};
+
+// Backwards compatibility alias – legacy code can keep importing Equipment
+export type Equipment = EquipmentItem;
 
 export type ActivityEquipment = {
   activity_id: string;

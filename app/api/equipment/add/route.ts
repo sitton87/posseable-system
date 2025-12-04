@@ -1,36 +1,235 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { query } from "@/db/connection";
 import { ensurePermissionResponse } from "@/lib/server/accessControl";
+
+type EquipmentPayload = {
+  family_code: string;
+  category_code: string;
+  name: string;
+  description?: string | null;
+  condition: string;
+  is_consumable?: boolean;
+  is_sku_tracked?: boolean;
+  min_stock?: number | null;
+  max_stock?: number | null;
+  is_rental?: boolean;
+  rental_expiry?: string | null;
+  manufacturer_name?: string | null;
+  manufacturer_sku?: string | null;
+  default_image_url?: string | null;
+  purchase_cost?: number | null;
+  notes?: string | null;
+  equipment_type?: string;
+};
 
 export async function POST(req: Request) {
   try {
     const permission = await ensurePermissionResponse("equipment", "write");
     if (!permission.allowed) return permission.response;
 
-    const body = await req.json();
-    const { name, category, size, condition, active, notes } = body;
+    const body: EquipmentPayload = await req.json();
+    const {
+      family_code,
+      category_code,
+      name,
+      description,
+      condition,
+      is_consumable = false,
+      is_sku_tracked = true,
+      min_stock,
+      max_stock,
+      is_rental = false,
+      rental_expiry,
+      manufacturer_name,
+      manufacturer_sku,
+      default_image_url,
+      purchase_cost,
+      notes,
+      equipment_type,
+    } = body;
 
-    // Validation
-    if (!name) {
+    if (!family_code || family_code.length !== 2) {
       return NextResponse.json(
-        { error: "Name is required" },
+        { error: "קוד משפחה נדרש (2 תווים)" },
         { status: 400 }
       );
     }
 
-    const sql = `
-      INSERT INTO equipment (name, category, size, condition, active, notes)
-      VALUES (@name, @category, @size, @condition, @active, @notes)
-    `;
+    if (!category_code || category_code.length !== 2) {
+      return NextResponse.json(
+        { error: "קוד קטגוריה נדרש (2 תווים)" },
+        { status: 400 }
+      );
+    }
 
-    await query(sql, {
-      name,
-      category,
-      size,
-      condition,
-      active: active ? 1 : 0,
-      notes,
-    });
+    if (!name?.trim()) {
+      return NextResponse.json(
+        { error: "שם הציוד הוא שדה חובה" },
+        { status: 400 }
+      );
+    }
+
+    const familyResult = await query(
+      `
+        SELECT TOP 1
+          code,
+          name,
+          equipment_type
+        FROM equipment_family
+        WHERE code = @family_code
+      `,
+      { family_code }
+    );
+
+    if (familyResult.recordset.length === 0) {
+      return NextResponse.json(
+        { error: "משפחה לא נמצאה במערכת" },
+        { status: 400 }
+      );
+    }
+
+    const categoryResult = await query(
+      `
+        SELECT TOP 1 code
+        FROM equipment_category
+        WHERE family_code = @family_code AND code = @category_code
+      `,
+      { family_code, category_code }
+    );
+
+    if (categoryResult.recordset.length === 0) {
+      return NextResponse.json(
+        { error: "קטגוריה לא קיימת במשפחה שנבחרה" },
+        { status: 400 }
+      );
+    }
+
+    const serialResult = await query(
+      `
+        SELECT ISNULL(MAX(serial_number), -1) + 1 AS next_serial
+        FROM equipment_item
+        WHERE family_code = @family_code AND category_code = @category_code
+      `,
+      { family_code, category_code }
+    );
+
+    const nextSerial = serialResult.recordset[0]?.next_serial ?? 0;
+    if (nextSerial > 999) {
+      return NextResponse.json(
+        { error: "חרגת ממספר פריטים מותר למשפחה/קטגוריה (999)" },
+        { status: 400 }
+      );
+    }
+
+    const serial_number = nextSerial;
+    const internal_sku = `${family_code}${category_code}${String(
+      serial_number
+    ).padStart(3, "0")}`;
+
+    const resolvedEquipmentType =
+      equipment_type || familyResult.recordset[0].equipment_type;
+
+    const internalSkuMeta = await query(
+      `
+        SELECT COLUMNPROPERTY(
+          OBJECT_ID('dbo.equipment_item'),
+          'internal_sku',
+          'IsComputed'
+        ) AS is_computed
+      `
+    );
+
+    const isInternalSkuComputed =
+      internalSkuMeta.recordset?.[0]?.is_computed === 1;
+    const newItemId = randomUUID();
+
+    await query(
+      `
+        INSERT INTO equipment_item (
+          id,
+          family_code,
+          category_code,
+          serial_number,
+          manufacturer_sku,
+          name,
+          description,
+          equipment_type,
+          condition,
+          is_consumable,
+          is_sku_tracked,
+          min_stock,
+          max_stock,
+          is_rental,
+          rental_expiry,
+          manufacturer_name,
+          default_image_url,
+          purchase_cost,
+          notes,
+          is_active,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          @id,
+          @family_code,
+          @category_code,
+          @serial_number,
+          @manufacturer_sku,
+          @name,
+          @description,
+          @equipment_type,
+          @condition,
+          @is_consumable,
+          @is_sku_tracked,
+          @min_stock,
+          @max_stock,
+          @is_rental,
+          @rental_expiry,
+          @manufacturer_name,
+          @default_image_url,
+          @purchase_cost,
+          @notes,
+          1,
+          SYSUTCDATETIME(),
+          SYSUTCDATETIME()
+        )
+      `,
+      {
+        id: newItemId,
+        family_code,
+        category_code,
+        serial_number,
+        manufacturer_sku: manufacturer_sku || null,
+        name: name.trim(),
+        description: description || null,
+        equipment_type: resolvedEquipmentType,
+        condition,
+        is_consumable: is_consumable ? 1 : 0,
+        is_sku_tracked: is_sku_tracked ? 1 : 0,
+        min_stock:
+          is_sku_tracked || typeof min_stock !== "number" ? null : min_stock,
+        max_stock:
+          is_sku_tracked || typeof max_stock !== "number" ? null : max_stock,
+        is_rental: is_rental ? 1 : 0,
+        rental_expiry: rental_expiry || null,
+        manufacturer_name: manufacturer_name || null,
+        default_image_url: default_image_url || null,
+        purchase_cost: purchase_cost ?? null,
+        notes: notes || null,
+      }
+    );
+
+    if (!isInternalSkuComputed) {
+      await query(
+        `
+          UPDATE equipment_item
+          SET internal_sku = @internal_sku
+          WHERE id = @id
+        `,
+        { id: newItemId, internal_sku }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
@@ -41,4 +240,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

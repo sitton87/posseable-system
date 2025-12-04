@@ -102,31 +102,82 @@ export default function Navbar() {
     : false;
 
   const baseMenuItems = [
-    { pageKey: "dashboard", href: "/dashboard", icon: <Home size={22} />, label: "דף הבית" },
-    { pageKey: "volunteers", href: "/volunteers", icon: <Users size={22} />, label: "מתנדבים" },
-    { pageKey: "surfers", href: "/surfers", icon: <UserCircle size={22} />, label: "גולשים" },
-    { pageKey: "groups", href: "/groups", icon: <UsersRound size={22} />, label: "קבוצות" },
-    { pageKey: "activities", href: "/activities", icon: <Calendar size={22} />, label: "פעילויות" },
-    { pageKey: "seasons", href: "/seasons", icon: <CalendarRange size={22} />, label: "עונות" },
-    { pageKey: "equipment", href: "/equipment", icon: <Wrench size={22} />, label: "ציוד" },
-    { pageKey: "suppliers", href: "/suppliers", icon: <Handshake size={22} />, label: "ספקים" },
-    { pageKey: "donors", href: "/donors", icon: <Heart size={22} />, label: "תורמים" },
-    { pageKey: "finance", href: "/finance", icon: <Wallet size={22} />, label: "כספים" },
+    {
+      pageKey: "dashboard",
+      href: "/dashboard",
+      icon: <Home size={22} />,
+      label: "דף הבית",
+    },
+    {
+      pageKey: "surfers",
+      href: "/surfers",
+      icon: <UserCircle size={22} />,
+      label: "גולשים",
+    },
+    {
+      pageKey: "volunteers",
+      href: "/volunteers",
+      icon: <Users size={22} />,
+      label: "מתנדבים",
+    },
+    {
+      pageKey: "groups",
+      href: "/groups",
+      icon: <UsersRound size={22} />,
+      label: "קבוצות",
+    },
+    {
+      pageKey: "seasons",
+      href: "/seasons",
+      icon: <CalendarRange size={22} />,
+      label: "עונות",
+    },
+    {
+      pageKey: "activities",
+      href: "/activities",
+      icon: <Calendar size={22} />,
+      label: "פעילויות",
+    },
+    {
+      pageKey: "donors",
+      href: "/donors",
+      icon: <Heart size={22} />,
+      label: "תורמים",
+    },
+    {
+      pageKey: "finance",
+      href: "/finance",
+      icon: <Wallet size={22} />,
+      label: "כספים",
+    },
+    {
+      pageKey: "suppliers",
+      href: "/suppliers",
+      icon: <Handshake size={22} />,
+      label: "ספקים",
+    },
+    {
+      pageKey: "equipment",
+      href: "/equipment",
+      icon: <Wrench size={22} />,
+      label: "ציוד",
+    },
   ];
 
   const { permissions, loading: permissionsLoading } = usePermissions();
 
-  const filteredMenuItems = (isAdmin
-    ? [
-        ...baseMenuItems,
-        {
-          pageKey: "system-settings",
-          href: "/system-settings",
-          icon: <Settings size={22} />,
-          label: "הגדרות מערכת",
-        },
-      ]
-    : baseMenuItems
+  const filteredMenuItems = (
+    isAdmin
+      ? [
+          ...baseMenuItems,
+          {
+            pageKey: "system-settings",
+            href: "/system-settings",
+            icon: <Settings size={22} />,
+            label: "הגדרות מערכת",
+          },
+        ]
+      : baseMenuItems
   ).filter((item) => {
     if (item.pageKey === "system-settings") {
       return isAdmin;

@@ -51,10 +51,15 @@ export async function GET(req: Request) {
     // Get equipment stats
     const equipmentResult = await query(`
       SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN condition IN ('דורש תיקון', 'לא תקין') THEN 1 ELSE 0 END) as needs_repair
-      FROM equipment
-      WHERE active = 1
+        COUNT(*) AS total,
+        SUM(
+          CASE 
+            WHEN condition IN (N'דורש תיקון', N'לא תקין') THEN 1 
+            ELSE 0 
+          END
+        ) AS needs_repair
+      FROM equipment_item
+      WHERE is_active = 1
     `);
 
     // Get donors stats

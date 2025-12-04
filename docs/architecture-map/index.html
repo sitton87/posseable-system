@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Posseable System – תרשים על</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <h1>Posseable System – מפת מערכת</h1>
+      <p>
+        מבט על מקצועי שמציג את רצף השלבים: הקמה, תשתיות, שכבת השירותים, API
+        ו-UI. כל חלק מצוין כדי שיהיה ברור מה לבדוק או ללמוד בכל נקודת כניסה.
+      </p>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-heading">
+          <h2>ארבעת שלבי ההיכרות</h2>
+          <span>הסדר המומלץ לעבודה שיטתית</span>
+        </div>
+        <div class="stage-grid">
+          <article class="stage-card">
+            <h3>1. תיעוד והקמה</h3>
+            <ul>
+              <li>קריאת README / SETUP_GUIDE</li>
+              <li>הגדרת `.env.local` ו-SQL Server</li>
+              <li>הרצת `npm install && npm run dev`</li>
+            </ul>
+          </article>
+          <article class="stage-card">
+            <h3>2. תשתיות</h3>
+            <ul>
+              <li>`lib/`, `db/connection.ts`, `type.ts`</li>
+              <li>שירותי הרשאות, אימייל, סיסמאות</li>
+              <li>Middleware והגנות עמודים</li>
+            </ul>
+          </article>
+          <article class="stage-card">
+            <h3>3. API ושירותים</h3>
+            <ul>
+              <li>Route Handlers תחת `app/api/**`</li>
+              <li>שכבת service וקריאות DB</li>
+              <li>מבנה נתונים והקשר ל-SQL</li>
+            </ul>
+          </article>
+          <article class="stage-card">
+            <h3>4. UI ומודולים</h3>
+            <ul>
+              <li>`app/(main)/layout.tsx` + Navbar</li>
+              <li>קומפוננטים משותפים + hooks</li>
+              <li>מסכי CRUD (equipment, volunteers...)</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>תרשים על – זרימת בקשה</h2>
+          <span>מהדפדפן ועד למסד הנתונים</span>
+        </div>
+        <div class="mermaid">
+          flowchart TD A[דפדפן / App Router] --> B[Middleware\nSession
+          validation] B --> C[AccessControl + PagePermissionGate] C -->
+          D[Service Layer\nlib/services/*] D -->|query| E[(SQL Server)] D
+          -->|business data| F[API Routes\napp/api/**] F --> G[UI
+          Components\napp/(main)/*] G --> A
+        </div>
+        <p>
+          ההרשאות מפוקחות כבר במידלוור ולאחר מכן ברמת העמוד. השירותים מרכזים את
+          הלוגיקה העסקית, ה-API מחזיר JSON קצר וברור, וה-UI מציג נתונים רק לאחר
+          אישור.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>פירוט נוסף</h2>
+        <p>מסך משלים מפרק כל שלב וכולל תרשימי רצף והרשאות מקצה לקצה.</p>
+        <div class="links">
+          <a class="link-button" href="./details.html">מעבר למסך המפורט</a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./mermaid-init.js"></script>
+  </body>
+</html>
