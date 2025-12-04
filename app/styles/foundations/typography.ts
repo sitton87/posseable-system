@@ -1,5 +1,5 @@
 export const typography = {
-  fontFamily: `'Heebo', 'Assistant', Arial, sans-serif`,
+  fontFamily: `'Calibri', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`,
   headingsWeight: 800,
   bodyWeight: 500,
   sizes: {
