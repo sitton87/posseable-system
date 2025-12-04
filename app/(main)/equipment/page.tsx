@@ -1,25 +1,17 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   EquipmentItem,
   EquipmentFamily,
   EquipmentCategory,
   Warehouse,
 } from "@/type";
-import { Button, Card, Modal } from "@/app/components/ui";
+import { Button, Card } from "@/app/components/ui";
 import { AccessDenied } from "@/app/components/AccessDenied";
 import { usePagePermission } from "@/app/hooks/usePagePermission";
-import {
-  badgeStyle,
-  inputStyle,
-  labelStyle,
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-  withCenteredControl,
-} from "@/app/styles/components";
+import { inputStyle, labelStyle } from "@/app/styles/components";
 import {
   colors,
   radii,
@@ -27,31 +19,32 @@ import {
   spacing,
   typography,
 } from "@/app/styles/foundations";
-import { EquipmentSummaryCard, WarehouseManagementCard } from "./components";
-import {
-  CONDITION_OPTIONS,
-  conditionBadgeMap,
-  getConditionLabel,
-  EQUIPMENT_TYPE_LABELS,
-} from "./constants";
+import { CatalogTab } from "./tabs/CatalogTab";
+import { InventoryTab } from "./tabs/InventoryTab";
+import { StructureTab } from "./tabs/StructureTab";
+import { EquipmentFormModal } from "./modals/EquipmentFormModal";
+import { InventoryReceiptModal } from "./modals/InventoryReceiptModal";
+import { WarehouseModal } from "./modals/WarehouseModal";
+import { StructureModal } from "./modals/StructureModal";
+import { HistoryModal } from "./modals/HistoryModal";
+import { ViewItemModal } from "./modals/ViewItemModal";
+import { WarehouseInventoryModal } from "./modals/WarehouseInventoryModal";
 import type {
   EquipmentFormState,
   EquipmentPageData,
   FiltersState,
+  ReceiptDetail,
   ReceiptHistoryEntry,
   ReceiptLine,
   StructureFormState,
   WarehouseFormState,
+  WarehouseStockEntry,
 } from "./types";
 import {
   createEmptyFormState,
   createEmptyReceiptLine,
   createEmptyStructureFormState,
   createEmptyWarehouseFormState,
-  formatDate,
-  formatNumber,
-  generateClientId,
-  generateDocumentCode,
   px,
 } from "./utils";
 
@@ -79,26 +72,6 @@ const TAB_CONFIG = [
 type EquipmentTabId = (typeof TAB_CONFIG)[number]["id"];
 
 const muted = colors.textMuted;
-const filterControlStyle = withCenteredControl(inputStyle);
-
-const DEMO_RECEIPTS: ReceiptHistoryEntry[] = [
-  {
-    id: "demo-1",
-    document_code: "021215001",
-    receipt_date: "2025-12-01",
-    supplier_name: "ספק הדגמה",
-    total_items: 3,
-    status: "טיוטה",
-  },
-  {
-    id: "demo-2",
-    document_code: "021215002",
-    receipt_date: "2025-11-29",
-    supplier_name: "Surf Logistics",
-    total_items: 5,
-    status: "סגור",
-  },
-];
 
 export default function EquipmentPage() {
   const [data, setData] = useState<EquipmentPageData>({
@@ -133,8 +106,25 @@ export default function EquipmentPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] =
     useState<ReceiptHistoryEntry | null>(null);
-  const [historyEntries, setHistoryEntries] =
-    useState<ReceiptHistoryEntry[]>(DEMO_RECEIPTS);
+  const [historyEntries, setHistoryEntries] = useState<ReceiptHistoryEntry[]>(
+    []
+  );
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [receiptDetail, setReceiptDetail] = useState<ReceiptDetail | null>(
+    null
+  );
+  const [receiptDetailLoading, setReceiptDetailLoading] = useState(false);
+  const [editingReceiptCode, setEditingReceiptCode] = useState<string | null>(
+    null
+  );
+  const [warehouseInventoryModalOpen, setWarehouseInventoryModalOpen] =
+    useState(false);
+  const [inventoryWarehouse, setInventoryWarehouse] =
+    useState<Warehouse | null>(null);
+  const [warehouseStock, setWarehouseStock] = useState<WarehouseStockEntry[]>(
+    []
+  );
+  const [warehouseStockLoading, setWarehouseStockLoading] = useState(false);
   const [showStructureModal, setShowStructureModal] = useState(false);
   const [structureModalMode, setStructureModalMode] =
     useState<StructureFormState["entityType"]>("family");
@@ -147,7 +137,43 @@ export default function EquipmentPage() {
     createEmptyWarehouseFormState()
   );
   const [warehouseSubmitting, setWarehouseSubmitting] = useState(false);
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useState<EquipmentTabId>("catalog");
+  const goToStructureTab = useCallback(() => setActiveTab("structure"), []);
+
+  const formatDateInputValue = (value?: string | Date | null) => {
+    if (!value) return "";
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    return value.toString().slice(0, 10);
+  };
+
+  const buildWarehouseFormState = (
+    warehouse: Warehouse
+  ): WarehouseFormState => ({
+    ...createEmptyWarehouseFormState(),
+    code: warehouse.code || "",
+    name: warehouse.name || "",
+    city: warehouse.city || "",
+    address_line: warehouse.address_line || "",
+    postal_code: warehouse.postal_code || "",
+    manager_name: warehouse.manager_name || "",
+    manager_phone: warehouse.manager_phone || "",
+    manager_email: warehouse.manager_email || "",
+    contact_name: warehouse.contact_name || "",
+    contact_phone: warehouse.contact_phone || "",
+    rent_cost:
+      typeof warehouse.rent_cost === "number" &&
+      !Number.isNaN(warehouse.rent_cost)
+        ? String(warehouse.rent_cost)
+        : "",
+    rent_currency: warehouse.rent_currency || "",
+    rent_expiry: formatDateInputValue(warehouse.rent_expiry),
+    lease_notes: warehouse.lease_notes || "",
+    general_notes: warehouse.general_notes || "",
+    is_active: warehouse.is_active,
+  });
 
   const baseEquipmentPermission = usePagePermission("equipment");
   const catalogPermissionRaw = usePagePermission("equipment-catalog");
@@ -223,6 +249,84 @@ export default function EquipmentPage() {
   const canEditStructure = structurePermission.canEdit;
   const currentTabConfig = TAB_CONFIG.find((tab) => tab.id === activeTab);
   const activeTabPermission = tabPermissionMap[activeTab];
+
+  const loadReceiptHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await fetch("/api/equipment/receipts");
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || "שגיאה בטעינת היסטוריית קליטות");
+      }
+      const payload = await res.json();
+      const normalized = (payload.data || []).map((entry: any) => ({
+        id: entry.id || entry.document_code,
+        document_code: entry.document_code,
+        receipt_date: entry.receipt_date,
+        supplier_name: entry.supplier_name ?? undefined,
+        total_items: entry.total_items ?? 0,
+        status: entry.status ?? "נקלט",
+        note: entry.note ?? undefined,
+      }));
+      setHistoryEntries(normalized);
+    } catch (err) {
+      console.error("Error loading receipt history:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  const loadReceiptDetail = useCallback(
+    async (documentCode: string, options?: { updateState?: boolean }) => {
+      const shouldUpdateState = options?.updateState ?? true;
+      if (shouldUpdateState) {
+        setReceiptDetail(null);
+        setReceiptDetailLoading(true);
+      }
+      try {
+        const res = await fetch(
+          `/api/equipment/receipts?document=${encodeURIComponent(documentCode)}`
+        );
+        if (!res.ok) {
+          const message = await res.text();
+          throw new Error(message || "שגיאה בטעינת תעודה");
+        }
+        const payload = await res.json();
+        const detail: ReceiptDetail = payload.receipt;
+        if (shouldUpdateState) {
+          setReceiptDetail(detail);
+        }
+        return detail;
+      } finally {
+        if (shouldUpdateState) {
+          setReceiptDetailLoading(false);
+        }
+      }
+    },
+    []
+  );
+
+  const loadWarehouseStock = useCallback(async (warehouseId: string) => {
+    try {
+      setWarehouseStockLoading(true);
+      const res = await fetch(
+        `/api/equipment/warehouse-stock?warehouseId=${encodeURIComponent(
+          warehouseId
+        )}`
+      );
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || "שגיאה בטעינת מלאי המחסן");
+      }
+      const payload = await res.json();
+      setWarehouseStock(payload.data || []);
+    } catch (err: any) {
+      console.error("Error loading warehouse stock:", err);
+      alert(err?.message || "שגיאה בטעינת מלאי המחסן");
+    } finally {
+      setWarehouseStockLoading(false);
+    }
+  }, []);
 
   if (permissionsLoading) {
     return (
@@ -310,6 +414,13 @@ export default function EquipmentPage() {
     }
   }, [filters.family, filters.category, data.categories]);
 
+  useEffect(() => {
+    if (activeTab !== "inventory") {
+      return;
+    }
+    loadReceiptHistory();
+  }, [activeTab, loadReceiptHistory]);
+
   const statSummary = useMemo(() => {
     const totalItems = data.items.length;
     const totalUnits = data.items.reduce(
@@ -382,22 +493,40 @@ export default function EquipmentPage() {
   };
 
   const openInventoryModal = () => {
+    setEditingReceiptCode(null);
     setReceiptLines([createEmptyReceiptLine()]);
     setInventoryNote("");
     setShowInventoryModal(true);
   };
 
   const closeInventoryModal = () => {
+    setEditingReceiptCode(null);
     setShowInventoryModal(false);
   };
 
-  const openHistoryModal = (entry: ReceiptHistoryEntry | null = null) => {
+  const selectReceipt = (entry: ReceiptHistoryEntry | null) => {
     setSelectedReceipt(entry);
+    if (entry) {
+      loadReceiptDetail(entry.document_code).catch((err: any) => {
+        console.error("Error loading receipt detail:", err);
+        alert(err?.message || "שגיאה בטעינת התעודה");
+      });
+    } else {
+      setReceiptDetail(null);
+      setReceiptDetailLoading(false);
+    }
+  };
+
+  const openHistoryModal = (entry: ReceiptHistoryEntry | null = null) => {
+    selectReceipt(entry);
     setShowHistoryModal(true);
+    if (!historyEntries.length) {
+      loadReceiptHistory();
+    }
   };
 
   const closeHistoryModal = () => {
-    setSelectedReceipt(null);
+    selectReceipt(null);
     setShowHistoryModal(false);
   };
 
@@ -416,11 +545,96 @@ export default function EquipmentPage() {
 
   const openWarehouseModal = () => {
     setWarehouseForm(createEmptyWarehouseFormState());
+    setEditingWarehouseId(null);
+    setShowWarehouseModal(true);
+  };
+
+  const handleEditWarehouse = (warehouse: Warehouse) => {
+    setWarehouseForm(buildWarehouseFormState(warehouse));
+    setEditingWarehouseId(warehouse.id);
     setShowWarehouseModal(true);
   };
 
   const closeWarehouseModal = () => {
     setShowWarehouseModal(false);
+    setEditingWarehouseId(null);
+  };
+
+  const openWarehouseInventoryModal = (warehouse: Warehouse) => {
+    setInventoryWarehouse(warehouse);
+    setWarehouseInventoryModalOpen(true);
+    loadWarehouseStock(warehouse.id);
+  };
+
+  const closeWarehouseInventoryModal = () => {
+    setWarehouseInventoryModalOpen(false);
+    setInventoryWarehouse(null);
+    setWarehouseStock([]);
+  };
+
+  const refreshWarehouseInventory = () => {
+    if (inventoryWarehouse) {
+      loadWarehouseStock(inventoryWarehouse.id);
+    }
+  };
+
+  const handleAddWarehouseStock = async ({
+    itemId,
+    quantity,
+    note,
+  }: {
+    itemId: string;
+    quantity: number;
+    note?: string;
+  }) => {
+    if (!inventoryWarehouse) return;
+    const res = await fetch("/api/equipment/warehouse-stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "add",
+        warehouseId: inventoryWarehouse.id,
+        lines: [{ item_id: itemId, quantity }],
+        note: note || null,
+      }),
+    });
+    const payload = await res.json();
+    if (!res.ok || !payload.success) {
+      throw new Error(payload.error || "שגיאה בהוספת מלאי למחסן");
+    }
+    fetchEquipment();
+    loadWarehouseStock(inventoryWarehouse.id);
+  };
+
+  const handleTransferWarehouseStock = async ({
+    itemId,
+    quantity,
+    targetWarehouseId,
+    note,
+  }: {
+    itemId: string;
+    quantity: number;
+    targetWarehouseId: string;
+    note?: string;
+  }) => {
+    if (!inventoryWarehouse) return;
+    const res = await fetch("/api/equipment/warehouse-stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "transfer",
+        sourceWarehouseId: inventoryWarehouse.id,
+        targetWarehouseId,
+        lines: [{ item_id: itemId, quantity }],
+        note: note || null,
+      }),
+    });
+    const payload = await res.json();
+    if (!res.ok || !payload.success) {
+      throw new Error(payload.error || "שגיאה בהעברת מלאי");
+    }
+    fetchEquipment();
+    loadWarehouseStock(inventoryWarehouse.id);
   };
 
   const openCreateModal = () => {
@@ -431,7 +645,7 @@ export default function EquipmentPage() {
 
   const openEditModal = (item: EquipmentItem) => {
     setEditingItem(item);
-    setFormState({
+    let nextState: EquipmentFormState = {
       family_code: item.family_code,
       category_code: item.category_code,
       name: item.name,
@@ -448,7 +662,18 @@ export default function EquipmentPage() {
       default_image_url: item.default_image_url || "",
       purchase_cost: item.purchase_cost?.toString() ?? "",
       notes: item.notes || "",
-    });
+      is_active: item.is_active,
+    };
+
+    if (nextState.is_consumable && nextState.is_rental) {
+      nextState = {
+        ...nextState,
+        is_rental: false,
+        rental_expiry: "",
+      };
+    }
+
+    setFormState(nextState);
     setShowFormModal(true);
   };
 
@@ -466,7 +691,34 @@ export default function EquipmentPage() {
     key: K,
     value: EquipmentFormState[K]
   ) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+    setFormState((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === "is_consumable" && typeof value === "boolean") {
+        if (value) {
+          next.is_rental = false;
+          next.rental_expiry = "";
+        }
+      }
+
+      if (key === "is_rental" && typeof value === "boolean") {
+        if (value) {
+          next.is_consumable = false;
+        } else {
+          next.rental_expiry = "";
+        }
+      }
+
+      if (
+        key === "rental_expiry" &&
+        typeof value === "string" &&
+        !prev.is_rental
+      ) {
+        next.rental_expiry = "";
+      }
+
+      return next;
+    });
   };
 
   const handleStructureChange = <K extends keyof StructureFormState>(
@@ -481,6 +733,36 @@ export default function EquipmentPage() {
     value: WarehouseFormState[K]
   ) => {
     setWarehouseForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleEditReceipt = async (entry: ReceiptHistoryEntry) => {
+    try {
+      const detail = await loadReceiptDetail(entry.document_code, {
+        updateState: false,
+      });
+      const mappedLines =
+        detail?.lines?.map((line) => ({
+          item_id: line.item_id,
+          warehouse_id: line.warehouse_id,
+          quantity: line.quantity?.toString() || "",
+          unit_cost:
+            line.unit_cost === null || line.unit_cost === undefined
+              ? ""
+              : line.unit_cost.toString(),
+          supplier_identifier: line.supplier_identifier || "",
+        })) || [];
+      setReceiptLines(
+        mappedLines.length ? mappedLines : [createEmptyReceiptLine()]
+      );
+      setInventoryNote(detail?.note || "");
+      setEditingReceiptCode(entry.document_code);
+      setShowInventoryModal(true);
+      selectReceipt(null);
+      setShowHistoryModal(false);
+    } catch (err: any) {
+      console.error("Error preparing receipt for edit:", err);
+      alert(err?.message || "שגיאה בטעינת התעודה לעריכה");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -537,7 +819,7 @@ export default function EquipmentPage() {
         ? Number(formState.purchase_cost)
         : null,
       notes: formState.notes || null,
-      is_active: true,
+      is_active: formState.is_active,
     };
 
     try {
@@ -639,6 +921,7 @@ export default function EquipmentPage() {
   };
 
   const handleWarehouseSubmit = async () => {
+    const isEditingWarehouse = Boolean(editingWarehouseId);
     const code = warehouseForm.code.trim().toUpperCase();
     const name = warehouseForm.name.trim();
     if (!code || code.length > 20) {
@@ -684,15 +967,17 @@ export default function EquipmentPage() {
     try {
       setWarehouseSubmitting(true);
       const res = await fetch("/api/warehouses", {
-        method: "POST",
+        method: isEditingWarehouse ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(
+          isEditingWarehouse ? { id: editingWarehouseId, ...payload } : payload
+        ),
       });
       const response = await res.json();
       if (!res.ok || !response.success) {
         throw new Error(response.error || "שמירת מחסן נכשלה");
       }
-      alert("מחסן נוצר בהצלחה");
+      alert(isEditingWarehouse ? "מחסן עודכן בהצלחה" : "מחסן נוצר בהצלחה");
       closeWarehouseModal();
       fetchEquipment();
     } catch (err: any) {
@@ -723,15 +1008,24 @@ export default function EquipmentPage() {
     setReceiptLines((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const handleInventorySubmit = () => {
+  const handleInventorySubmit = async () => {
     const normalizedLines = receiptLines
       .map((line) => ({
-        ...line,
-        quantity: line.quantity.trim(),
-        unit_cost: line.unit_cost.trim(),
+        item_id: line.item_id.trim(),
+        warehouse_id: line.warehouse_id.trim(),
+        quantity: Number(line.quantity),
+        unit_cost:
+          line.unit_cost && !Number.isNaN(Number(line.unit_cost))
+            ? Number(line.unit_cost)
+            : null,
+        supplier_identifier: line.supplier_identifier?.trim() || null,
       }))
       .filter(
-        (line) => line.item_id && line.warehouse_id && Number(line.quantity) > 0
+        (line) =>
+          line.item_id &&
+          line.warehouse_id &&
+          Number.isFinite(line.quantity) &&
+          line.quantity > 0
       );
 
     if (!normalizedLines.length) {
@@ -739,85 +1033,58 @@ export default function EquipmentPage() {
       return;
     }
 
-    const documentCode = generateDocumentCode();
-    const now = new Date().toISOString();
-    const totalItems = normalizedLines.reduce(
-      (sum, line) => sum + Number(line.quantity),
-      0
-    );
-    const aggregatedSupplier =
-      normalizedLines[0]?.supplier_identifier?.trim() || undefined;
-
-    setHistoryEntries((prev) => [
-      {
-        id: generateClientId("receipt"),
-        document_code: documentCode,
-        receipt_date: now,
-        supplier_name: aggregatedSupplier,
-        total_items: totalItems,
-        status: "טיוטה",
-        lines: normalizedLines,
-        note: inventoryNote || undefined,
-      },
-      ...prev,
-    ]);
-
-    setData((prev) => {
-      const updatedItems = prev.items.map((item) => {
-        const relatedLines = normalizedLines.filter(
-          (line) => line.item_id === item.id
-        );
-        if (!relatedLines.length) {
-          return item;
-        }
-
-        const stockArray = [...(item.warehouse_stock || [])];
-
-        relatedLines.forEach((line) => {
-          const qty = Number(line.quantity);
-          const stockIndex = stockArray.findIndex(
-            (stock) => stock.warehouse_id === line.warehouse_id
-          );
-          if (stockIndex >= 0) {
-            stockArray[stockIndex] = {
-              ...stockArray[stockIndex],
-              quantity: Number(stockArray[stockIndex].quantity || 0) + qty,
-            };
-          } else {
-            const warehouseInfo = prev.warehouses.find(
-              (warehouse) => warehouse.id === line.warehouse_id
-            );
-            stockArray.push({
-              warehouse_id: line.warehouse_id,
-              warehouse_name: warehouseInfo?.name || "—",
-              warehouse_code: warehouseInfo?.code,
-              quantity: qty,
-            });
-          }
-        });
-
-        const total_units = stockArray.reduce(
-          (sum, stock) => sum + Number(stock.quantity || 0),
-          0
-        );
-
-        return {
-          ...item,
-          warehouse_stock: stockArray,
-          total_units,
-        };
+    try {
+      const res = await fetch("/api/equipment/receipts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          lines: normalizedLines,
+          note: inventoryNote || null,
+          document_code: editingReceiptCode,
+        }),
       });
 
-      return {
-        ...prev,
-        items: updatedItems,
-      };
-    });
+      const payload = await res.json();
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error || "שגיאה בשמירת תעודת הקליטה");
+      }
 
-    alert("תעודת קליטה נשמרה (סימולציה ללא חיבור למסד נתונים).");
-    setReceiptLines([createEmptyReceiptLine()]);
-    setInventoryNote("");
-    closeInventoryModal();
+      alert("תעודת הקליטה נשמרה בהצלחה.");
+      setReceiptLines([createEmptyReceiptLine()]);
+      setInventoryNote("");
+      closeInventoryModal();
+      fetchEquipment();
+      loadReceiptHistory();
+      if (editingReceiptCode) {
+        setEditingReceiptCode(null);
+        if (
+          selectedReceipt &&
+          selectedReceipt.document_code === editingReceiptCode
+        ) {
+          setSelectedReceipt((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  document_code:
+                    payload.receipt?.document_code || prev.document_code,
+                  total_items: payload.receipt?.total_items ?? prev.total_items,
+                  note: inventoryNote || prev.note,
+                }
+              : prev
+          );
+          loadReceiptDetail(
+            payload.receipt?.document_code || editingReceiptCode
+          ).catch((err: any) => {
+            console.error("Error refreshing receipt detail:", err);
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("Error saving inventory receipt:", err);
+      alert(err?.message || "שגיאה בשמירת תעודת הקליטה");
+    }
   };
 
   return (
@@ -885,1642 +1152,139 @@ export default function EquipmentPage() {
       )}
 
       {activeTab === "catalog" && (
-        <>
-          <EquipmentSummaryCard
-            statSummary={statSummary}
-            error={error}
-            onRefresh={() => fetchEquipment()}
-            onCreate={openCreateModal}
-            canCreate={canEditCatalog}
-          />
-
-          <Card>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: spacing.md,
-                marginBottom: spacing.lg,
-              }}
-            >
-              <input
-                type="text"
-                placeholder="חיפוש לפי שם, SKU או יצרן"
-                style={filterControlStyle}
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-              />
-              <select
-                style={filterControlStyle}
-                value={filters.family}
-                onChange={(e) => handleFilterChange("family", e.target.value)}
-              >
-                <option value="">כל המשפחות</option>
-                {data.families.map((family) => (
-                  <option key={family.code} value={family.code}>
-                    {family.code} · {family.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                style={filterControlStyle}
-                value={filters.category}
-                onChange={(e) => handleFilterChange("category", e.target.value)}
-              >
-                <option value="">כל הקטגוריות</option>
-                {availableCategories.map((category) => (
-                  <option
-                    key={`${category.family_code}-${category.code}`}
-                    value={category.code}
-                  >
-                    {category.family_code}/{category.code} · {category.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                style={filterControlStyle}
-                value={filters.type}
-                onChange={(e) => handleFilterChange("type", e.target.value)}
-              >
-                <option value="">כל סוגי הציוד</option>
-                <option value="sea">ציוד ים</option>
-                <option value="support">ציוד מסייע</option>
-              </select>
-              <select
-                style={filterControlStyle}
-                value={filters.condition}
-                onChange={(e) =>
-                  handleFilterChange("condition", e.target.value)
-                }
-              >
-                <option value="">כל המצבים</option>
-                {CONDITION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                style={filterControlStyle}
-                value={filters.status}
-                onChange={(e) =>
-                  handleFilterChange(
-                    "status",
-                    e.target.value as FiltersState["status"]
-                  )
-                }
-              >
-                <option value="active">פעילים בלבד</option>
-                <option value="all">כל הפריטים</option>
-                <option value="inactive">לא פעילים</option>
-              </select>
-            </div>
-
-            <div style={{ overflowX: "auto" }}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>פריט</th>
-                    <th style={tableHeaderStyle}>משפחה / קטגוריה</th>
-                    <th style={tableHeaderStyle}>סוג ציוד</th>
-                    <th style={tableHeaderStyle}>מצב</th>
-                    <th style={tableHeaderStyle}>מלאי</th>
-                    <th style={tableHeaderStyle}>מחסנים</th>
-                    <th style={tableHeaderStyle}>סטטוסים נוספים</th>
-                    <th style={tableHeaderStyle}>פעולות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={8} style={tableCellStyle}>
-                        טוען נתונים...
-                      </td>
-                    </tr>
-                  ) : (
-                    data.items.map((item) => {
-                      const typeLabel =
-                        EQUIPMENT_TYPE_LABELS[item.equipment_type] ||
-                        item.equipment_type ||
-                        "—";
-                      const warehouses = item.warehouse_stock || [];
-                      return (
-                        <tr key={item.id}>
-                          <td style={tableCellStyle}>
-                            <div style={{ fontWeight: 700 }}>{item.name}</div>
-                            <div style={{ color: muted, fontSize: 12 }}>
-                              SKU פנימי: {item.internal_sku || "—"}
-                            </div>
-                            <div style={{ color: muted, fontSize: 12 }}>
-                              מק״ט יצרן: {item.manufacturer_sku || "—"}
-                            </div>
-                          </td>
-                          <td style={tableCellStyle}>
-                            <div>{item.family_name || item.family_code}</div>
-                            <div style={{ fontSize: 12, color: muted }}>
-                              {item.category_name || item.category_code}
-                            </div>
-                          </td>
-                          <td style={tableCellStyle}>{typeLabel}</td>
-                          <td style={tableCellStyle}>
-                            <span
-                              style={badgeStyle(
-                                conditionBadgeMap[item.condition]?.background ||
-                                  colors.borderMuted,
-                                conditionBadgeMap[item.condition]?.color ||
-                                  colors.textPrimary
-                              )}
-                            >
-                              {getConditionLabel(item.condition)}
-                            </span>
-                          </td>
-                          <td style={tableCellStyle}>
-                            <div style={{ fontSize: 16, fontWeight: 700 }}>
-                              {formatNumber(item.total_units, "0")}
-                            </div>
-                            <div style={{ fontSize: 12, color: muted }}>
-                              מינימום:{" "}
-                              {item.is_sku_tracked
-                                ? "N/A"
-                                : formatNumber(item.min_stock)}
-                            </div>
-                            <div style={{ fontSize: 12, color: muted }}>
-                              מקסימום:{" "}
-                              {item.is_sku_tracked
-                                ? "N/A"
-                                : formatNumber(item.max_stock)}
-                            </div>
-                          </td>
-                          <td style={tableCellStyle}>
-                            {warehouses.length === 0 && (
-                              <div style={{ color: muted }}>אין נתוני מלאי</div>
-                            )}
-                            <div
-                              style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 4,
-                              }}
-                            >
-                              {warehouses.map((stock) => (
-                                <span
-                                  key={stock.warehouse_id}
-                                  style={badgeStyle(
-                                    colors.surfaceAlt,
-                                    colors.textPrimary
-                                  )}
-                                >
-                                  {stock.warehouse_name}:{" "}
-                                  {formatNumber(stock.quantity, "0")}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td style={tableCellStyle}>
-                            <div>
-                              <strong>מתכלה:</strong>{" "}
-                              {item.is_consumable ? "כן" : "לא"}
-                            </div>
-                            <div>
-                              <strong>השכרה:</strong>{" "}
-                              {item.is_rental
-                                ? `כן (${formatDate(item.rental_expiry)})`
-                                : "לא"}
-                            </div>
-                          </td>
-                          <td style={tableCellStyle}>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                gap: spacing.xs,
-                              }}
-                            >
-                              <Button
-                                variant="secondary"
-                                title="צפייה"
-                                aria-label="צפייה"
-                                onClick={() => openViewModal(item)}
-                              >
-                                👁️
-                              </Button>
-                              {canEditCatalog && (
-                                <>
-                                  <Button
-                                    variant="secondary"
-                                    title="עריכה"
-                                    aria-label="עריכה"
-                                    onClick={() => openEditModal(item)}
-                                  >
-                                    ✏️
-                                  </Button>
-                                  <Button
-                                    variant="secondary"
-                                    title="מחיקה"
-                                    aria-label="מחיקה"
-                                    style={{ color: colors.danger }}
-                                    onClick={() => handleDelete(item.id)}
-                                  >
-                                    🗑️
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                  {!loading && data.items.length === 0 && (
-                    <tr>
-                      <td colSpan={8} style={tableCellStyle}>
-                        אין פריטים תואמים לסינון שנבחר.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
+        <CatalogTab
+          data={data}
+          filters={filters}
+          availableCategories={availableCategories}
+          statSummary={statSummary}
+          loading={loading}
+          error={error}
+          canEdit={canEditCatalog}
+          onFilterChange={handleFilterChange}
+          onRefresh={() => fetchEquipment()}
+          onCreateItem={openCreateModal}
+          onViewItem={openViewModal}
+          onEditItem={openEditModal}
+          onDeleteItem={handleDelete}
+        />
       )}
 
       {activeTab === "inventory" && (
-        <>
-          <WarehouseManagementCard
-            warehouses={data.warehouses}
-            onCreateWarehouse={openWarehouseModal}
-            canCreate={canEditInventory}
-          />
-
-          <Card>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: spacing.sm,
-                marginBottom: spacing.md,
-              }}
-            >
-              <div>
-                <h3 style={{ margin: 0 }}>ניהול קליטת מלאי</h3>
-                <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-                  פתיחת תעודת קליטה חדשה או צפייה בתעודות קיימות
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: spacing.sm }}>
-                <Button
-                  onClick={openInventoryModal}
-                  disabled={!canEditInventory}
-                >
-                  + קליטת מלאי חדשה
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => openHistoryModal(null)}
-                >
-                  היסטוריית תעודות
-                </Button>
-              </div>
-            </div>
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <strong>תעודות אחרונות (נתוני הדגמה)</strong>
-                <Button
-                  variant="secondary"
-                  onClick={() => openHistoryModal(null)}
-                >
-                  הצג הכל
-                </Button>
-              </div>
-              <div style={{ marginTop: spacing.sm }}>
-                {historyEntries.length === 0 ? (
-                  <div
-                    style={{
-                      padding: px(spacing.md),
-                      textAlign: "center",
-                      color: muted,
-                    }}
-                  >
-                    טרם נקלטו תעודות במערכת.
-                  </div>
-                ) : (
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th style={tableHeaderStyle}>תעודה</th>
-                        <th style={tableHeaderStyle}>תאריך</th>
-                        <th style={tableHeaderStyle}>ספק</th>
-                        <th style={tableHeaderStyle}>פריטים</th>
-                        <th style={tableHeaderStyle}>סטטוס</th>
-                        <th style={tableHeaderStyle}>פעולה</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {historyEntries.map((entry) => (
-                        <tr key={entry.id}>
-                          <td style={tableCellStyle}>{entry.document_code}</td>
-                          <td style={tableCellStyle}>
-                            {formatDate(entry.receipt_date)}
-                          </td>
-                          <td style={tableCellStyle}>
-                            {entry.supplier_name || "—"}
-                          </td>
-                          <td style={tableCellStyle}>{entry.total_items}</td>
-                          <td style={tableCellStyle}>{entry.status}</td>
-                          <td style={tableCellStyle}>
-                            <Button
-                              variant="secondary"
-                              onClick={() => openHistoryModal(entry)}
-                              aria-label="צפייה בתעודה"
-                            >
-                              👁️
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </Card>
-        </>
+        <InventoryTab
+          warehouses={data.warehouses}
+          historyEntries={historyEntries}
+          historyLoading={historyLoading}
+          canEdit={canEditInventory}
+          onOpenInventoryModal={openInventoryModal}
+          onOpenHistoryModal={openHistoryModal}
+          onEditReceipt={handleEditReceipt}
+          onManageWarehouse={openWarehouseInventoryModal}
+          onEditWarehouse={handleEditWarehouse}
+          onGoToStructure={goToStructureTab}
+          onCreateWarehouse={openWarehouseModal}
+        />
       )}
 
       {activeTab === "structure" && (
-        <Card>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: spacing.sm,
-              marginBottom: spacing.md,
-            }}
-          >
-            <div>
-              <h3 style={{ margin: 0 }}>ניהול משפחות וקטגוריות</h3>
-              <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-                לא ניתן למחוק או לעדכן מבנים אליהם מקושרים פריטים פעילים
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: spacing.sm }}>
-              <Button
-                variant="secondary"
-                onClick={() => openStructureModal("family")}
-                disabled={!canEditStructure}
-              >
-                משפחה חדשה
-              </Button>
-              <Button
-                onClick={() => openStructureModal("category")}
-                disabled={!canEditStructure}
-              >
-                קטגוריה חדשה
-              </Button>
-            </div>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <h4 style={{ margin: "0 0 8px 0" }}>משפחות קיימות</h4>
-              <div
-                style={{
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: radii.card,
-                  maxHeight: 260,
-                  overflowY: "auto",
-                }}
-              >
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={tableHeaderStyle}>קוד</th>
-                      <th style={tableHeaderStyle}>שם</th>
-                      <th style={tableHeaderStyle}>פריטים</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {familiesWithCounts.map((family) => (
-                      <tr key={family.code}>
-                        <td style={tableCellStyle}>{family.code}</td>
-                        <td style={tableCellStyle}>{family.name}</td>
-                        <td style={tableCellStyle}>{family.itemCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div>
-              <h4 style={{ margin: "0 0 8px 0" }}>קטגוריות קיימות</h4>
-              <div
-                style={{
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: radii.card,
-                  maxHeight: 260,
-                  overflowY: "auto",
-                }}
-              >
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th style={tableHeaderStyle}>משפחה</th>
-                      <th style={tableHeaderStyle}>קוד</th>
-                      <th style={tableHeaderStyle}>שם</th>
-                      <th style={tableHeaderStyle}>פריטים</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categoriesWithCounts.map((category) => (
-                      <tr key={`${category.family_code}-${category.code}`}>
-                        <td style={tableCellStyle}>{category.family_code}</td>
-                        <td style={tableCellStyle}>{category.code}</td>
-                        <td style={tableCellStyle}>{category.name}</td>
-                        <td style={tableCellStyle}>{category.itemCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </Card>
+        <StructureTab
+          familiesWithCounts={familiesWithCounts}
+          categoriesWithCounts={categoriesWithCounts}
+          canEdit={canEditStructure}
+          onOpenStructureModal={openStructureModal}
+          warehouses={data.warehouses}
+          onCreateWarehouse={openWarehouseModal}
+          onEditWarehouse={handleEditWarehouse}
+          onManageWarehouse={openWarehouseInventoryModal}
+        />
       )}
 
-      <Modal
+      <InventoryReceiptModal
         open={showInventoryModal}
         onClose={closeInventoryModal}
-        width="min(820px, 95vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h3 style={{ margin: 0 }}>קליטת מלאי חדשה</h3>
-          <Button variant="secondary" onClick={addReceiptLine}>
-            + שורה חדשה
-          </Button>
-        </div>
-        <p style={{ marginTop: spacing.xs, color: muted, fontSize: 13 }}>
-          הזן את שורות הקליטה, כולל מחסן, ספק וכמות. החיבור למסד יתבצע בשלב הבא.
-        </p>
-        {!activeWarehouses.length && (
-          <div
-            style={{
-              marginTop: spacing.sm,
-              padding: px(spacing.sm),
-              borderRadius: radii.card,
-              background: colors.primarySoft,
-              color: colors.warning,
-              textAlign: "center",
-            }}
-          >
-            כדי לקלוט מלאי יש ליצור לפחות מחסן פעיל. לחץ על &quot;+ מחסן
-            חדש&quot; בחלק המחסנים.
-          </div>
-        )}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            marginTop: spacing.md,
-          }}
-        >
-          {receiptLines.map((line, index) => (
-            <div
-              key={`receipt-modal-line-${index}`}
-              style={{
-                border: `1px solid ${colors.border}`,
-                borderRadius: radii.card,
-                padding: px(spacing.md),
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: spacing.sm,
-              }}
-            >
-              <select
-                style={inputStyle}
-                value={line.item_id}
-                onChange={(e) =>
-                  handleReceiptLineChange(index, "item_id", e.target.value)
-                }
-              >
-                <option value="">בחר פריט</option>
-                {data.items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.internal_sku} · {item.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                style={inputStyle}
-                value={line.warehouse_id}
-                onChange={(e) =>
-                  handleReceiptLineChange(index, "warehouse_id", e.target.value)
-                }
-                disabled={!activeWarehouses.length}
-              >
-                <option value="">בחר מחסן</option>
-                {activeWarehouses.map((warehouse) => (
-                  <option key={warehouse.id} value={warehouse.id}>
-                    {warehouse.code} · {warehouse.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="0"
-                style={inputStyle}
-                placeholder="כמות"
-                value={line.quantity}
-                onChange={(e) =>
-                  handleReceiptLineChange(index, "quantity", e.target.value)
-                }
-              />
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                style={inputStyle}
-                placeholder="עלות ליחידה"
-                value={line.unit_cost}
-                onChange={(e) =>
-                  handleReceiptLineChange(index, "unit_cost", e.target.value)
-                }
-              />
-              <input
-                type="text"
-                style={inputStyle}
-                placeholder="מספר ספק"
-                value={line.supplier_identifier}
-                onChange={(e) =>
-                  handleReceiptLineChange(
-                    index,
-                    "supplier_identifier",
-                    e.target.value
-                  )
-                }
-              />
-              <Button
-                variant="secondary"
-                onClick={() => removeReceiptLine(index)}
-                disabled={receiptLines.length === 1}
-              >
-                ✖ הסר
-              </Button>
-            </div>
-          ))}
-          <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-            placeholder="הערות לתעודה"
-            value={inventoryNote}
-            onChange={(e) => setInventoryNote(e.target.value)}
-          />
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: spacing.sm,
-            }}
-          >
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setReceiptLines([createEmptyReceiptLine()]);
-                setInventoryNote("");
-              }}
-            >
-              ניקוי טופס
-            </Button>
-            <Button onClick={handleInventorySubmit}>שמור קליטה</Button>
-          </div>
-        </div>
-      </Modal>
+        documentCode={editingReceiptCode}
+        receiptLines={receiptLines}
+        inventoryNote={inventoryNote}
+        activeWarehouses={activeWarehouses}
+        items={data.items}
+        onInventoryNoteChange={setInventoryNote}
+        onAddLine={addReceiptLine}
+        onRemoveLine={removeReceiptLine}
+        onLineChange={handleReceiptLineChange}
+        onSubmit={handleInventorySubmit}
+        onReset={() => {
+          setReceiptLines([createEmptyReceiptLine()]);
+          setInventoryNote("");
+        }}
+      />
 
-      <Modal
+      <WarehouseModal
         open={showWarehouseModal}
+        form={warehouseForm}
+        submitting={warehouseSubmitting}
+        isEditing={Boolean(editingWarehouseId)}
         onClose={closeWarehouseModal}
-        width="min(760px, 95vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        <h3 style={{ marginTop: 0, fontSize: 20, fontWeight: 800 }}>
-          מחסן חדש
-        </h3>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>קוד*</label>
-              <input
-                type="text"
-                maxLength={20}
-                style={inputStyle}
-                value={warehouseForm.code}
-                onChange={(e) =>
-                  handleWarehouseChange("code", e.target.value.toUpperCase())
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>שם*</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.name}
-                onChange={(e) => handleWarehouseChange("name", e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>עיר</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.city}
-                onChange={(e) => handleWarehouseChange("city", e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>רחוב וכתובת</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.address_line}
-                onChange={(e) =>
-                  handleWarehouseChange("address_line", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>מיקוד</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.postal_code}
-                onChange={(e) =>
-                  handleWarehouseChange("postal_code", e.target.value)
-                }
-              />
-            </div>
-          </div>
+        onSubmit={handleWarehouseSubmit}
+        onChange={handleWarehouseChange}
+      />
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>מנהל המחסן</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.manager_name}
-                onChange={(e) =>
-                  handleWarehouseChange("manager_name", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>טלפון מנהל</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.manager_phone}
-                onChange={(e) =>
-                  handleWarehouseChange("manager_phone", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>אימייל מנהל</label>
-              <input
-                type="email"
-                style={inputStyle}
-                value={warehouseForm.manager_email}
-                onChange={(e) =>
-                  handleWarehouseChange("manager_email", e.target.value)
-                }
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>איש קשר נוסף</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.contact_name}
-                onChange={(e) =>
-                  handleWarehouseChange("contact_name", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>טלפון איש קשר</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={warehouseForm.contact_phone}
-                onChange={(e) =>
-                  handleWarehouseChange("contact_phone", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>עלות שכירות (חודשי)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                style={inputStyle}
-                value={warehouseForm.rent_cost}
-                onChange={(e) =>
-                  handleWarehouseChange("rent_cost", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>מטבע</label>
-              <input
-                type="text"
-                maxLength={3}
-                style={inputStyle}
-                value={warehouseForm.rent_currency}
-                onChange={(e) =>
-                  handleWarehouseChange(
-                    "rent_currency",
-                    e.target.value.toUpperCase()
-                  )
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>תום חוזה שכירות</label>
-              <input
-                type="date"
-                style={inputStyle}
-                value={warehouseForm.rent_expiry}
-                onChange={(e) =>
-                  handleWarehouseChange("rent_expiry", e.target.value)
-                }
-              />
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>הערות חוזה / מסמכים</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 80 }}
-                value={warehouseForm.lease_notes}
-                onChange={(e) =>
-                  handleWarehouseChange("lease_notes", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>הערות כלליות</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 80 }}
-                value={warehouseForm.general_notes}
-                onChange={(e) =>
-                  handleWarehouseChange("general_notes", e.target.value)
-                }
-              />
-            </div>
-          </div>
-
-          <label
-            style={{ display: "flex", alignItems: "center", gap: spacing.xs }}
-          >
-            <input
-              type="checkbox"
-              checked={warehouseForm.is_active}
-              onChange={(e) =>
-                handleWarehouseChange("is_active", e.target.checked)
-              }
-            />
-            מחסן פעיל
-          </label>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: spacing.sm,
-            }}
-          >
-            <Button variant="secondary" onClick={closeWarehouseModal}>
-              ביטול
-            </Button>
-            <Button
-              onClick={handleWarehouseSubmit}
-              disabled={warehouseSubmitting}
-            >
-              {warehouseSubmitting ? "שומר..." : "שמור מחסן"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
+      <HistoryModal
         open={showHistoryModal}
+        selected={selectedReceipt}
+        entries={historyEntries}
         onClose={closeHistoryModal}
-        width="min(720px, 95vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h3 style={{ margin: 0 }}>היסטוריית תעודות</h3>
-          <Button variant="secondary" onClick={closeHistoryModal}>
-            ✖ סגור
-          </Button>
-        </div>
-        {selectedReceipt ? (
-          <div
-            style={{
-              marginTop: spacing.md,
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>מספר תעודה</div>
-              <strong>{selectedReceipt.document_code}</strong>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: spacing.md,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>תאריך</div>
-                <div>{formatDate(selectedReceipt.receipt_date)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>ספק</div>
-                <div>{selectedReceipt.supplier_name || "—"}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
-                <div>{selectedReceipt.status}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>מספר פריטים</div>
-                <div>{selectedReceipt.total_items}</div>
-              </div>
-            </div>
-            <div
-              style={{
-                marginTop: spacing.md,
-                padding: px(spacing.md),
-                borderRadius: radii.card,
-                background: colors.surfaceAlt,
-                color: muted,
-              }}
-            >
-              פירוט תעודה יגיע מחיבור המסד (בקרוב).
-            </div>
-          </div>
-        ) : (
-          <div style={{ marginTop: spacing.md }}>
-            {historyEntries.length === 0 ? (
-              <div
-                style={{
-                  padding: px(spacing.md),
-                  textAlign: "center",
-                  color: muted,
-                }}
-              >
-                אין תעודות להצגה.
-              </div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>תעודה</th>
-                    <th style={tableHeaderStyle}>תאריך</th>
-                    <th style={tableHeaderStyle}>ספק</th>
-                    <th style={tableHeaderStyle}>פריטים</th>
-                    <th style={tableHeaderStyle}>סטטוס</th>
-                    <th style={tableHeaderStyle}>פעולה</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyEntries.map((entry) => (
-                    <tr key={`modal-history-${entry.id}`}>
-                      <td style={tableCellStyle}>{entry.document_code}</td>
-                      <td style={tableCellStyle}>
-                        {formatDate(entry.receipt_date)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {entry.supplier_name || "—"}
-                      </td>
-                      <td style={tableCellStyle}>{entry.total_items}</td>
-                      <td style={tableCellStyle}>{entry.status}</td>
-                      <td style={tableCellStyle}>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setSelectedReceipt(entry)}
-                        >
-                          👁️
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-      </Modal>
+        onSelect={selectReceipt}
+        detail={receiptDetail}
+        detailLoading={receiptDetailLoading}
+        onEdit={handleEditReceipt}
+        canEdit={canEditInventory}
+      />
 
-      <Modal
+      <StructureModal
         open={showStructureModal}
+        mode={structureModalMode}
+        form={structureForm}
+        submitting={structureSubmitting}
+        families={data.families}
+        familiesWithCounts={familiesWithCounts}
+        categoriesWithCounts={categoriesWithCounts}
         onClose={closeStructureModal}
-        width="min(820px, 95vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h3 style={{ margin: 0 }}>
-            {structureModalMode === "family" ? "משפחה חדשה" : "קטגוריה חדשה"}
-          </h3>
-          <div style={{ display: "flex", gap: spacing.xs }}>
-            <Button
-              variant={
-                structureModalMode === "family" ? "primary" : "secondary"
-              }
-              onClick={() => openStructureModal("family")}
-            >
-              משפחה
-            </Button>
-            <Button
-              variant={
-                structureModalMode === "category" ? "primary" : "secondary"
-              }
-              onClick={() => openStructureModal("category")}
-            >
-              קטגוריה
-            </Button>
-          </div>
-        </div>
-        <div
-          style={{
-            marginTop: spacing.md,
-            display: "grid",
-            gridTemplateColumns: "minmax(260px, 1fr) minmax(260px, 1fr)",
-            gap: spacing.md,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            {structureModalMode === "category" && (
-              <div>
-                <label style={labelStyle}>משפחה קיימת*</label>
-                <select
-                  style={inputStyle}
-                  value={structureForm.family_code}
-                  onChange={(e) =>
-                    handleStructureChange("family_code", e.target.value)
-                  }
-                >
-                  <option value="">בחר משפחה</option>
-                  {familiesWithCounts.map((family) => (
-                    <option
-                      key={`structure-family-${family.code}`}
-                      value={family.code}
-                    >
-                      {family.code} · {family.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div>
-              <label style={labelStyle}>קוד*</label>
-              <input
-                type="text"
-                maxLength={2}
-                style={inputStyle}
-                value={structureForm.code}
-                onChange={(e) =>
-                  handleStructureChange("code", e.target.value.toUpperCase())
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>שם*</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={structureForm.name}
-                onChange={(e) => handleStructureChange("name", e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>תיאור</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 70 }}
-                value={structureForm.description}
-                onChange={(e) =>
-                  handleStructureChange("description", e.target.value)
-                }
-              />
-            </div>
-            {structureModalMode === "family" ? (
-              <>
-                <div>
-                  <label style={labelStyle}>סוג ציוד</label>
-                  <select
-                    style={inputStyle}
-                    value={structureForm.equipment_type}
-                    onChange={(e) =>
-                      handleStructureChange(
-                        "equipment_type",
-                        e.target.value as StructureFormState["equipment_type"]
-                      )
-                    }
-                  >
-                    <option value="sea">ציוד ים</option>
-                    <option value="support">ציוד מסייע</option>
-                  </select>
-                </div>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: spacing.xs,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={structureForm.allow_item_images}
-                    onChange={(e) =>
-                      handleStructureChange(
-                        "allow_item_images",
-                        e.target.checked
-                      )
-                    }
-                  />
-                  לאפשר תמונות ברמת משפחה
-                </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: spacing.xs,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={structureForm.allow_consumables}
-                    onChange={(e) =>
-                      handleStructureChange(
-                        "allow_consumables",
-                        e.target.checked
-                      )
-                    }
-                  />
-                  לאפשר סימון מתכלה כברירת מחדל
-                </label>
-              </>
-            ) : (
-              <>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: spacing.xs,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={structureForm.enforce_sku}
-                    onChange={(e) =>
-                      handleStructureChange("enforce_sku", e.target.checked)
-                    }
-                  />
-                  חובה על מק״ט יצרן
-                </label>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: spacing.xs,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={structureForm.require_image}
-                    onChange={(e) =>
-                      handleStructureChange("require_image", e.target.checked)
-                    }
-                  />
-                  דרישת תמונה לפריטים
-                </label>
-              </>
-            )}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: spacing.sm,
-                marginTop: spacing.sm,
-              }}
-            >
-              <Button variant="secondary" onClick={closeStructureModal}>
-                ביטול
-              </Button>
-              <Button
-                onClick={handleStructureSubmit}
-                disabled={structureSubmitting}
-              >
-                {structureSubmitting ? "שומר..." : "שמור"}
-              </Button>
-            </div>
-          </div>
-          <div
-            style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: radii.card,
-              padding: px(spacing.md),
-            }}
-          >
-            <strong>מצב קיים</strong>
-            <p style={{ marginTop: spacing.xs, color: muted, fontSize: 13 }}>
-              סקירה מהירה של המבנים כולל ספירת פריטים.
-            </p>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: spacing.sm,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>משפחות</div>
-                <ul style={{ margin: 0, paddingInlineStart: spacing.lg }}>
-                  {familiesWithCounts.slice(0, 5).map((family) => (
-                    <li key={`structure-side-family-${family.code}`}>
-                      {family.code} · {family.name} ({family.itemCount})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>קטגוריות</div>
-                <ul style={{ margin: 0, paddingInlineStart: spacing.lg }}>
-                  {categoriesWithCounts.slice(0, 5).map((category) => (
-                    <li
-                      key={`structure-side-category-${category.family_code}-${category.code}`}
-                    >
-                      {category.family_code}/{category.code} · {category.name} (
-                      {category.itemCount})
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
+        onSwitchMode={openStructureModal}
+        onChange={handleStructureChange}
+        onSubmit={handleStructureSubmit}
+      />
 
-      <Modal
+      <EquipmentFormModal
         open={showFormModal}
         onClose={() => setShowFormModal(false)}
-        width="min(720px, 95vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        <h3 style={{ marginTop: 0, fontSize: 20, fontWeight: 800 }}>
-          {editingItem ? "עריכת פריט ציוד" : "פריט ציוד חדש"}
-        </h3>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>משפחה*</label>
-              <select
-                style={inputStyle}
-                value={formState.family_code}
-                onChange={(e) =>
-                  handleFormChange("family_code", e.target.value)
-                }
-              >
-                <option value="">בחר משפחה</option>
-                {data.families.map((family) => (
-                  <option key={family.code} value={family.code}>
-                    {family.code} · {family.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>קטגוריה*</label>
-              <select
-                style={inputStyle}
-                value={formState.category_code}
-                onChange={(e) =>
-                  handleFormChange("category_code", e.target.value)
-                }
-              >
-                <option value="">בחר קטגוריה</option>
-                {formCategories.map((category) => (
-                  <option
-                    key={`${category.family_code}-${category.code}`}
-                    value={category.code}
-                  >
-                    {category.code} · {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label style={labelStyle}>שם הפריט*</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={formState.name}
-              onChange={(e) => handleFormChange("name", e.target.value)}
-              placeholder="למשל: גלשן פאן 8'"
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>תיאור</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80 }}
-              value={formState.description}
-              onChange={(e) => handleFormChange("description", e.target.value)}
-              placeholder="מידע נוסף על הפריט..."
-            />
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>מצב</label>
-              <select
-                style={inputStyle}
-                value={formState.condition}
-                onChange={(e) => handleFormChange("condition", e.target.value)}
-              >
-                {CONDITION_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>מקט יצרן</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formState.manufacturer_sku}
-                onChange={(e) =>
-                  handleFormChange("manufacturer_sku", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>שם יצרן</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formState.manufacturer_name}
-                onChange={(e) =>
-                  handleFormChange("manufacturer_name", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>עלות רכישה</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                style={inputStyle}
-                value={formState.purchase_cost}
-                onChange={(e) =>
-                  handleFormChange("purchase_cost", e.target.value)
-                }
-              />
-            </div>
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: spacing.md,
-              border: `1px solid ${colors.border}`,
-              borderRadius: radii.card,
-              padding: px(spacing.md),
-            }}
-          >
-            <label
-              style={{ display: "flex", alignItems: "center", gap: spacing.xs }}
-            >
-              <input
-                type="checkbox"
-                checked={formState.is_consumable}
-                onChange={(e) =>
-                  handleFormChange("is_consumable", e.target.checked)
-                }
-              />
-              פריט מתכלה
-            </label>
-            <label
-              style={{ display: "flex", alignItems: "center", gap: spacing.xs }}
-            >
-              <input
-                type="checkbox"
-                checked={formState.is_sku_tracked}
-                onChange={(e) =>
-                  handleFormChange("is_sku_tracked", e.target.checked)
-                }
-              />
-              מנוהל לפי מק״ט ייחודי
-            </label>
-            <label
-              style={{ display: "flex", alignItems: "center", gap: spacing.xs }}
-            >
-              <input
-                type="checkbox"
-                checked={formState.is_rental}
-                onChange={(e) =>
-                  handleFormChange("is_rental", e.target.checked)
-                }
-              />
-              ציוד בהשכרה
-            </label>
-            {formState.is_rental && (
-              <input
-                type="date"
-                style={inputStyle}
-                value={formState.rental_expiry}
-                onChange={(e) =>
-                  handleFormChange("rental_expiry", e.target.value)
-                }
-              />
-            )}
-          </div>
-          {!formState.is_sku_tracked && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: spacing.md,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>מלאי מינימלי</label>
-                <input
-                  type="number"
-                  min="0"
-                  style={inputStyle}
-                  value={formState.min_stock}
-                  onChange={(e) =>
-                    handleFormChange("min_stock", e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>מלאי מקסימלי</label>
-                <input
-                  type="number"
-                  min="0"
-                  style={inputStyle}
-                  value={formState.max_stock}
-                  onChange={(e) =>
-                    handleFormChange("max_stock", e.target.value)
-                  }
-                />
-              </div>
-            </div>
-          )}
-          <div>
-            <label style={labelStyle}>קישור לתמונה / מסמך</label>
-            <input
-              type="url"
-              style={inputStyle}
-              value={formState.default_image_url}
-              onChange={(e) =>
-                handleFormChange("default_image_url", e.target.value)
-              }
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>הערות</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80 }}
-              value={formState.notes}
-              onChange={(e) => handleFormChange("notes", e.target.value)}
-            />
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: spacing.sm,
-            }}
-          >
-            <Button variant="secondary" onClick={() => setShowFormModal(false)}>
-              ביטול
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? "שומר..." : editingItem ? "עדכן" : "צור פריט"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        formState={formState}
+        formCategories={formCategories}
+        families={data.families}
+        editingItem={editingItem}
+        canEdit={canEditCatalog}
+        onChange={handleFormChange}
+      />
 
-      <Modal
+      <ViewItemModal
         open={showViewModal && !!viewingItem}
+        item={viewingItem}
         onClose={closeViewModal}
-        width="min(720px, 95vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        {viewingItem && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <h3 style={{ margin: 0 }}>{viewingItem.name}</h3>
-                <div style={{ color: muted, fontSize: 13 }}>
-                  SKU פנימי: {viewingItem.internal_sku || "—"}
-                </div>
-              </div>
-              <Button variant="secondary" onClick={closeViewModal}>
-                ✖ סגור
-              </Button>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: spacing.md,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>משפחה</div>
-                <div>{viewingItem.family_name || viewingItem.family_code}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>קטגוריה</div>
-                <div>
-                  {viewingItem.category_name || viewingItem.category_code}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>מצב</div>
-                <span
-                  style={badgeStyle(
-                    conditionBadgeMap[viewingItem.condition]?.background ||
-                      colors.borderMuted,
-                    conditionBadgeMap[viewingItem.condition]?.color ||
-                      colors.textPrimary
-                  )}
-                >
-                  {getConditionLabel(viewingItem.condition)}
-                </span>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>סוג ציוד</div>
-                <div>
-                  {EQUIPMENT_TYPE_LABELS[viewingItem.equipment_type] ||
-                    viewingItem.equipment_type}
-                </div>
-              </div>
-            </div>
-            <div
-              style={{
-                border: `1px solid ${colors.border}`,
-                borderRadius: radii.card,
-                padding: px(spacing.md),
-              }}
-            >
-              <div style={{ fontWeight: 700, marginBottom: spacing.xs }}>
-                מלאי לפי מחסן
-              </div>
-              {(!viewingItem.warehouse_stock ||
-                viewingItem.warehouse_stock.length === 0) && (
-                <div style={{ color: muted }}>אין נתוני מלאי זמינים</div>
-              )}
-              <div
-                style={{ display: "flex", flexWrap: "wrap", gap: spacing.xs }}
-              >
-                {(viewingItem.warehouse_stock || []).map((stock) => (
-                  <span
-                    key={stock.warehouse_id}
-                    style={badgeStyle(colors.surfaceAlt, colors.textPrimary)}
-                  >
-                    {stock.warehouse_name}: {formatNumber(stock.quantity, "0")}
-                  </span>
-                ))}
-              </div>
-            </div>
-            {viewingItem.notes && (
-              <div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: muted,
-                    marginBottom: spacing.xs,
-                  }}
-                >
-                  הערות
-                </div>
-                <div style={{ whiteSpace: "pre-wrap" }}>
-                  {viewingItem.notes}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+      />
+
+      <WarehouseInventoryModal
+        open={warehouseInventoryModalOpen}
+        warehouse={inventoryWarehouse}
+        stock={warehouseStock}
+        loading={warehouseStockLoading}
+        items={data.items}
+        warehouses={data.warehouses}
+        onClose={closeWarehouseInventoryModal}
+        onRefresh={refreshWarehouseInventory}
+        onAddStock={handleAddWarehouseStock}
+        onTransferStock={handleTransferWarehouseStock}
+        canEdit={canEditInventory}
+      />
     </div>
   );
 }

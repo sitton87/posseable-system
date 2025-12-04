@@ -14,13 +14,23 @@ type WarehouseManagementCardProps = {
   warehouses: Warehouse[];
   onCreateWarehouse: () => void;
   canCreate?: boolean;
+  onManageWarehouse?: (warehouse: Warehouse) => void;
+  canManage?: boolean;
+  onEditWarehouse?: (warehouse: Warehouse) => void;
+  canEditDetails?: boolean;
 };
 
 export function WarehouseManagementCard({
   warehouses,
   onCreateWarehouse,
   canCreate = true,
+  onManageWarehouse,
+  canManage = true,
+  onEditWarehouse,
+  canEditDetails = true,
 }: WarehouseManagementCardProps) {
+  const showActions = Boolean(onManageWarehouse || onEditWarehouse);
+
   return (
     <Card>
       <div
@@ -66,6 +76,7 @@ export function WarehouseManagementCard({
                 <th style={tableHeaderStyle}>מנהל</th>
                 <th style={tableHeaderStyle}>טלפון</th>
                 <th style={tableHeaderStyle}>סטטוס</th>
+                {showActions && <th style={tableHeaderStyle}>פעולות</th>}
               </tr>
             </thead>
             <tbody>
@@ -92,6 +103,36 @@ export function WarehouseManagementCard({
                       {warehouse.is_active ? "פעיל" : "לא פעיל"}
                     </span>
                   </td>
+                  {showActions && (
+                    <td style={tableCellStyle}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: spacing.xs,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {onManageWarehouse && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => onManageWarehouse(warehouse)}
+                            disabled={!canManage}
+                          >
+                            ניהול מלאי
+                          </Button>
+                        )}
+                        {onEditWarehouse && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => onEditWarehouse(warehouse)}
+                            disabled={!canEditDetails}
+                          >
+                            עריכת פרטים
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -1,7 +1,11 @@
 "use client";
 
 import { Button, Card } from "@/app/components/ui";
-import { tableCellStyle, tableHeaderStyle, tableStyle } from "@/app/styles/components";
+import {
+  tableCellStyle,
+  tableHeaderStyle,
+  tableStyle,
+} from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import type { ReceiptHistoryEntry } from "../types";
 import { formatDate } from "../utils";
@@ -84,12 +88,17 @@ export function InventoryManagementCard({
                 {historyEntries.map((entry) => (
                   <tr key={entry.id}>
                     <td style={tableCellStyle}>{entry.document_code}</td>
-                    <td style={tableCellStyle}>{formatDate(entry.receipt_date)}</td>
+                    <td style={tableCellStyle}>
+                      {formatDate(entry.receipt_date)}
+                    </td>
                     <td style={tableCellStyle}>{entry.supplier_name || "—"}</td>
                     <td style={tableCellStyle}>{entry.total_items}</td>
                     <td style={tableCellStyle}>{entry.status}</td>
                     <td style={tableCellStyle}>
-                      <Button variant="secondary" onClick={() => onOpenHistoryModal(entry)}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => onOpenHistoryModal(entry)}
+                      >
                         👁️
                       </Button>
                     </td>
@@ -103,6 +112,3 @@ export function InventoryManagementCard({
     </Card>
   );
 }
-
-
-

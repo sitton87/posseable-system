@@ -1,13 +1,14 @@
 "use client";
 
 import { Button, Card } from "@/app/components/ui";
-import { badgeStyle, tableCellStyle, tableHeaderStyle, tableStyle } from "@/app/styles/components";
+import {
+  badgeStyle,
+  tableCellStyle,
+  tableHeaderStyle,
+  tableStyle,
+} from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
-import type {
-  EquipmentCategory,
-  EquipmentFamily,
-  EquipmentItem,
-} from "@/type";
+import type { EquipmentCategory, EquipmentFamily, EquipmentItem } from "@/type";
 import type { FiltersState } from "../types";
 import {
   CONDITION_OPTIONS,
@@ -82,7 +83,10 @@ export function EquipmentCatalogCard({
         >
           <option value="">כל הקטגוריות</option>
           {availableCategories.map((category) => (
-            <option key={`${category.family_code}-${category.code}`} value={category.code}>
+            <option
+              key={`${category.family_code}-${category.code}`}
+              value={category.code}
+            >
               {category.family_code}/{category.code} · {category.name}
             </option>
           ))}
@@ -111,7 +115,9 @@ export function EquipmentCatalogCard({
         <select
           style={filterControlStyle}
           value={filters.status}
-          onChange={(e) => onFilterChange("status", e.target.value as FiltersState["status"])}
+          onChange={(e) =>
+            onFilterChange("status", e.target.value as FiltersState["status"])
+          }
         >
           <option value="active">פעילים בלבד</option>
           <option value="all">כל הפריטים</option>
@@ -144,7 +150,9 @@ export function EquipmentCatalogCard({
               items.map((item) => {
                 const warehouses = item.warehouse_stock || [];
                 const typeLabel =
-                  EQUIPMENT_TYPE_LABELS[item.equipment_type] || item.equipment_type || "—";
+                  EQUIPMENT_TYPE_LABELS[item.equipment_type] ||
+                  item.equipment_type ||
+                  "—";
                 return (
                   <tr key={item.id}>
                     <td style={tableCellStyle}>
@@ -166,8 +174,10 @@ export function EquipmentCatalogCard({
                     <td style={tableCellStyle}>
                       <span
                         style={badgeStyle(
-                          conditionBadgeMap[item.condition]?.background || colors.borderMuted,
-                          conditionBadgeMap[item.condition]?.color || colors.textPrimary
+                          conditionBadgeMap[item.condition]?.background ||
+                            colors.borderMuted,
+                          conditionBadgeMap[item.condition]?.color ||
+                            colors.textPrimary
                         )}
                       >
                         {getConditionLabel(item.condition)}
@@ -178,30 +188,49 @@ export function EquipmentCatalogCard({
                         {formatNumber(item.total_units, "0")}
                       </div>
                       <div style={{ fontSize: 12, color: colors.textMuted }}>
-                        מינימום: {item.is_sku_tracked ? "N/A" : formatNumber(item.min_stock)}
+                        מינימום:{" "}
+                        {item.is_sku_tracked
+                          ? "N/A"
+                          : formatNumber(item.min_stock)}
                       </div>
                       <div style={{ fontSize: 12, color: colors.textMuted }}>
-                        מקסימום: {item.is_sku_tracked ? "N/A" : formatNumber(item.max_stock)}
+                        מקסימום:{" "}
+                        {item.is_sku_tracked
+                          ? "N/A"
+                          : formatNumber(item.max_stock)}
                       </div>
                     </td>
                     <td style={tableCellStyle}>
                       {warehouses.length === 0 && (
-                        <div style={{ color: colors.textMuted }}>אין נתוני מלאי</div>
+                        <div style={{ color: colors.textMuted }}>
+                          אין נתוני מלאי
+                        </div>
                       )}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 4,
+                        }}
+                      >
                         {warehouses.map((stock) => (
                           <span
                             key={stock.warehouse_id}
-                            style={badgeStyle(colors.surfaceAlt, colors.textPrimary)}
+                            style={badgeStyle(
+                              colors.surfaceAlt,
+                              colors.textPrimary
+                            )}
                           >
-                            {stock.warehouse_name}: {formatNumber(stock.quantity, "0")}
+                            {stock.warehouse_name}:{" "}
+                            {formatNumber(stock.quantity, "0")}
                           </span>
                         ))}
                       </div>
                     </td>
                     <td style={tableCellStyle}>
                       <div>
-                        <strong>מתכלה:</strong> {item.is_consumable ? "כן" : "לא"}
+                        <strong>מתכלה:</strong>{" "}
+                        {item.is_consumable ? "כן" : "לא"}
                       </div>
                       <div>
                         <strong>השכרה:</strong>{" "}
@@ -209,11 +238,23 @@ export function EquipmentCatalogCard({
                       </div>
                     </td>
                     <td style={tableCellStyle}>
-                      <div style={{ display: "flex", justifyContent: "center", gap: spacing.xs }}>
-                        <Button variant="secondary" onClick={() => onView(item)}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          gap: spacing.xs,
+                        }}
+                      >
+                        <Button
+                          variant="secondary"
+                          onClick={() => onView(item)}
+                        >
                           👁️
                         </Button>
-                        <Button variant="secondary" onClick={() => onEdit(item)}>
+                        <Button
+                          variant="secondary"
+                          onClick={() => onEdit(item)}
+                        >
                           ✏️
                         </Button>
                         <Button
@@ -242,6 +283,3 @@ export function EquipmentCatalogCard({
     </Card>
   );
 }
-
-
-

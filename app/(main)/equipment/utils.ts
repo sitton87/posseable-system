@@ -59,6 +59,7 @@ export const createEmptyFormState = (): EquipmentFormState => ({
   default_image_url: "",
   purchase_cost: "",
   notes: "",
+  is_active: true,
 });
 
 export const createEmptyReceiptLine = (): ReceiptLine => ({

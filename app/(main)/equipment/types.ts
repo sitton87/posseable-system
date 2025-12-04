@@ -31,6 +31,7 @@ export type EquipmentFormState = {
   default_image_url: string;
   purchase_cost: string;
   notes: string;
+  is_active: boolean;
 };
 
 export type ReceiptLine = {
@@ -50,6 +51,34 @@ export type ReceiptHistoryEntry = {
   status: string;
   lines?: ReceiptLine[];
   note?: string;
+};
+
+export type ReceiptDetailLine = {
+  item_id: string;
+  item_name: string;
+  warehouse_id: string;
+  warehouse_name: string;
+  quantity: number;
+  unit_cost?: number | null;
+  supplier_identifier?: string | null;
+};
+
+export type ReceiptDetail = {
+  document_code: string;
+  receipt_date: string;
+  total_items: number;
+  note?: string | null;
+  lines: ReceiptDetailLine[];
+};
+
+export type WarehouseStockEntry = {
+  item_id: string;
+  item_name: string;
+  warehouse_id: string;
+  warehouse_name: string;
+  quantity: number;
+  equipment_type: string;
+  condition: string;
 };
 
 export type StructureFormState = {
