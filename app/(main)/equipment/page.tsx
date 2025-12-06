@@ -737,6 +737,10 @@ export default function EquipmentPage() {
           warehouse_id: line.warehouse_id,
           quantity: line.quantity?.toString() || "",
           supplier_document_number: line.supplier_document_number || "",
+          unit_cost:
+            line.unit_cost === null || line.unit_cost === undefined
+              ? ""
+              : line.unit_cost.toString(),
         })) || [];
       setReceiptLines(
         mappedLines.length ? mappedLines : [createEmptyReceiptLine()]
@@ -981,9 +985,25 @@ export default function EquipmentPage() {
     value: ReceiptLine[K]
   ) => {
     setReceiptLines((prev) =>
-      prev.map((line, idx) =>
-        idx === index ? { ...line, [key]: value } : line
-      )
+      prev.map((line, idx) => {
+        if (idx !== index) return line;
+        const next = { ...line, [key]: value };
+        if (key === "item_id") {
+          const selectedItem = data.items.find((item) => item.id === value);
+          if (selectedItem) {
+            const cost =
+              selectedItem.purchase_cost ?? selectedItem.unit_cost ?? null;
+            if (cost !== null && cost !== undefined) {
+              next.unit_cost = cost.toString();
+            } else {
+              next.unit_cost = "";
+            }
+          } else {
+            next.unit_cost = "";
+          }
+        }
+        return next;
+      })
     );
   };
 
@@ -995,7 +1015,10 @@ export default function EquipmentPage() {
     setReceiptLines((prev) => {
       const source = prev[index];
       if (!source) return prev;
-      const clone = { ...source };
+      const clone = {
+        ...createEmptyReceiptLine(),
+        supplier_document_number: source.supplier_document_number,
+      };
       return [
         ...prev.slice(0, index + 1),
         { ...clone },
@@ -1019,6 +1042,10 @@ export default function EquipmentPage() {
         warehouse_id: line.warehouse_id.trim(),
         quantity: Number(line.quantity),
         supplier_document_number: line.supplier_document_number?.trim() || null,
+        unit_cost:
+          line.unit_cost && line.unit_cost.toString().trim().length
+            ? Number(line.unit_cost)
+            : null,
       }))
       .filter(
         (line) =>

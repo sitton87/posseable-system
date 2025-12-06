@@ -41,6 +41,7 @@ export type ReceiptLine = {
   warehouse_id: string;
   quantity: string;
   supplier_document_number: string;
+  unit_cost?: string;
 };
 
 export type ReceiptHistoryEntry = {

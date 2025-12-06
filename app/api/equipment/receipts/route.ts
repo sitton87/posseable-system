@@ -10,6 +10,7 @@ type ReceiptLinePayload = {
   warehouse_id: string;
   quantity: number;
   supplier_document_number: string | null;
+  unit_cost: number | null;
 };
 
 function generateDocumentCode() {
@@ -31,6 +32,14 @@ function normalizeLines(raw: any[]): ReceiptLinePayload[] {
       const warehouseId =
         typeof line.warehouse_id === "string" ? line.warehouse_id.trim() : "";
       const quantity = Number(line.quantity);
+      const unitCostRaw =
+        typeof line.unit_cost === "number"
+          ? line.unit_cost
+          : typeof line.unit_cost === "string"
+          ? Number(line.unit_cost)
+          : null;
+      const unitCost =
+        unitCostRaw === null || Number.isNaN(unitCostRaw) ? null : unitCostRaw;
       const supplierDoc =
         typeof line.supplier_document_number === "string" &&
         line.supplier_document_number.trim().length
@@ -51,6 +60,7 @@ function normalizeLines(raw: any[]): ReceiptLinePayload[] {
         warehouse_id: warehouseId,
         quantity,
         supplier_document_number: supplierDoc,
+        unit_cost: unitCost,
       };
     })
     .filter((line): line is ReceiptLinePayload => Boolean(line));

@@ -68,6 +68,7 @@ export const createEmptyReceiptLine = (): ReceiptLine => ({
   warehouse_id: "",
   quantity: "",
   supplier_document_number: "",
+  unit_cost: "",
 });
 
 export const createEmptyStructureFormState = (): StructureFormState => ({

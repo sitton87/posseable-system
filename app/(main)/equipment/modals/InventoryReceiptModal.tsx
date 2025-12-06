@@ -58,7 +58,7 @@ export function InventoryReceiptModal({
     <Modal
       open={open}
       onClose={onClose}
-      width="min(820px, 95vw)"
+      width="min(980px, 95vw)"
       style={{ padding: spacing.xxl }}
     >
       <div
@@ -78,12 +78,41 @@ export function InventoryReceiptModal({
             </div>
           )}
         </div>
-        <Button variant="secondary" onClick={onAddLine}>
-          + שורה חדשה
-        </Button>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: spacing.sm,
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Button onClick={onAddLine}>+ שורה חדשה</Button>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: spacing.xs }}
+          >
+            <label style={{ ...labelStyle, margin: 0 }}>ספק*</label>
+            <select
+              style={{ ...inputStyle, minWidth: 240 }}
+              value={selectedSupplierId}
+              onChange={(e) => onSupplierChange(e.target.value)}
+              disabled={!suppliers.length}
+            >
+              <option value="">בחר ספק</option>
+              {suppliers.map((supplier) => (
+                <option
+                  key={supplier.supplier_identifier}
+                  value={supplier.supplier_identifier}
+                >
+                  {supplier.name} · {supplier.supplier_identifier}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
       <p style={{ marginTop: spacing.xs, color: muted, fontSize: 13 }}>
-        הזן את שורות הקליטה, כולל מחסן, ספק וכמות. החיבור למסד יתבצע בשמירה.
+        הזן את שורות הקליטה, כולל מחסן, ספק וכמות.
       </p>
       {!activeWarehouses.length && (
         <div
@@ -108,44 +137,45 @@ export function InventoryReceiptModal({
           marginTop: spacing.md,
         }}
       >
-        <div>
-          <label style={labelStyle}>ספק*</label>
-          <select
-            style={inputStyle}
-            value={selectedSupplierId}
-            onChange={(e) => onSupplierChange(e.target.value)}
-            disabled={!suppliers.length}
-          >
-            <option value="">בחר ספק</option>
-            {suppliers.map((supplier) => (
-              <option
-                key={supplier.supplier_identifier}
-                value={supplier.supplier_identifier}
-              >
-                {supplier.name} · {supplier.supplier_identifier}
-              </option>
-            ))}
-          </select>
-          {!suppliers.length && (
-            <div style={{ color: colors.danger, fontSize: 12 }}>
-              אין ספקים פעילים במערכת. יש להגדיר ספק לפני קליטת מלאי.
-            </div>
-          )}
-        </div>
-        {receiptLines.map((line, index) => (
+        {!suppliers.length && (
+          <div style={{ color: colors.danger, fontSize: 12 }}>
+            אין ספקים פעילים במערכת. יש להגדיר ספק לפני קליטת מלאי.
+          </div>
+        )}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.sm,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radii.card,
+            padding: px(spacing.sm),
+          }}
+        >
           <div
-            key={`receipt-modal-line-${index}`}
             style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: radii.card,
-              padding: px(spacing.md),
-              display: "flex",
-              flexWrap: "wrap",
+              display: "grid",
+              gridTemplateColumns: "2.4fr 2fr 1fr 2fr auto",
               gap: spacing.sm,
-              alignItems: "flex-end",
+              alignItems: "center",
             }}
           >
-            <div style={{ flex: "1 1 200px" }}>
+            <div style={{ fontSize: 12, color: muted }}>פריט</div>
+            <div style={{ fontSize: 12, color: muted }}>מחסן</div>
+            <div style={{ fontSize: 12, color: muted }}>כמות</div>
+            <div style={{ fontSize: 12, color: muted }}>מס' תעודת ספק</div>
+            <div />
+          </div>
+          {receiptLines.map((line, index) => (
+            <div
+              key={`receipt-modal-line-${index}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "2.4fr 2fr 1fr 2fr auto",
+                gap: spacing.sm,
+                alignItems: "center",
+              }}
+            >
               <select
                 style={inputStyle}
                 value={line.item_id}
@@ -158,8 +188,6 @@ export function InventoryReceiptModal({
                   </option>
                 ))}
               </select>
-            </div>
-            <div style={{ flex: "1 1 200px" }}>
               <select
                 style={inputStyle}
                 value={line.warehouse_id}
@@ -175,8 +203,6 @@ export function InventoryReceiptModal({
                   </option>
                 ))}
               </select>
-            </div>
-            <div style={{ width: 120 }}>
               <input
                 type="number"
                 min="0"
@@ -187,48 +213,52 @@ export function InventoryReceiptModal({
                   onLineChange(index, "quantity", e.target.value)
                 }
               />
-            </div>
-            <div style={{ flex: "1 1 200px" }}>
               <input
                 type="text"
                 style={inputStyle}
                 placeholder="מספר תעודת ספק"
                 value={line.supplier_document_number}
                 onChange={(e) =>
-                  onLineChange(index, "supplier_document_number", e.target.value)
+                  onLineChange(
+                    index,
+                    "supplier_document_number",
+                    e.target.value
+                  )
                 }
               />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: spacing.xs,
-              }}
-            >
-              <Button
-                variant="secondary"
-                title="שכפול שורה"
-                aria-label="שכפול שורה"
-                onClick={() => onDuplicateLine(index)}
+              <div
+                style={{
+                  display: "flex",
+                  gap: spacing.xs,
+                  justifyContent: "flex-end",
+                }}
               >
-                ⧉
-              </Button>
-              <Button
-                variant="secondary"
-                title="הסר שורה"
-                aria-label="הסר שורה"
-                onClick={() => onRemoveLine(index)}
-                disabled={receiptLines.length === 1}
-              >
-                🗑️
-              </Button>
+                <Button
+                  variant="secondary"
+                  title="שכפול שורה"
+                  aria-label="שכפול שורה"
+                  onClick={() => onDuplicateLine(index)}
+                >
+                  ⧉
+                </Button>
+                <Button
+                  variant="secondary"
+                  title="הסר שורה"
+                  aria-label="הסר שורה"
+                  onClick={() => onRemoveLine(index)}
+                  disabled={receiptLines.length === 1}
+                >
+                  🗑️
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
         <div>
           <label style={labelStyle}>הערות לתעודה</label>
           <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+            rows={1}
+            style={{ ...inputStyle, height: 44, resize: "none" }}
             value={inventoryNote}
             onChange={(e) => onInventoryNoteChange(e.target.value)}
           />
