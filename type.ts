@@ -186,6 +186,7 @@ export type Warehouse = {
   is_active: boolean;
   created_at?: string | Date;
   updated_at?: string | Date;
+  total_value?: number | null;
 };
 
 export type EquipmentWarehouseStock = {

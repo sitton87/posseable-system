@@ -608,12 +608,13 @@ export default function EquipmentPage() {
     setShowHistoryModal(false);
   };
 
-  const openStructureModal = (mode: "family" | "category") => {
+  const openStructureModal = async (mode: "family" | "category") => {
     setStructureModalMode(mode);
-    setStructureForm({
+    const nextForm = {
       ...createEmptyStructureFormState(),
       entityType: mode,
-    });
+    };
+    setStructureForm(nextForm);
     setShowStructureModal(true);
   };
 
@@ -910,12 +911,12 @@ export default function EquipmentPage() {
 
   const handleStructureSubmit = async () => {
     const normalizedCode = structureForm.code.trim().toUpperCase();
-    if (normalizedCode.length !== 2) {
-      alert("קוד חייב להיות בן 2 תווים");
+    if (normalizedCode && normalizedCode.length !== 2) {
+      alert("קוד חייב להיות בן 2 תווים או להשאיר ריק ליצירה אוטומטית");
       return;
     }
-
-    if (!structureForm.name.trim()) {
+    const trimmedName = structureForm.name.trim();
+    if (!trimmedName) {
       alert("שם הוא שדה חובה");
       return;
     }
@@ -926,8 +927,8 @@ export default function EquipmentPage() {
 
     if (entityType === "family") {
       payload = {
-        code: normalizedCode,
-        name: structureForm.name.trim(),
+        code: normalizedCode.length === 2 ? normalizedCode : undefined,
+        name: trimmedName,
         description: structureForm.description || null,
         equipment_type: structureForm.equipment_type,
         allow_item_images: structureForm.allow_item_images,
@@ -941,8 +942,8 @@ export default function EquipmentPage() {
       }
       payload = {
         family_code: structureForm.family_code,
-        code: normalizedCode,
-        name: structureForm.name.trim(),
+        code: normalizedCode.length === 2 ? normalizedCode : undefined,
+        name: trimmedName,
         description: structureForm.description || null,
         enforce_sku: structureForm.enforce_sku,
         require_image: structureForm.require_image,
@@ -979,8 +980,13 @@ export default function EquipmentPage() {
     const isEditingWarehouse = Boolean(editingWarehouseId);
     const code = warehouseForm.code.trim().toUpperCase();
     const name = warehouseForm.name.trim();
-    if (!code || code.length > 20) {
-      alert("קוד המחסן נדרש (עד 20 תווים)");
+    if (isEditingWarehouse) {
+      if (!code || code.length > 20) {
+        alert("קוד המחסן נדרש (עד 20 תווים)");
+        return;
+      }
+    } else if (code && code.length > 20) {
+      alert("קוד המחסן חייב להיות עד 20 תווים");
       return;
     }
     if (!name) {
@@ -999,7 +1005,7 @@ export default function EquipmentPage() {
     }
 
     const payload = {
-      code,
+      code: code || undefined,
       name,
       city: warehouseForm.city || null,
       address_line: warehouseForm.address_line || null,

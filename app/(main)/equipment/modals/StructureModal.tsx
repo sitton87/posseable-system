@@ -76,8 +76,8 @@ export function StructureModal({
         style={{
           marginTop: spacing.md,
           display: "grid",
-          gridTemplateColumns: "minmax(260px, 1fr) minmax(260px, 1fr)",
-          gap: spacing.md,
+          gridTemplateColumns: "minmax(360px, 1fr) minmax(280px, 1fr)",
+          gap: spacing.lg,
         }}
       >
         <div
@@ -108,14 +108,9 @@ export function StructureModal({
             </div>
           )}
           <div>
-            <label style={labelStyle}>קוד*</label>
-            <input
-              type="text"
-              maxLength={2}
-              style={inputStyle}
-              value={form.code}
-              onChange={(e) => onChange("code", e.target.value.toUpperCase())}
-            />
+            <p style={{ color: muted, fontSize: 13, margin: 0 }}>
+              הקוד ייווצר אוטומטית בעת השמירה.
+            </p>
           </div>
           <div>
             <label style={labelStyle}>שם*</label>
@@ -238,43 +233,76 @@ export function StructureModal({
             border: `1px solid ${colors.border}`,
             borderRadius: radii.card,
             padding: spacing.md,
+            maxHeight: 380,
+            overflowY: "auto",
           }}
         >
-          <strong>מצב קיים</strong>
+          <strong>
+            מצב קיים ({mode === "family" ? "משפחות" : "קטגוריות"})
+          </strong>
           <p style={{ marginTop: spacing.xs, color: muted, fontSize: 13 }}>
-            סקירה מהירה של המבנים כולל ספירת פריטים.
+            סקירה מהירה של המבנים וקשר לפריטים.
           </p>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>משפחות</div>
-              <ul style={{ margin: 0, paddingInlineStart: spacing.lg }}>
-                {familiesWithCounts.slice(0, 5).map((family) => (
-                  <li key={`structure-side-family-${family.code}`}>
-                    {family.code} · {family.name} ({family.itemCount})
-                  </li>
-                ))}
-              </ul>
+          {mode === "family" ? (
+            familiesWithCounts.length ? (
+              familiesWithCounts.map((family) => (
+                <div
+                  key={`structure-side-family-${family.code}`}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    padding: `${spacing.xs}px 0`,
+                    borderBottom: `1px solid ${colors.borderMuted}`,
+                  }}
+                >
+                  <span>
+                    {family.code} · {family.name}
+                  </span>
+                  <span style={{ color: muted }}>
+                    {family.itemCount} פריטים
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div style={{ color: muted, fontSize: 13 }}>
+                אין משפחות במערכת.
+              </div>
+            )
+          ) : !form.family_code ? (
+            <div style={{ color: muted, fontSize: 13 }}>
+              בחר משפחה כדי להציג קטגוריות קיימות.
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>קטגוריות</div>
-              <ul style={{ margin: 0, paddingInlineStart: spacing.lg }}>
-                {categoriesWithCounts.slice(0, 5).map((category) => (
-                  <li
+          ) : (
+            (categoriesWithCounts.filter(
+              (category) => category.family_code === form.family_code
+            ).length &&
+              categoriesWithCounts
+                .filter((category) => category.family_code === form.family_code)
+                .map((category) => (
+                  <div
                     key={`structure-side-category-${category.family_code}-${category.code}`}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 13,
+                      padding: `${spacing.xs}px 0`,
+                      borderBottom: `1px solid ${colors.borderMuted}`,
+                    }}
                   >
-                    {category.family_code}/{category.code} · {category.name} (
-                    {category.itemCount})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+                    <span>
+                      {category.code} · {category.name}
+                    </span>
+                    <span style={{ color: muted }}>
+                      {category.itemCount} פריטים
+                    </span>
+                  </div>
+                ))) || (
+              <div style={{ color: muted, fontSize: 13 }}>
+                אין קטגוריות למשפחה זו.
+              </div>
+            )
+          )}
         </div>
       </div>
     </Modal>

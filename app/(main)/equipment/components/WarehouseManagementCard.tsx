@@ -8,6 +8,8 @@ import {
   tableStyle,
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
+import { formatPhoneNumber } from "@/lib/utils/format";
+import { formatCurrency } from "../utils";
 import type { Warehouse } from "@/type";
 
 type WarehouseManagementCardProps = {
@@ -76,7 +78,12 @@ export function WarehouseManagementCard({
                 <th style={tableHeaderStyle}>מנהל</th>
                 <th style={tableHeaderStyle}>טלפון</th>
                 <th style={tableHeaderStyle}>סטטוס</th>
-                {showActions && <th style={tableHeaderStyle}>פעולות</th>}
+                <th style={tableHeaderStyle}>שווי מלאי</th>
+                {showActions && (
+                  <th style={{ ...tableHeaderStyle, textAlign: "center" }}>
+                    פעולות
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -89,7 +96,9 @@ export function WarehouseManagementCard({
                     {warehouse.manager_name || warehouse.contact_name || "—"}
                   </td>
                   <td style={tableCellStyle}>
-                    {warehouse.manager_phone || warehouse.contact_phone || "—"}
+                    {formatPhoneNumber(
+                      warehouse.manager_phone || warehouse.contact_phone || ""
+                    )}
                   </td>
                   <td style={tableCellStyle}>
                     <span
@@ -103,13 +112,17 @@ export function WarehouseManagementCard({
                       {warehouse.is_active ? "פעיל" : "לא פעיל"}
                     </span>
                   </td>
+                  <td style={tableCellStyle}>
+                    {formatCurrency(warehouse.total_value)}
+                  </td>
                   {showActions && (
-                    <td style={tableCellStyle}>
+                    <td style={{ ...tableCellStyle, textAlign: "center" }}>
                       <div
                         style={{
-                          display: "flex",
+                          display: "inline-flex",
                           gap: spacing.xs,
                           flexWrap: "wrap",
+                          justifyContent: "center",
                         }}
                       >
                         {onManageWarehouse && (

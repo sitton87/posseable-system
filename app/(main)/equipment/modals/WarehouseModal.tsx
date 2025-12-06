@@ -2,7 +2,7 @@
 
 import { Modal, Button } from "@/app/components/ui";
 import { inputStyle, labelStyle } from "@/app/styles/components";
-import { spacing } from "@/app/styles/foundations";
+import { colors, spacing } from "@/app/styles/foundations";
 import type { WarehouseFormState } from "../types";
 
 type WarehouseModalProps = {
@@ -54,14 +54,22 @@ export function WarehouseModal({
           }}
         >
           <div>
-            <label style={labelStyle}>קוד*</label>
-            <input
-              type="text"
-              maxLength={20}
-              style={inputStyle}
-              value={form.code}
-              onChange={(e) => onChange("code", e.target.value.toUpperCase())}
-            />
+            {isEditing ? (
+              <>
+                <label style={labelStyle}>קוד מחסן</label>
+                <input
+                  type="text"
+                  style={{ ...inputStyle, backgroundColor: "#f5f5f5" }}
+                  value={form.code}
+                  disabled
+                  readOnly
+                />
+              </>
+            ) : (
+              <p style={{ color: colors.textMuted, fontSize: 13, margin: 0 }}>
+                קוד המחסן ייווצר אוטומטית בעת השמירה.
+              </p>
+            )}
           </div>
           <div>
             <label style={labelStyle}>שם*</label>
@@ -82,7 +90,7 @@ export function WarehouseModal({
             />
           </div>
           <div>
-            <label style={labelStyle}>רחוב וכתובת</label>
+            <label style={labelStyle}>כתובת</label>
             <input
               type="text"
               style={inputStyle}
@@ -120,7 +128,9 @@ export function WarehouseModal({
           <div>
             <label style={labelStyle}>טלפון מנהל</label>
             <input
-              type="text"
+              type="tel"
+              inputMode="tel"
+              placeholder="050-1234567"
               style={inputStyle}
               value={form.manager_phone}
               onChange={(e) => onChange("manager_phone", e.target.value)}
@@ -156,7 +166,9 @@ export function WarehouseModal({
           <div>
             <label style={labelStyle}>טלפון איש קשר</label>
             <input
-              type="text"
+              type="tel"
+              inputMode="tel"
+              placeholder="050-1234567"
               style={inputStyle}
               value={form.contact_phone}
               onChange={(e) => onChange("contact_phone", e.target.value)}

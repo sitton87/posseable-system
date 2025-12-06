@@ -61,21 +61,12 @@ export function StructureTab({
             לא ניתן למחוק או לעדכן מבנים אליהם מקושרים פריטים פעילים
           </p>
         </div>
-        <div style={{ display: "flex", gap: spacing.sm }}>
-          <Button
-            variant="secondary"
-            onClick={() => onOpenStructureModal("family")}
-            disabled={!canEdit}
-          >
-            משפחה חדשה
-          </Button>
-          <Button
-            onClick={() => onOpenStructureModal("category")}
-            disabled={!canEdit}
-          >
-            קטגוריה חדשה
-          </Button>
-        </div>
+        <Button
+          onClick={() => onOpenStructureModal("family")}
+          disabled={!canEdit}
+        >
+          + משפחה / קטגוריה חדשה
+        </Button>
       </div>
       <div
         style={{

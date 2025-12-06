@@ -176,27 +176,52 @@ export async function GET(req: Request) {
       `),
       query(`
         SELECT
-          id,
-          code,
-          name,
-          city,
-          address_line,
-          postal_code,
-          manager_name,
-          manager_phone,
-          manager_email,
-          contact_name,
-          contact_phone,
-          rent_cost,
-          rent_currency,
-          rent_expiry,
-          lease_notes,
-          general_notes,
-          is_active,
-          created_at,
-          updated_at
-        FROM warehouse
-        ORDER BY name
+          w.id,
+          w.code,
+          w.name,
+          w.city,
+          w.address_line,
+          w.postal_code,
+          w.manager_name,
+          w.manager_phone,
+          w.manager_email,
+          w.contact_name,
+          w.contact_phone,
+          w.rent_cost,
+          w.rent_currency,
+          w.rent_expiry,
+          w.lease_notes,
+          w.general_notes,
+          w.is_active,
+          w.created_at,
+          w.updated_at,
+          SUM(COALESCE(es.quantity, 0) * COALESCE(ei.purchase_cost, 0)) AS total_value
+        FROM warehouse w
+        LEFT JOIN equipment_stock es
+          ON es.warehouse_id = w.id
+        LEFT JOIN equipment_item ei
+          ON ei.id = es.item_id
+        GROUP BY
+          w.id,
+          w.code,
+          w.name,
+          w.city,
+          w.address_line,
+          w.postal_code,
+          w.manager_name,
+          w.manager_phone,
+          w.manager_email,
+          w.contact_name,
+          w.contact_phone,
+          w.rent_cost,
+          w.rent_currency,
+          w.rent_expiry,
+          w.lease_notes,
+          w.general_notes,
+          w.is_active,
+          w.created_at,
+          w.updated_at
+        ORDER BY w.name
       `),
       query(`
         SELECT

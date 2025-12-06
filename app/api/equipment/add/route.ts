@@ -125,17 +125,15 @@ export async function POST(req: Request) {
 
     const serialResult = await query(
       `
-        SELECT ISNULL(MAX(serial_number), -1) + 1 AS next_serial
+        SELECT ISNULL(MAX(serial_number), 0) + 1 AS next_serial
         FROM equipment_item
-        WHERE family_code = @family_code AND category_code = @category_code
-      `,
-      { family_code, category_code }
+      `
     );
 
-    const nextSerial = serialResult.recordset[0]?.next_serial ?? 0;
-    if (nextSerial > 999) {
+    const nextSerial = serialResult.recordset[0]?.next_serial ?? 1;
+    if (nextSerial > 9999) {
       return NextResponse.json(
-        { error: "חרגת ממספר פריטים מותר למשפחה/קטגוריה (999)" },
+        { error: "חרגת ממספר פריטים מותר (9999)" },
         { status: 400 }
       );
     }

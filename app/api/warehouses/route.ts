@@ -4,7 +4,7 @@ import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 type WarehousePayload = {
   id?: string;
-  code: string;
+  code?: string;
   name: string;
   city?: string | null;
   address_line?: string | null;
@@ -97,13 +97,6 @@ export async function POST(req: Request) {
     const body = (await req.json()) as WarehousePayload;
     const payload = normalizePayload(body);
 
-    if (!payload.code || payload.code.length > 20) {
-      return NextResponse.json(
-        { error: "קוד מחסן חובה (עד 20 תווים)" },
-        { status: 400 }
-      );
-    }
-
     if (!payload.name) {
       return NextResponse.json(
         { error: "שם המחסן הוא שדה חובה" },
@@ -111,15 +104,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const existing = await query(
-      `SELECT TOP 1 id FROM warehouse WHERE code = @code`,
-      { code: payload.code }
-    );
-    if (existing.recordset.length) {
+    let warehouseCode = payload.code;
+    if (!warehouseCode) {
+      const nextCodeResult = await query(`
+        SELECT CAST(ISNULL(MAX(CAST(code AS INT)), 10) + 1 AS VARCHAR(20)) AS next_code
+        FROM warehouse
+        WHERE ISNUMERIC(code) = 1
+      `);
+      warehouseCode = nextCodeResult.recordset[0]?.next_code || "11";
+    } else if (warehouseCode.length > 20) {
       return NextResponse.json(
-        { error: "קוד המחסן כבר קיים במערכת" },
-        { status: 409 }
+        { error: "קוד מחסן חובה (עד 20 תווים)" },
+        { status: 400 }
       );
+    } else {
+      const existing = await query(
+        `SELECT TOP 1 id FROM warehouse WHERE code = @code`,
+        { code: warehouseCode }
+      );
+      if (existing.recordset.length) {
+        return NextResponse.json(
+          { error: "קוד המחסן כבר קיים במערכת" },
+          { status: 409 }
+        );
+      }
     }
 
     await query(
@@ -167,7 +175,7 @@ export async function POST(req: Request) {
           SYSUTCDATETIME()
         )
       `,
-      payload
+      { ...payload, code: warehouseCode }
     );
 
     return NextResponse.json({ success: true });
