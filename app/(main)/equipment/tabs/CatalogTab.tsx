@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, useState } from "react";
 import { Card, Button } from "@/app/components/ui";
 import {
   badgeStyle,
@@ -18,7 +19,7 @@ import {
   getConditionLabel,
   EQUIPMENT_TYPE_LABELS,
 } from "../constants";
-import { formatDate, formatNumber, px } from "../utils";
+import { formatDate, formatNumber } from "../utils";
 import { EquipmentSummaryCard } from "../components";
 
 type CatalogTabProps = {
@@ -38,10 +39,30 @@ type CatalogTabProps = {
   onViewItem: (item: EquipmentItem) => void;
   onEditItem: (item: EquipmentItem) => void;
   onDeleteItem: (id: string) => void;
+  onClearFilters: () => void;
 };
 
 const filterControlStyle = withCenteredControl(inputStyle);
 const muted = colors.textMuted;
+const stockCardStyle = {
+  border: `1px solid ${colors.border}`,
+  borderRadius: spacing.sm,
+  padding: spacing.md,
+  background: colors.surfaceAlt,
+};
+const stockTableHeader = {
+  textAlign: "center" as const,
+  padding: "8px 12px",
+  fontSize: 13,
+  color: muted,
+  borderBottom: `1px solid ${colors.border}`,
+};
+const stockTableCell = {
+  padding: "8px 12px",
+  fontSize: 14,
+  borderBottom: `1px solid ${colors.borderMuted}`,
+  textAlign: "center" as const,
+};
 
 export function CatalogTab({
   data,
@@ -57,7 +78,16 @@ export function CatalogTab({
   onViewItem,
   onEditItem,
   onDeleteItem,
+  onClearFilters,
 }: CatalogTabProps) {
+  const [expandedStockItem, setExpandedStockItem] = useState<string | null>(
+    null
+  );
+
+  const toggleStockCard = (itemId: string) => {
+    setExpandedStockItem((prev) => (prev === itemId ? null : itemId));
+  };
+
   return (
     <>
       <EquipmentSummaryCard
@@ -126,11 +156,13 @@ export function CatalogTab({
             onChange={(e) => onFilterChange("condition", e.target.value)}
           >
             <option value="">כל המצבים</option>
-            {CONDITION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            {CONDITION_OPTIONS.map(
+              (option: (typeof CONDITION_OPTIONS)[number]) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              )
+            )}
           </select>
           <select
             style={filterControlStyle}
@@ -144,18 +176,29 @@ export function CatalogTab({
             <option value="inactive">לא פעילים</option>
           </select>
         </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginBottom: spacing.lg,
+          }}
+        >
+          <Button variant="secondary" onClick={onClearFilters}>
+            ניקוי פילטרים
+          </Button>
+        </div>
 
         <div style={{ overflowX: "auto" }}>
           <table style={tableStyle}>
             <thead>
               <tr>
+                <th style={tableHeaderStyle}>קוד פריט</th>
                 <th style={tableHeaderStyle}>פריט</th>
                 <th style={tableHeaderStyle}>משפחה / קטגוריה</th>
                 <th style={tableHeaderStyle}>סוג ציוד</th>
                 <th style={tableHeaderStyle}>מצב</th>
-                <th style={tableHeaderStyle}>מלאי</th>
-                <th style={tableHeaderStyle}>מחסנים</th>
-                <th style={tableHeaderStyle}>סטטוסים נוספים</th>
+                <th style={tableHeaderStyle}>הערות</th>
+                <th style={tableHeaderStyle}>מלאי/מחסן</th>
                 <th style={tableHeaderStyle}>פעולות</th>
               </tr>
             </thead>
@@ -173,152 +216,210 @@ export function CatalogTab({
                     item.equipment_type ||
                     "—";
                   const warehouses = item.warehouse_stock || [];
+                  const isExpanded = expandedStockItem === item.id;
                   return (
-                    <tr key={item.id}>
-                      <td style={tableCellStyle}>
-                        <div style={{ fontWeight: 700 }}>{item.name}</div>
-                        <div style={{ color: muted, fontSize: 12 }}>
-                          SKU פנימי: {item.internal_sku || "—"}
-                        </div>
-                        <div style={{ color: muted, fontSize: 12 }}>
-                          מק״ט יצרן: {item.manufacturer_sku || "—"}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div>{item.family_name || item.family_code}</div>
-                        <div style={{ fontSize: 12, color: muted }}>
-                          {item.category_name || item.category_code}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>{typeLabel}</td>
-                      <td style={tableCellStyle}>
-                        <span
-                          style={badgeStyle(
-                            conditionBadgeMap[item.condition]?.background ||
-                              colors.borderMuted,
-                            conditionBadgeMap[item.condition]?.color ||
-                              colors.textPrimary
-                          )}
-                        >
-                          {getConditionLabel(item.condition)}
-                        </span>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div style={{ fontSize: 16, fontWeight: 700 }}>
-                          {formatNumber(item.total_units, "0")}
-                        </div>
-                        <div style={{ fontSize: 12, color: muted }}>
-                          מינימום:{" "}
-                          {item.is_sku_tracked
-                            ? "N/A"
-                            : formatNumber(item.min_stock)}
-                        </div>
-                        <div style={{ fontSize: 12, color: muted }}>
-                          מקסימום:{" "}
-                          {item.is_sku_tracked
-                            ? "N/A"
-                            : formatNumber(item.max_stock)}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        {warehouses.length === 0 && (
-                          <div style={{ color: muted }}>אין נתוני מלאי</div>
-                        )}
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                          }}
-                        >
-                          {warehouses.map((stock) => (
-                            <span
-                              key={stock.warehouse_id}
-                              style={badgeStyle(
-                                colors.surfaceAlt,
-                                colors.textPrimary
-                              )}
-                            >
-                              {stock.warehouse_name}:{" "}
-                              {formatNumber(stock.quantity, "0")}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        {item.is_consumable ? (
+                    <Fragment key={item.id}>
+                      <tr>
+                        <td style={tableCellStyle}>
+                          <div style={{ fontWeight: 700 }}>
+                            {item.internal_sku || "—"}
+                          </div>
+                        </td>
+                        <td style={tableCellStyle}>
+                          <div style={{ fontWeight: 700 }}>{item.name}</div>
+                        </td>
+                        <td style={tableCellStyle}>
+                          <div>{item.family_name || item.family_code}</div>
+                          <div style={{ fontSize: 12, color: muted }}>
+                            {item.category_name || item.category_code}
+                          </div>
+                        </td>
+                        <td style={tableCellStyle}>{typeLabel}</td>
+                        <td style={tableCellStyle}>
                           <span
                             style={badgeStyle(
-                              colors.surfaceAlt,
-                              colors.textPrimary
+                              conditionBadgeMap[item.condition]?.background ||
+                                colors.borderMuted,
+                              conditionBadgeMap[item.condition]?.color ||
+                                colors.textPrimary
                             )}
                           >
-                            פריט מתכלה
+                            {getConditionLabel(item.condition)}
                           </span>
-                        ) : item.is_rental ? (
+                        </td>
+                        <td style={tableCellStyle}>
                           <div
                             style={{
                               display: "flex",
                               flexDirection: "column",
                               gap: 4,
+                              fontSize: 12,
                             }}
                           >
-                            <span
-                              style={badgeStyle(
-                                colors.surfaceAlt,
-                                colors.textPrimary
+                            {item.ownership_type === "consignment" && (
+                              <span>פריט בקונסיגנציה</span>
+                            )}
+                            {item.is_consumable && <span>פריט מתכלה</span>}
+                            {item.is_rental && (
+                              <span>
+                                <div>פריט בהשכרה</div>
+                                {item.rental_expiry && (
+                                  <div style={{ fontSize: 11, color: muted }}>
+                                    תוקף: {formatDate(item.rental_expiry)}
+                                  </div>
+                                )}
+                              </span>
+                            )}
+                            {!item.is_consumable &&
+                              !item.is_rental &&
+                              item.ownership_type !== "consignment" &&
+                              !item.notes && (
+                                <span style={{ color: muted }}>—</span>
                               )}
-                            >
-                              ציוד בהשכרה
-                            </span>
-                            <span style={{ fontSize: 12, color: muted }}>
-                              תוקף: {formatDate(item.rental_expiry)}
-                            </span>
+                            {item.notes && (
+                              <span style={{ color: muted }}>
+                                {item.notes.length > 120
+                                  ? `${item.notes.slice(0, 117)}...`
+                                  : item.notes}
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          <span style={{ color: muted }}>—</span>
-                        )}
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            gap: spacing.xs,
-                          }}
-                        >
+                        </td>
+                        <td style={tableCellStyle}>
                           <Button
                             variant="secondary"
-                            title="צפייה"
-                            aria-label="צפייה"
-                            onClick={() => onViewItem(item)}
+                            onClick={() => toggleStockCard(item.id)}
+                            aria-expanded={isExpanded}
                           >
-                            👁️
+                            {isExpanded ? "סגור כרטיס" : "הצג מלאי/מחסן"}
                           </Button>
-                          {canEdit && (
-                            <>
-                              <Button
-                                variant="secondary"
-                                title="עריכה"
-                                aria-label="עריכה"
-                                onClick={() => onEditItem(item)}
+                        </td>
+                        <td style={tableCellStyle}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "center",
+                              gap: spacing.xs,
+                            }}
+                          >
+                            <Button
+                              variant="secondary"
+                              title="צפייה"
+                              aria-label="צפייה"
+                              onClick={() => onViewItem(item)}
+                            >
+                              👁️
+                            </Button>
+                            {canEdit && (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  title="עריכה"
+                                  aria-label="עריכה"
+                                  onClick={() => onEditItem(item)}
+                                >
+                                  ✏️
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  title="מחיקה"
+                                  aria-label="מחיקה"
+                                  style={{ color: colors.danger }}
+                                  onClick={() => onDeleteItem(item.id)}
+                                >
+                                  🗑️
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td
+                            colSpan={8}
+                            style={{
+                              ...tableCellStyle,
+                              background: colors.surfaceAlt,
+                            }}
+                          >
+                            <div
+                              style={{
+                                ...stockCardStyle,
+                                marginTop: spacing.sm,
+                                textAlign: "center",
+                              }}
+                            >
+                              <table
+                                style={{
+                                  width: "100%",
+                                  maxWidth: 420,
+                                  borderCollapse: "collapse",
+                                  margin: "0 auto",
+                                  marginBottom: spacing.md,
+                                }}
                               >
-                                ✏️
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                title="מחיקה"
-                                aria-label="מחיקה"
-                                style={{ color: colors.danger }}
-                                onClick={() => onDeleteItem(item.id)}
+                                <thead>
+                                  <tr>
+                                    <th style={stockTableHeader}>שם המחסן</th>
+                                    <th style={stockTableHeader}>כמות</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {warehouses.length === 0 ? (
+                                    <tr>
+                                      <td
+                                        colSpan={2}
+                                        style={{
+                                          ...stockTableCell,
+                                          textAlign: "center",
+                                          color: muted,
+                                        }}
+                                      >
+                                        אין נתוני מלאי זמינים
+                                      </td>
+                                    </tr>
+                                  ) : (
+                                    warehouses.map((stock) => (
+                                      <tr key={stock.warehouse_id}>
+                                        <td style={stockTableCell}>
+                                          {stock.warehouse_name}
+                                        </td>
+                                        <td style={stockTableCell}>
+                                          {formatNumber(stock.quantity, "0")}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  )}
+                                </tbody>
+                              </table>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  gap: spacing.xs,
+                                  fontWeight: 600,
+                                }}
                               >
-                                🗑️
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                                <div>
+                                  סה״כ מלאי:{" "}
+                                  {formatNumber(item.total_units, "0")}
+                                </div>
+                                {!item.is_sku_tracked &&
+                                  typeof item.min_stock === "number" &&
+                                  !Number.isNaN(item.min_stock) && (
+                                    <div style={{ fontSize: 13, color: muted }}>
+                                      מלאי מינימום:{" "}
+                                      {formatNumber(item.min_stock)}
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })
               )}

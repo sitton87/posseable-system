@@ -9,10 +9,7 @@ import {
   tableStyle,
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
-import type {
-  EquipmentItem,
-  Warehouse,
-} from "@/type";
+import type { Warehouse } from "@/type";
 import type { WarehouseStockEntry } from "../types";
 
 type WarehouseInventoryModalProps = {
@@ -20,11 +17,9 @@ type WarehouseInventoryModalProps = {
   warehouse: Warehouse | null;
   stock: WarehouseStockEntry[];
   loading: boolean;
-  items: EquipmentItem[];
   warehouses: Warehouse[];
   onClose: () => void;
   onRefresh: () => void;
-  onAddStock: (payload: { itemId: string; quantity: number; note?: string }) => Promise<void>;
   onTransferStock: (payload: {
     itemId: string;
     quantity: number;
@@ -41,21 +36,12 @@ export function WarehouseInventoryModal({
   warehouse,
   stock,
   loading,
-  items,
   warehouses,
   onClose,
   onRefresh,
-  onAddStock,
   onTransferStock,
   canEdit,
 }: WarehouseInventoryModalProps) {
-  const [addForm, setAddForm] = useState({
-    itemId: "",
-    quantity: "",
-    note: "",
-    submitting: false,
-  });
-
   const [transferForm, setTransferForm] = useState({
     itemId: "",
     quantity: "",
@@ -64,44 +50,14 @@ export function WarehouseInventoryModal({
     submitting: false,
   });
 
-  const availableTransferItems = useMemo(() => stock.filter((entry) => entry.quantity > 0), [stock]);
+  const availableTransferItems = useMemo(
+    () => stock.filter((entry) => entry.quantity > 0),
+    [stock]
+  );
   const targetWarehouseOptions = useMemo(
     () => warehouses.filter((w) => w.id !== warehouse?.id && w.is_active),
     [warehouses, warehouse?.id]
   );
-
-  const handleAddSubmit = async () => {
-    if (!canEdit || !warehouse) return;
-    if (!addForm.itemId || !addForm.quantity) {
-      alert("בחר פריט וכמות להוספה.");
-      return;
-    }
-    const quantity = Number(addForm.quantity);
-    if (Number.isNaN(quantity) || quantity <= 0) {
-      alert("כמות חייבת להיות מספר חיובי.");
-      return;
-    }
-    try {
-      setAddForm((prev) => ({ ...prev, submitting: true }));
-      await onAddStock({
-        itemId: addForm.itemId,
-        quantity,
-        note: addForm.note?.trim() || undefined,
-      });
-      setAddForm({
-        itemId: "",
-        quantity: "",
-        note: "",
-        submitting: false,
-      });
-      onRefresh();
-    } catch (err: any) {
-      console.error("Error adding stock:", err);
-      alert(err?.message || "שגיאה בהוספת מלאי למחסן.");
-    } finally {
-      setAddForm((prev) => ({ ...prev, submitting: false }));
-    }
-  };
 
   const handleTransferSubmit = async () => {
     if (!canEdit || !warehouse) return;
@@ -224,59 +180,7 @@ export function WarehouseInventoryModal({
         )}
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: spacing.md,
-          marginTop: spacing.xl,
-        }}
-      >
-        <div
-          style={{
-            border: `1px solid ${colors.border}`,
-            borderRadius: spacing.sm,
-            padding: spacing.md,
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.sm,
-          }}
-        >
-          <h4 style={{ margin: 0 }}>הוספת מלאי למחסן</h4>
-          <select
-            style={inputStyle}
-            value={addForm.itemId}
-            disabled={!canEdit}
-            onChange={(e) => setAddForm((prev) => ({ ...prev, itemId: e.target.value }))}
-          >
-            <option value="">בחר פריט</option>
-            {items.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min="0"
-            style={inputStyle}
-            disabled={!canEdit}
-            value={addForm.quantity}
-            onChange={(e) => setAddForm((prev) => ({ ...prev, quantity: e.target.value }))}
-            placeholder="כמות"
-          />
-          <textarea
-            style={{ ...inputStyle, minHeight: 70 }}
-            disabled={!canEdit}
-            value={addForm.note}
-            onChange={(e) => setAddForm((prev) => ({ ...prev, note: e.target.value }))}
-            placeholder="הערות (לא חובה)"
-          />
-          <Button onClick={handleAddSubmit} disabled={!canEdit || addForm.submitting}>
-            {addForm.submitting ? "שומר..." : "הוסף למחסן"}
-          </Button>
-        </div>
-
+      <div style={{ marginTop: spacing.xl }}>
         <div
           style={{
             border: `1px solid ${colors.border}`,
@@ -343,6 +247,9 @@ export function WarehouseInventoryModal({
             {transferForm.submitting ? "מעביר..." : "העבר למחסן אחר"}
           </Button>
         </div>
+        <p style={{ color: muted, fontSize: 12, marginTop: spacing.sm }}>
+          להוספת מלאי השתמשו במסך &quot;קליטת מלאי חדשה&quot;.
+        </p>
       </div>
     </Modal>
   );

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensureEquipmentExtendedColumns } from "./helpers";
 
 type EquipmentRecord = {
   id: string;
@@ -17,10 +18,12 @@ type EquipmentRecord = {
   is_consumable: boolean;
   is_sku_tracked: boolean;
   min_stock?: number | null;
-  max_stock?: number | null;
   is_rental: boolean;
   rental_expiry?: string | null;
+  ownership_type?: string | null;
   manufacturer_name?: string | null;
+  supplier_identifier?: string | null;
+  supplier_name?: string | null;
   default_image_url?: string | null;
   purchase_cost?: number | null;
   notes?: string | null;
@@ -33,6 +36,7 @@ type EquipmentRecord = {
 
 export async function GET(req: Request) {
   try {
+    await ensureEquipmentExtendedColumns();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search");
     const family = searchParams.get("family");
@@ -58,10 +62,12 @@ export async function GET(req: Request) {
         ei.is_consumable,
         ei.is_sku_tracked,
         ei.min_stock,
-        ei.max_stock,
         ei.is_rental,
         ei.rental_expiry,
+        ei.ownership_type,
         ei.manufacturer_name,
+        ei.supplier_identifier,
+        s.name AS supplier_name,
         ei.default_image_url,
         ei.purchase_cost,
         ei.notes,
@@ -94,6 +100,8 @@ export async function GET(req: Request) {
         ON f.code = ei.family_code
       LEFT JOIN equipment_category c
         ON c.family_code = ei.family_code AND c.code = ei.category_code
+      LEFT JOIN supplier s
+        ON s.supplier_identifier = ei.supplier_identifier
       WHERE 1 = 1
     `;
 
@@ -139,7 +147,8 @@ export async function GET(req: Request) {
 
     sql += " ORDER BY ei.created_at DESC";
 
-    const [itemsResult, familiesResult, categoriesResult, warehousesResult] = await Promise.all([
+    const [itemsResult, familiesResult, categoriesResult, warehousesResult, suppliersResult] =
+      await Promise.all([
       query(sql, params),
       query(`
         SELECT
@@ -189,6 +198,19 @@ export async function GET(req: Request) {
         FROM warehouse
         ORDER BY name
       `),
+      query(`
+        SELECT
+          supplier_identifier,
+          identifier_type,
+          name,
+          contact_name,
+          phone,
+          email,
+          notes,
+          is_active
+        FROM supplier
+        ORDER BY name
+      `),
     ]);
 
     const items = (itemsResult.recordset as EquipmentRecord[]).map((record) => {
@@ -217,6 +239,7 @@ export async function GET(req: Request) {
       families: familiesResult.recordset,
       categories: categoriesResult.recordset,
       warehouses: warehousesResult.recordset,
+      suppliers: suppliersResult.recordset,
     });
   } catch (err: any) {
     console.error("Error fetching equipment:", err);

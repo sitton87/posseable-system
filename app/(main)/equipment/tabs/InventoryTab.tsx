@@ -7,39 +7,40 @@ import {
   tableStyle,
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
-import type { Warehouse } from "@/type";
 import type { ReceiptHistoryEntry } from "../types";
 import { formatDate, px } from "../utils";
-import { WarehouseManagementCard } from "../components";
 
 type InventoryTabProps = {
-  warehouses: Warehouse[];
   historyEntries: ReceiptHistoryEntry[];
   historyLoading: boolean;
   canEdit: boolean;
   onOpenInventoryModal: () => void;
   onOpenHistoryModal: (entry: ReceiptHistoryEntry | null) => void;
   onEditReceipt: (entry: ReceiptHistoryEntry) => void;
-  onManageWarehouse: (warehouse: Warehouse) => void;
-  onEditWarehouse: (warehouse: Warehouse) => void;
   onGoToStructure: () => void;
-  onCreateWarehouse: () => void;
 };
 
 const muted = colors.textMuted;
+const currencyFormatter = new Intl.NumberFormat("he-IL", {
+  style: "currency",
+  currency: "ILS",
+});
+
+function formatCurrency(value?: number | null) {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return "—";
+  }
+  return currencyFormatter.format(value);
+}
 
 export function InventoryTab({
-  warehouses,
   historyEntries,
   historyLoading,
   canEdit,
   onOpenInventoryModal,
   onOpenHistoryModal,
   onEditReceipt,
-  onManageWarehouse,
-  onEditWarehouse,
   onGoToStructure,
-  onCreateWarehouse,
 }: InventoryTabProps) {
   return (
     <>
@@ -116,6 +117,8 @@ export function InventoryTab({
                     <th style={tableHeaderStyle}>תעודה</th>
                     <th style={tableHeaderStyle}>תאריך</th>
                     <th style={tableHeaderStyle}>ספק</th>
+                    <th style={tableHeaderStyle}>ערך כספי</th>
+                    <th style={tableHeaderStyle}>משתמש</th>
                     <th style={tableHeaderStyle}>פריטים</th>
                     <th style={tableHeaderStyle}>סטטוס</th>
                     <th style={tableHeaderStyle}>פעולות</th>
@@ -131,6 +134,14 @@ export function InventoryTab({
                       <td style={tableCellStyle}>
                         {entry.supplier_name || "—"}
                       </td>
+                    <td style={tableCellStyle}>
+                      {formatCurrency(entry.total_value)}
+                    </td>
+                    <td style={tableCellStyle}>
+                      {entry.created_by_name ||
+                        entry.created_by ||
+                        "—"}
+                    </td>
                       <td style={tableCellStyle}>{entry.total_items}</td>
                       <td style={tableCellStyle}>{entry.status}</td>
                       <td style={tableCellStyle}>
@@ -159,16 +170,9 @@ export function InventoryTab({
           </div>
         </div>
       </Card>
-
-      <WarehouseManagementCard
-        warehouses={warehouses}
-        onCreateWarehouse={onCreateWarehouse}
-        canCreate={canEdit}
-        onManageWarehouse={onManageWarehouse}
-        onEditWarehouse={onEditWarehouse}
-        canManage={canEdit}
-        canEditDetails={canEdit}
-      />
+      <p style={{ color: muted, fontSize: 13, marginTop: spacing.md }}>
+        ניהול המחסנים מתבצע דרך &quot;הגדרות מחסנים&quot; בטאב "הגדרות מבנה".
+      </p>
     </>
   );
 }

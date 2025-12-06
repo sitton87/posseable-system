@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { query } from "@/db/connection";
 import { ensurePermissionResponse } from "@/lib/server/accessControl";
+import { ensureEquipmentExtendedColumns } from "../helpers";
 
 type EquipmentPayload = {
   family_code: string;
@@ -12,7 +13,6 @@ type EquipmentPayload = {
   is_consumable?: boolean;
   is_sku_tracked?: boolean;
   min_stock?: number | null;
-  max_stock?: number | null;
   is_rental?: boolean;
   rental_expiry?: string | null;
   manufacturer_name?: string | null;
@@ -21,12 +21,15 @@ type EquipmentPayload = {
   purchase_cost?: number | null;
   notes?: string | null;
   equipment_type?: string;
+  ownership_type?: "item" | "rental" | "consignment";
+  supplier_identifier?: string | null;
 };
 
 export async function POST(req: Request) {
   try {
     const permission = await ensurePermissionResponse("equipment", "write");
     if (!permission.allowed) return permission.response;
+    await ensureEquipmentExtendedColumns();
 
     const body: EquipmentPayload = await req.json();
     const {
@@ -38,7 +41,6 @@ export async function POST(req: Request) {
       is_consumable = false,
       is_sku_tracked = true,
       min_stock,
-      max_stock,
       is_rental = false,
       rental_expiry,
       manufacturer_name,
@@ -47,7 +49,23 @@ export async function POST(req: Request) {
       purchase_cost,
       notes,
       equipment_type,
+      ownership_type,
+      supplier_identifier,
     } = body;
+
+    const normalizedOwnership: "item" | "rental" | "consignment" =
+      ownership_type === "rental"
+        ? "rental"
+        : ownership_type === "consignment"
+        ? "consignment"
+        : "item";
+    const resolvedIsRental = normalizedOwnership === "rental";
+    const resolvedIsConsumable =
+      normalizedOwnership === "rental" ? false : is_consumable;
+    const normalizedSupplierIdentifier =
+      supplier_identifier && supplier_identifier.trim().length
+        ? supplier_identifier.trim()
+        : null;
 
     if (!family_code || family_code.length !== 2) {
       return NextResponse.json(
@@ -159,9 +177,10 @@ export async function POST(req: Request) {
           is_consumable,
           is_sku_tracked,
           min_stock,
-          max_stock,
           is_rental,
           rental_expiry,
+          ownership_type,
+          supplier_identifier,
           manufacturer_name,
           default_image_url,
           purchase_cost,
@@ -183,9 +202,10 @@ export async function POST(req: Request) {
           @is_consumable,
           @is_sku_tracked,
           @min_stock,
-          @max_stock,
           @is_rental,
           @rental_expiry,
+          @ownership_type,
+          @supplier_identifier,
           @manufacturer_name,
           @default_image_url,
           @purchase_cost,
@@ -205,14 +225,14 @@ export async function POST(req: Request) {
         description: description || null,
         equipment_type: resolvedEquipmentType,
         condition,
-        is_consumable: is_consumable ? 1 : 0,
+        is_consumable: resolvedIsConsumable ? 1 : 0,
         is_sku_tracked: is_sku_tracked ? 1 : 0,
         min_stock:
           is_sku_tracked || typeof min_stock !== "number" ? null : min_stock,
-        max_stock:
-          is_sku_tracked || typeof max_stock !== "number" ? null : max_stock,
-        is_rental: is_rental ? 1 : 0,
-        rental_expiry: rental_expiry || null,
+        is_rental: resolvedIsRental ? 1 : 0,
+        rental_expiry: resolvedIsRental ? rental_expiry || null : null,
+        ownership_type: normalizedOwnership,
+        supplier_identifier: normalizedSupplierIdentifier,
         manufacturer_name: manufacturer_name || null,
         default_image_url: default_image_url || null,
         purchase_cost: purchase_cost ?? null,

@@ -1,24 +1,16 @@
 "use client";
 
 import { Modal, Button } from "@/app/components/ui";
-import {
-  badgeStyle,
-  inputStyle,
-  labelStyle,
-} from "@/app/styles/components";
+import { inputStyle, labelStyle } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import type {
   EquipmentCategory,
   EquipmentFamily,
   EquipmentItem,
+  Supplier,
 } from "@/type";
 import type { EquipmentFormState } from "../types";
-import {
-  CONDITION_OPTIONS,
-  conditionBadgeMap,
-  getConditionLabel,
-} from "../constants";
-import { formatDate } from "../utils";
+import { CONDITION_OPTIONS } from "../constants";
 
 type EquipmentFormModalProps = {
   open: boolean;
@@ -30,6 +22,7 @@ type EquipmentFormModalProps = {
   families: EquipmentFamily[];
   editingItem: EquipmentItem | null;
   canEdit: boolean;
+  suppliers: Supplier[];
   onChange: <K extends keyof EquipmentFormState>(
     key: K,
     value: EquipmentFormState[K]
@@ -46,6 +39,7 @@ export function EquipmentFormModal({
   families,
   editingItem,
   canEdit,
+  suppliers,
   onChange,
 }: EquipmentFormModalProps) {
   const handleSubmit = () => {
@@ -53,34 +47,84 @@ export function EquipmentFormModal({
       onSubmit();
     }
   };
-
-  const usageMode = formState.is_consumable
-    ? "consumable"
-    : formState.is_rental
-    ? "rental"
-    : "none";
-
-  const handleUsageModeChange = (mode: "none" | "consumable" | "rental") => {
+  const activeSuppliers = suppliers.filter((supplier) => supplier.is_active);
+  const ownershipOptions: EquipmentFormState["ownership_type"][] = [
+    "item",
+    "rental",
+    "consignment",
+  ];
+  const ownershipLabels: Record<EquipmentFormState["ownership_type"], string> =
+    {
+      item: "פרטית",
+      rental: "השכרה",
+      consignment: "קונסיגנציה",
+    };
+  const handleOwnershipTypeChange = (
+    value: EquipmentFormState["ownership_type"]
+  ) => {
     if (!canEdit) return;
-    if (mode === "consumable") {
-      onChange("is_consumable", true);
-      onChange("is_rental", false);
-      onChange("rental_expiry", "");
-    } else if (mode === "rental") {
+    onChange("ownership_type", value);
+    if (value === "rental") {
       onChange("is_rental", true);
       onChange("is_consumable", false);
+      onChange("min_stock", "");
     } else {
-      onChange("is_consumable", false);
       onChange("is_rental", false);
       onChange("rental_expiry", "");
     }
+  };
+  const handleConsumableChange = (isConsumable: boolean) => {
+    if (!canEdit) return;
+    onChange("is_consumable", isConsumable);
+    if (isConsumable) {
+      onChange("is_sku_tracked", false);
+      onChange("is_rental", false);
+      if (formState.ownership_type === "rental") {
+        onChange("ownership_type", "item");
+      }
+      onChange("rental_expiry", "");
+    } else {
+      onChange("min_stock", "");
+    }
+  };
+  const handleSkuTrackedChange = (checked: boolean) => {
+    if (!canEdit) return;
+    if (checked && formState.is_consumable) {
+      onChange("is_consumable", false);
+      onChange("min_stock", "");
+    }
+    onChange("is_sku_tracked", checked);
+  };
+  const handleSupplierChange = (identifier: string) => {
+    if (!canEdit) return;
+    onChange("supplier_identifier", identifier);
+    const supplierName =
+      activeSuppliers.find(
+        (supplier) => supplier.supplier_identifier === identifier
+      )?.name || "";
+    onChange("manufacturer_name", supplierName);
+  };
+  const handleImageFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("הקובץ גדול מדי (מעל 2MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      onChange("default_image_url", reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      width="min(720px, 95vw)"
+      width="min(960px, 95vw)"
       style={{ padding: spacing.xxl }}
     >
       <h3 style={{ marginTop: 0, fontSize: 20, fontWeight: 800 }}>
@@ -91,27 +135,8 @@ export function EquipmentFormModal({
       >
         <div
           style={{
-            fontSize: 13,
-            display: "flex",
-            alignItems: "center",
-            gap: spacing.xs / 2,
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={formState.is_active}
-            disabled={!canEdit}
-            onChange={(e) => onChange("is_active", e.target.checked)}
-          />
-          <span style={{ fontWeight: 600 }}>פריט פעיל</span>
-          <span style={{ fontSize: 12, color: colors.textMuted }}>
-            בטל סימון אם הפריט אינו זמין לשימוש.
-          </span>
-        </div>
-        <div
-          style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: spacing.md,
           }}
         >
@@ -150,22 +175,23 @@ export function EquipmentFormModal({
               ))}
             </select>
           </div>
-        </div>
-        <div>
-          <label style={labelStyle}>שם הפריט*</label>
-          <input
-            type="text"
-            style={inputStyle}
-            disabled={!canEdit}
-            value={formState.name}
-            onChange={(e) => onChange("name", e.target.value)}
-            placeholder="למשל: גלשן פאן 8'"
-          />
+          <div>
+            <label style={labelStyle}>שם הפריט*</label>
+            <input
+              type="text"
+              style={inputStyle}
+              disabled={!canEdit}
+              value={formState.name}
+              onChange={(e) => onChange("name", e.target.value)}
+              placeholder="למשל: גלשן פאן 8'"
+            />
+          </div>
         </div>
         <div>
           <label style={labelStyle}>תיאור</label>
           <textarea
-            style={{ ...inputStyle, minHeight: 80 }}
+            style={{ ...inputStyle, minHeight: 44, maxHeight: 140 }}
+            rows={1}
             disabled={!canEdit}
             value={formState.description}
             onChange={(e) => onChange("description", e.target.value)}
@@ -175,7 +201,7 @@ export function EquipmentFormModal({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
             gap: spacing.md,
           }}
         >
@@ -201,25 +227,35 @@ export function EquipmentFormModal({
               style={inputStyle}
               disabled={!canEdit}
               value={formState.manufacturer_sku}
-              onChange={(e) =>
-                onChange("manufacturer_sku", e.target.value)
-              }
+              onChange={(e) => onChange("manufacturer_sku", e.target.value)}
             />
           </div>
           <div>
-            <label style={labelStyle}>שם יצרן</label>
-            <input
-              type="text"
+            <label style={labelStyle}>שם ספק</label>
+            <select
               style={inputStyle}
               disabled={!canEdit}
-              value={formState.manufacturer_name}
-              onChange={(e) =>
-                onChange("manufacturer_name", e.target.value)
-              }
-            />
+              value={formState.supplier_identifier}
+              onChange={(e) => handleSupplierChange(e.target.value)}
+            >
+              <option value="">בחר ספק</option>
+              {activeSuppliers.map((supplier) => (
+                <option
+                  key={supplier.supplier_identifier}
+                  value={supplier.supplier_identifier}
+                >
+                  {supplier.name}
+                </option>
+              ))}
+            </select>
+            {!formState.supplier_identifier && formState.manufacturer_name && (
+              <div style={{ fontSize: 12, color: colors.textMuted }}>
+                ספק נוכחי: {formState.manufacturer_name}
+              </div>
+            )}
           </div>
           <div>
-            <label style={labelStyle}>עלות רכישה</label>
+            <label style={labelStyle}>מחיר עלות ליחידה</label>
             <input
               type="number"
               min="0"
@@ -227,9 +263,7 @@ export function EquipmentFormModal({
               style={inputStyle}
               disabled={!canEdit}
               value={formState.purchase_cost}
-              onChange={(e) =>
-                onChange("purchase_cost", e.target.value)
-              }
+              onChange={(e) => onChange("purchase_cost", e.target.value)}
             />
           </div>
         </div>
@@ -240,91 +274,90 @@ export function EquipmentFormModal({
             padding: spacing.md,
             display: "flex",
             flexDirection: "column",
-            gap: spacing.sm,
+            gap: spacing.md,
           }}
         >
+          <div style={{ fontWeight: 600 }}>אופי שימוש</div>
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: spacing.sm,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: spacing.md,
             }}
           >
-            <div style={{ fontWeight: 600 }}>אופי שימוש</div>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: spacing.xs / 2,
-                fontSize: 13,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={formState.is_active}
+            <div>
+              <label style={labelStyle}>סוג בעלות</label>
+              <select
+                style={inputStyle}
                 disabled={!canEdit}
-                onChange={(e) => onChange("is_active", e.target.checked)}
-              />
-              <span>פריט פעיל</span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              gap: spacing.sm,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            {[
-              { value: "none", label: "ללא" },
-              { value: "consumable", label: "מתכלה" },
-              { value: "rental", label: "בהשכרה" },
-            ].map((option) => (
+                value={formState.ownership_type}
+                onChange={(e) =>
+                  handleOwnershipTypeChange(
+                    e.target.value as EquipmentFormState["ownership_type"]
+                  )
+                }
+              >
+                {ownershipOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {ownershipLabels[option]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>סוג פריט</label>
+              <select
+                style={inputStyle}
+                disabled={!canEdit}
+                value={formState.is_consumable ? "consumable" : "regular"}
+                onChange={(e) =>
+                  handleConsumableChange(e.target.value === "consumable")
+                }
+              >
+                <option value="regular">רגיל</option>
+                <option value="consumable">מתכלה</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>סטטוס פריט</label>
               <label
-                key={option.value}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: spacing.xs / 2,
-                  cursor: canEdit ? "pointer" : "not-allowed",
+                  fontSize: 13,
                 }}
               >
                 <input
-                  type="radio"
-                  name="usageMode"
-                  value={option.value}
-                  checked={usageMode === option.value}
+                  type="checkbox"
+                  checked={formState.is_active}
                   disabled={!canEdit}
-                  onChange={() =>
-                    handleUsageModeChange(option.value as typeof usageMode)
-                  }
+                  onChange={(e) => onChange("is_active", e.target.checked)}
                 />
-                {option.label}
+                פריט פעיל
               </label>
-            ))}
-            <label
-              style={{
-                marginInlineStart: "auto",
-                display: "flex",
-                alignItems: "center",
-                gap: spacing.xs / 2,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={formState.is_sku_tracked}
-                disabled={!canEdit}
-                onChange={(e) =>
-                  onChange("is_sku_tracked", e.target.checked)
-                }
-              />
-              מנוהל לפי מק״ט ייחודי
-            </label>
+            </div>
+            <div>
+              <label style={labelStyle}>סימון מק״ט ייחודי</label>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: spacing.xs / 2,
+                  fontSize: 13,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formState.is_sku_tracked}
+                  disabled={!canEdit}
+                  onChange={(e) => handleSkuTrackedChange(e.target.checked)}
+                />
+                מנוהל לפי מק״ט ייחודי
+              </label>
+            </div>
           </div>
-          {formState.is_rental && (
+          {formState.ownership_type === "rental" && (
             <div>
               <label style={labelStyle}>תוקף השכרה</label>
               <input
@@ -336,23 +369,7 @@ export function EquipmentFormModal({
               />
             </div>
           )}
-          <div
-            style={{
-              fontSize: 12,
-              color: colors.textMuted,
-            }}
-          >
-            ניתן לבחור מתכלה או השכרה בלבד. בחירה באפשרות אחת תבטל את השנייה.
-          </div>
-        </div>
-        {!formState.is_sku_tracked && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: spacing.md,
-            }}
-          >
+          {formState.is_consumable && (
             <div>
               <label style={labelStyle}>מלאי מינימלי</label>
               <input
@@ -364,39 +381,54 @@ export function EquipmentFormModal({
                 onChange={(e) => onChange("min_stock", e.target.value)}
               />
             </div>
-            <div>
-              <label style={labelStyle}>מלאי מקסימלי</label>
-              <input
-                type="number"
-                min="0"
-                style={inputStyle}
-                disabled={!canEdit}
-                value={formState.max_stock}
-                onChange={(e) => onChange("max_stock", e.target.value)}
-              />
+          )}
+          <div
+            style={{
+              fontSize: 12,
+              color: colors.textMuted,
+            }}
+          >
+            {
+              'בחירה ב"השכרה" מנטרלת אופציית מתכלה. ניתן להגדיר קונסיגנציה כמצב ביניים (מתועד בלבד).'
+            }
+          </div>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: spacing.md,
+          }}
+        >
+          <div>
+            <label style={labelStyle}>קישור לתמונה / מסמך</label>
+            <input
+              type="url"
+              style={inputStyle}
+              disabled={!canEdit}
+              value={formState.default_image_url}
+              onChange={(e) => onChange("default_image_url", e.target.value)}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              style={{ marginTop: spacing.xs }}
+              disabled={!canEdit}
+              onChange={handleImageFileChange}
+            />
+            <div style={{ fontSize: 12, color: colors.textMuted }}>
+              ניתן להעלות קובץ עד 2MB או לספק קישור ישיר.
             </div>
           </div>
-        )}
-        <div>
-          <label style={labelStyle}>קישור לתמונה / מסמך</label>
-          <input
-            type="url"
-            style={inputStyle}
-            disabled={!canEdit}
-            value={formState.default_image_url}
-            onChange={(e) =>
-              onChange("default_image_url", e.target.value)
-            }
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>הערות</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 80 }}
-            disabled={!canEdit}
-            value={formState.notes}
-            onChange={(e) => onChange("notes", e.target.value)}
-          />
+          <div>
+            <label style={labelStyle}>הערות</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 80 }}
+              disabled={!canEdit}
+              value={formState.notes}
+              onChange={(e) => onChange("notes", e.target.value)}
+            />
+          </div>
         </div>
         <div
           style={{
@@ -416,4 +448,3 @@ export function EquipmentFormModal({
     </Modal>
   );
 }
-

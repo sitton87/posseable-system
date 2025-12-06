@@ -57,6 +57,22 @@ export function HistoryModal({
         </Button>
       </div>
       {selected ? (
+        (() => {
+          const supplierDisplay =
+            detail?.supplier_name ??
+            selected.supplier_name ??
+            "—";
+          const totalItemsDisplay =
+            detail?.total_items ?? selected.total_items;
+          const totalValueDisplay =
+            detail?.total_value ?? selected.total_value;
+          const createdByDisplay =
+            detail?.created_by_name ??
+            detail?.created_by ??
+            selected.created_by_name ??
+            selected.created_by ??
+            "—";
+          return (
         <div
           style={{
             marginTop: spacing.md,
@@ -89,7 +105,20 @@ export function HistoryModal({
             </div>
             <div>
               <div style={{ fontSize: 12, color: muted }}>ספק</div>
-              <div>{selected.supplier_name || "—"}</div>
+              <div>{supplierDisplay}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: muted }}>ערך כספי</div>
+              <div>
+                {totalValueDisplay === undefined ||
+                totalValueDisplay === null
+                  ? "—"
+                  : `${Number(totalValueDisplay).toLocaleString("he-IL")} ₪`}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: muted }}>הוקלט על ידי</div>
+              <div>{createdByDisplay}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
@@ -97,7 +126,7 @@ export function HistoryModal({
             </div>
             <div>
               <div style={{ fontSize: 12, color: muted }}>מספר פריטים</div>
-              <div>{selected.total_items}</div>
+              <div>{totalItemsDisplay}</div>
             </div>
           </div>
           {effectiveNote && (
@@ -136,7 +165,7 @@ export function HistoryModal({
                     <th style={tableHeaderStyle}>מחסן</th>
                     <th style={tableHeaderStyle}>כמות</th>
                     <th style={tableHeaderStyle}>עלות ליחידה</th>
-                    <th style={tableHeaderStyle}>ספק</th>
+                    <th style={tableHeaderStyle}>מס' תעודת ספק</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -151,7 +180,7 @@ export function HistoryModal({
                           : line.unit_cost}
                       </td>
                       <td style={tableCellStyle}>
-                        {line.supplier_identifier || "—"}
+                        {line.supplier_document_number || "—"}
                       </td>
                     </tr>
                   ))}
@@ -171,6 +200,8 @@ export function HistoryModal({
             </div>
           )}
         </div>
+          );
+        })()
       ) : (
         <div style={{ marginTop: spacing.md }}>
           {entries.length === 0 ? (
@@ -190,6 +221,8 @@ export function HistoryModal({
                   <th style={tableHeaderStyle}>תעודה</th>
                   <th style={tableHeaderStyle}>תאריך</th>
                   <th style={tableHeaderStyle}>ספק</th>
+                  <th style={tableHeaderStyle}>ערך כספי</th>
+                  <th style={tableHeaderStyle}>משתמש</th>
                   <th style={tableHeaderStyle}>פריטים</th>
                   <th style={tableHeaderStyle}>סטטוס</th>
                   <th style={tableHeaderStyle}>פעולה</th>
@@ -203,6 +236,17 @@ export function HistoryModal({
                       {formatDate(entry.receipt_date)}
                     </td>
                     <td style={tableCellStyle}>{entry.supplier_name || "—"}</td>
+                    <td style={tableCellStyle}>
+                      {entry.total_value === undefined ||
+                      entry.total_value === null
+                        ? "—"
+                        : `${entry.total_value.toLocaleString("he-IL")} ₪`}
+                    </td>
+                    <td style={tableCellStyle}>
+                      {entry.created_by_name ||
+                        entry.created_by ||
+                        "—"}
+                    </td>
                     <td style={tableCellStyle}>{entry.total_items}</td>
                     <td style={tableCellStyle}>{entry.status}</td>
                     <td style={tableCellStyle}>

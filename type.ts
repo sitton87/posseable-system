@@ -218,10 +218,12 @@ export type EquipmentItem = {
   is_consumable: boolean;
   is_sku_tracked: boolean;
   min_stock?: number | null;
-  max_stock?: number | null;
   is_rental: boolean;
   rental_expiry?: string | null;
+  ownership_type?: "item" | "rental" | "consignment" | null;
   manufacturer_name?: string | null;
+  supplier_identifier?: string | null;
+  supplier_name?: string | null;
   default_image_url?: string | null;
   purchase_cost?: number | null;
   notes?: string | null;

@@ -51,7 +51,6 @@ export const createEmptyFormState = (): EquipmentFormState => ({
   is_consumable: false,
   is_sku_tracked: true,
   min_stock: "",
-  max_stock: "",
   is_rental: false,
   rental_expiry: "",
   manufacturer_name: "",
@@ -60,14 +59,15 @@ export const createEmptyFormState = (): EquipmentFormState => ({
   purchase_cost: "",
   notes: "",
   is_active: true,
+  ownership_type: "item",
+  supplier_identifier: "",
 });
 
 export const createEmptyReceiptLine = (): ReceiptLine => ({
   item_id: "",
   warehouse_id: "",
   quantity: "",
-  unit_cost: "",
-  supplier_identifier: "",
+  supplier_document_number: "",
 });
 
 export const createEmptyStructureFormState = (): StructureFormState => ({

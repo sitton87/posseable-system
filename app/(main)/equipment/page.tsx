@@ -72,6 +72,14 @@ const TAB_CONFIG = [
 type EquipmentTabId = (typeof TAB_CONFIG)[number]["id"];
 
 const muted = colors.textMuted;
+const createDefaultFilters = (): FiltersState => ({
+  search: "",
+  family: "",
+  category: "",
+  type: "",
+  condition: "",
+  status: "active",
+});
 
 export default function EquipmentPage() {
   const [data, setData] = useState<EquipmentPageData>({
@@ -79,15 +87,9 @@ export default function EquipmentPage() {
     families: [],
     categories: [],
     warehouses: [],
+    suppliers: [],
   });
-  const [filters, setFilters] = useState<FiltersState>({
-    search: "",
-    family: "",
-    category: "",
-    type: "",
-    condition: "",
-    status: "active",
-  });
+  const [filters, setFilters] = useState<FiltersState>(createDefaultFilters());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -98,6 +100,7 @@ export default function EquipmentPage() {
   const [receiptLines, setReceiptLines] = useState<ReceiptLine[]>([
     createEmptyReceiptLine(),
   ]);
+  const [receiptSupplierId, setReceiptSupplierId] = useState("");
   const [editingItem, setEditingItem] = useState<EquipmentItem | null>(null);
   const [viewingItem, setViewingItem] = useState<EquipmentItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -263,8 +266,12 @@ export default function EquipmentPage() {
         id: entry.id || entry.document_code,
         document_code: entry.document_code,
         receipt_date: entry.receipt_date,
+        supplier_identifier: entry.supplier_identifier ?? undefined,
         supplier_name: entry.supplier_name ?? undefined,
         total_items: entry.total_items ?? 0,
+        total_value: entry.total_value ?? undefined,
+        created_by: entry.created_by ?? undefined,
+        created_by_name: entry.created_by_name ?? undefined,
         status: entry.status ?? "נקלט",
         note: entry.note ?? undefined,
       }));
@@ -361,7 +368,7 @@ export default function EquipmentPage() {
       if (filters.category) params.set("category", filters.category);
       if (filters.type) params.set("type", filters.type);
       if (filters.condition) params.set("condition", filters.condition);
-      if (filters.status && filters.status !== "all") {
+      if (filters.status) {
         params.set("status", filters.status);
       }
 
@@ -387,6 +394,7 @@ export default function EquipmentPage() {
         families: payload.families || [],
         categories: payload.categories || [],
         warehouses: payload.warehouses || [],
+        suppliers: payload.suppliers || [],
       });
     } catch (err: any) {
       if (err?.name === "AbortError") return;
@@ -492,15 +500,21 @@ export default function EquipmentPage() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleClearFilters = () => {
+    setFilters(createDefaultFilters());
+  };
+
   const openInventoryModal = () => {
     setEditingReceiptCode(null);
     setReceiptLines([createEmptyReceiptLine()]);
     setInventoryNote("");
+    setReceiptSupplierId("");
     setShowInventoryModal(true);
   };
 
   const closeInventoryModal = () => {
     setEditingReceiptCode(null);
+    setReceiptSupplierId("");
     setShowInventoryModal(false);
   };
 
@@ -578,34 +592,6 @@ export default function EquipmentPage() {
     }
   };
 
-  const handleAddWarehouseStock = async ({
-    itemId,
-    quantity,
-    note,
-  }: {
-    itemId: string;
-    quantity: number;
-    note?: string;
-  }) => {
-    if (!inventoryWarehouse) return;
-    const res = await fetch("/api/equipment/warehouse-stock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "add",
-        warehouseId: inventoryWarehouse.id,
-        lines: [{ item_id: itemId, quantity }],
-        note: note || null,
-      }),
-    });
-    const payload = await res.json();
-    if (!res.ok || !payload.success) {
-      throw new Error(payload.error || "שגיאה בהוספת מלאי למחסן");
-    }
-    fetchEquipment();
-    loadWarehouseStock(inventoryWarehouse.id);
-  };
-
   const handleTransferWarehouseStock = async ({
     itemId,
     quantity,
@@ -654,15 +640,20 @@ export default function EquipmentPage() {
       is_consumable: !!item.is_consumable,
       is_sku_tracked: !!item.is_sku_tracked,
       min_stock: item.min_stock?.toString() ?? "",
-      max_stock: item.max_stock?.toString() ?? "",
       is_rental: !!item.is_rental,
       rental_expiry: item.rental_expiry ? item.rental_expiry.slice(0, 10) : "",
-      manufacturer_name: item.manufacturer_name || "",
+      manufacturer_name: item.supplier_name || item.manufacturer_name || "",
       manufacturer_sku: item.manufacturer_sku || "",
       default_image_url: item.default_image_url || "",
       purchase_cost: item.purchase_cost?.toString() ?? "",
       notes: item.notes || "",
       is_active: item.is_active,
+      ownership_type: item.ownership_type
+        ? (item.ownership_type as EquipmentFormState["ownership_type"])
+        : item.is_rental
+        ? "rental"
+        : "item",
+      supplier_identifier: item.supplier_identifier || "",
     };
 
     if (nextState.is_consumable && nextState.is_rental) {
@@ -745,16 +736,15 @@ export default function EquipmentPage() {
           item_id: line.item_id,
           warehouse_id: line.warehouse_id,
           quantity: line.quantity?.toString() || "",
-          unit_cost:
-            line.unit_cost === null || line.unit_cost === undefined
-              ? ""
-              : line.unit_cost.toString(),
-          supplier_identifier: line.supplier_identifier || "",
+          supplier_document_number: line.supplier_document_number || "",
         })) || [];
       setReceiptLines(
         mappedLines.length ? mappedLines : [createEmptyReceiptLine()]
       );
       setInventoryNote(detail?.note || "");
+      setReceiptSupplierId(
+        detail?.supplier_identifier || entry.supplier_identifier || ""
+      );
       setEditingReceiptCode(entry.document_code);
       setShowInventoryModal(true);
       selectReceipt(null);
@@ -805,11 +795,6 @@ export default function EquipmentPage() {
         : formState.min_stock
         ? Number(formState.min_stock)
         : null,
-      max_stock: formState.is_sku_tracked
-        ? null
-        : formState.max_stock
-        ? Number(formState.max_stock)
-        : null,
       is_rental: formState.is_rental,
       rental_expiry: formState.rental_expiry || null,
       manufacturer_name: formState.manufacturer_name || null,
@@ -820,6 +805,8 @@ export default function EquipmentPage() {
         : null,
       notes: formState.notes || null,
       is_active: formState.is_active,
+      ownership_type: formState.ownership_type,
+      supplier_identifier: formState.supplier_identifier || null,
     };
 
     try {
@@ -1004,21 +991,34 @@ export default function EquipmentPage() {
     setReceiptLines((prev) => [...prev, createEmptyReceiptLine()]);
   };
 
+  const duplicateReceiptLine = (index: number) => {
+    setReceiptLines((prev) => {
+      const source = prev[index];
+      if (!source) return prev;
+      const clone = { ...source };
+      return [
+        ...prev.slice(0, index + 1),
+        { ...clone },
+        ...prev.slice(index + 1),
+      ];
+    });
+  };
+
   const removeReceiptLine = (index: number) => {
     setReceiptLines((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleInventorySubmit = async () => {
+    if (!receiptSupplierId) {
+      alert("יש לבחור ספק לתעודה.");
+      return;
+    }
     const normalizedLines = receiptLines
       .map((line) => ({
         item_id: line.item_id.trim(),
         warehouse_id: line.warehouse_id.trim(),
         quantity: Number(line.quantity),
-        unit_cost:
-          line.unit_cost && !Number.isNaN(Number(line.unit_cost))
-            ? Number(line.unit_cost)
-            : null,
-        supplier_identifier: line.supplier_identifier?.trim() || null,
+        supplier_document_number: line.supplier_document_number?.trim() || null,
       }))
       .filter(
         (line) =>
@@ -1043,6 +1043,7 @@ export default function EquipmentPage() {
           lines: normalizedLines,
           note: inventoryNote || null,
           document_code: editingReceiptCode,
+          supplier_identifier: receiptSupplierId,
         }),
       });
 
@@ -1054,6 +1055,7 @@ export default function EquipmentPage() {
       alert("תעודת הקליטה נשמרה בהצלחה.");
       setReceiptLines([createEmptyReceiptLine()]);
       setInventoryNote("");
+      setReceiptSupplierId("");
       closeInventoryModal();
       fetchEquipment();
       loadReceiptHistory();
@@ -1166,22 +1168,19 @@ export default function EquipmentPage() {
           onViewItem={openViewModal}
           onEditItem={openEditModal}
           onDeleteItem={handleDelete}
+          onClearFilters={handleClearFilters}
         />
       )}
 
       {activeTab === "inventory" && (
         <InventoryTab
-          warehouses={data.warehouses}
           historyEntries={historyEntries}
           historyLoading={historyLoading}
           canEdit={canEditInventory}
           onOpenInventoryModal={openInventoryModal}
           onOpenHistoryModal={openHistoryModal}
           onEditReceipt={handleEditReceipt}
-          onManageWarehouse={openWarehouseInventoryModal}
-          onEditWarehouse={handleEditWarehouse}
           onGoToStructure={goToStructureTab}
-          onCreateWarehouse={openWarehouseModal}
         />
       )}
 
@@ -1206,14 +1205,19 @@ export default function EquipmentPage() {
         inventoryNote={inventoryNote}
         activeWarehouses={activeWarehouses}
         items={data.items}
+        suppliers={data.suppliers}
+        selectedSupplierId={receiptSupplierId}
+        onSupplierChange={setReceiptSupplierId}
         onInventoryNoteChange={setInventoryNote}
         onAddLine={addReceiptLine}
+        onDuplicateLine={duplicateReceiptLine}
         onRemoveLine={removeReceiptLine}
         onLineChange={handleReceiptLineChange}
         onSubmit={handleInventorySubmit}
         onReset={() => {
           setReceiptLines([createEmptyReceiptLine()]);
           setInventoryNote("");
+          setReceiptSupplierId("");
         }}
       />
 
@@ -1263,6 +1267,7 @@ export default function EquipmentPage() {
         families={data.families}
         editingItem={editingItem}
         canEdit={canEditCatalog}
+        suppliers={data.suppliers}
         onChange={handleFormChange}
       />
 
@@ -1277,11 +1282,9 @@ export default function EquipmentPage() {
         warehouse={inventoryWarehouse}
         stock={warehouseStock}
         loading={warehouseStockLoading}
-        items={data.items}
         warehouses={data.warehouses}
         onClose={closeWarehouseInventoryModal}
         onRefresh={refreshWarehouseInventory}
-        onAddStock={handleAddWarehouseStock}
         onTransferStock={handleTransferWarehouseStock}
         canEdit={canEditInventory}
       />

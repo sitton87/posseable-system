@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
 import { ensurePermissionResponse } from "@/lib/server/accessControl";
+import { ensureEquipmentExtendedColumns } from "../helpers";
 
 export async function PUT(req: Request) {
   try {
     const permission = await ensurePermissionResponse("equipment", "write");
     if (!permission.allowed) return permission.response;
+    await ensureEquipmentExtendedColumns();
 
     const body = await req.json();
     const {
@@ -16,7 +18,6 @@ export async function PUT(req: Request) {
       is_consumable = false,
       is_sku_tracked = true,
       min_stock,
-      max_stock,
       is_rental = false,
       rental_expiry,
       manufacturer_name,
@@ -25,7 +26,23 @@ export async function PUT(req: Request) {
       purchase_cost,
       notes,
       is_active = true,
+      ownership_type,
+      supplier_identifier,
     } = body;
+
+    const normalizedOwnership: "item" | "rental" | "consignment" =
+      ownership_type === "rental"
+        ? "rental"
+        : ownership_type === "consignment"
+        ? "consignment"
+        : "item";
+    const resolvedIsRental = normalizedOwnership === "rental";
+    const resolvedIsConsumable =
+      normalizedOwnership === "rental" ? false : is_consumable;
+    const normalizedSupplierIdentifier =
+      supplier_identifier && supplier_identifier.trim().length
+        ? supplier_identifier.trim()
+        : null;
 
     if (!id) {
       return NextResponse.json(
@@ -44,9 +61,10 @@ export async function PUT(req: Request) {
           is_consumable = @is_consumable,
           is_sku_tracked = @is_sku_tracked,
           min_stock = @min_stock,
-          max_stock = @max_stock,
           is_rental = @is_rental,
           rental_expiry = @rental_expiry,
+          ownership_type = @ownership_type,
+          supplier_identifier = @supplier_identifier,
           manufacturer_name = @manufacturer_name,
           manufacturer_sku = @manufacturer_sku,
           default_image_url = @default_image_url,
@@ -61,14 +79,14 @@ export async function PUT(req: Request) {
         name,
         description: description || null,
         condition,
-        is_consumable: is_consumable ? 1 : 0,
+        is_consumable: resolvedIsConsumable ? 1 : 0,
         is_sku_tracked: is_sku_tracked ? 1 : 0,
         min_stock:
           is_sku_tracked || typeof min_stock !== "number" ? null : min_stock,
-        max_stock:
-          is_sku_tracked || typeof max_stock !== "number" ? null : max_stock,
-        is_rental: is_rental ? 1 : 0,
-        rental_expiry: rental_expiry || null,
+        is_rental: resolvedIsRental ? 1 : 0,
+        rental_expiry: resolvedIsRental ? rental_expiry || null : null,
+        ownership_type: normalizedOwnership,
+        supplier_identifier: normalizedSupplierIdentifier,
         manufacturer_name: manufacturer_name || null,
         manufacturer_sku: manufacturer_sku || null,
         default_image_url: default_image_url || null,

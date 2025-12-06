@@ -9,8 +9,7 @@ type ReceiptLinePayload = {
   item_id: string;
   warehouse_id: string;
   quantity: number;
-  unit_cost: number | null;
-  supplier_identifier: string | null;
+  supplier_document_number: string | null;
 };
 
 function generateDocumentCode() {
@@ -32,14 +31,10 @@ function normalizeLines(raw: any[]): ReceiptLinePayload[] {
       const warehouseId =
         typeof line.warehouse_id === "string" ? line.warehouse_id.trim() : "";
       const quantity = Number(line.quantity);
-      const unitCost =
-        line.unit_cost === undefined || line.unit_cost === null || line.unit_cost === ""
-          ? null
-          : Number(line.unit_cost);
-      const supplier =
-        typeof line.supplier_identifier === "string" &&
-        line.supplier_identifier.trim().length
-          ? line.supplier_identifier.trim()
+      const supplierDoc =
+        typeof line.supplier_document_number === "string" &&
+        line.supplier_document_number.trim().length
+          ? line.supplier_document_number.trim()
           : null;
 
       if (
@@ -55,9 +50,7 @@ function normalizeLines(raw: any[]): ReceiptLinePayload[] {
         item_id: itemId,
         warehouse_id: warehouseId,
         quantity,
-        unit_cost:
-          unitCost === null || Number.isNaN(unitCost) ? null : unitCost,
-        supplier_identifier: supplier,
+        supplier_document_number: supplierDoc,
       };
     })
     .filter((line): line is ReceiptLinePayload => Boolean(line));
@@ -83,17 +76,27 @@ DECLARE @Lines TABLE (
   warehouse_id UNIQUEIDENTIFIER NOT NULL,
   quantity DECIMAL(14,2) NOT NULL,
   unit_cost DECIMAL(14,2) NULL,
-  supplier_identifier NVARCHAR(100) NULL
+  supplier_document_number NVARCHAR(100) NULL
 );
 
-INSERT INTO @Lines (item_id, warehouse_id, quantity, unit_cost, supplier_identifier)
+INSERT INTO @Lines (item_id, warehouse_id, quantity, unit_cost, supplier_document_number)
 SELECT
   TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(value, '$.item_id')) AS item_id,
   TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(value, '$.warehouse_id')) AS warehouse_id,
   TRY_CONVERT(DECIMAL(14,2), JSON_VALUE(value, '$.quantity')) AS quantity,
   TRY_CONVERT(DECIMAL(14,2), JSON_VALUE(value, '$.unit_cost')) AS unit_cost,
-  JSON_VALUE(value, '$.supplier_identifier') AS supplier_identifier
+  JSON_VALUE(value, '$.supplier_document_number') AS supplier_document_number
 FROM OPENJSON(@linesJson);
+
+UPDATE l
+SET
+  unit_cost = COALESCE(
+    l.unit_cost,
+    ei.purchase_cost,
+    0
+  )
+FROM @Lines l
+JOIN equipment_item ei ON ei.id = l.item_id;
 
 IF NOT EXISTS (SELECT 1 FROM @Lines)
 BEGIN
@@ -199,7 +202,8 @@ BEGIN TRY
     (
       SELECT
         @note AS doc_note,
-        supplier_identifier AS supplier_identifier,
+        @supplierId AS doc_supplier_id,
+        supplier_document_number AS supplier_document_number,
         unit_cost AS unit_cost
       FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
     )
@@ -221,7 +225,8 @@ END CATCH;
 SELECT
   @IncomingDocument AS document_code,
   @Now AS receipt_date,
-  (SELECT SUM(quantity) FROM @Lines) AS total_items;
+  (SELECT SUM(quantity) FROM @Lines) AS total_items,
+  (SELECT SUM(quantity * ISNULL(unit_cost, 0)) FROM @Lines) AS total_value;
 `;
 
 type PermissionResult = {
@@ -269,15 +274,29 @@ export async function GET(req: Request) {
       const headerResult = await query(
         `
           SELECT
-            MIN(movement_date) AS receipt_date,
-            SUM(quantity) AS total_items,
+            MIN(l.movement_date) AS receipt_date,
+            SUM(l.quantity) AS total_items,
+            SUM(
+              l.quantity * COALESCE(
+                TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(l.notes, '$.unit_cost')),
+                0
+              )
+            ) AS total_value,
             COALESCE(
-              MAX(JSON_VALUE(notes, '$.doc_note')),
-              MAX(CASE WHEN notes IS NOT NULL AND notes NOT LIKE '{%' THEN notes END)
-            ) AS note
-          FROM equipment_stock_ledger
-          WHERE movement_type = 'RECEIPT'
-            AND reference_doc = @document
+              MAX(JSON_VALUE(l.notes, '$.doc_note')),
+              MAX(CASE WHEN l.notes IS NOT NULL AND l.notes NOT LIKE '{%' THEN l.notes END)
+            ) AS note,
+            MAX(JSON_VALUE(l.notes, '$.doc_supplier_id')) AS supplier_identifier,
+            MAX(l.created_by) AS created_by,
+            MAX(s.name) AS supplier_name,
+            MAX(au.full_name) AS created_by_name
+          FROM equipment_stock_ledger l
+          LEFT JOIN supplier s
+            ON s.supplier_identifier = JSON_VALUE(l.notes, '$.doc_supplier_id')
+          LEFT JOIN app_user au
+            ON au.national_id = l.created_by
+          WHERE l.movement_type = 'RECEIPT'
+            AND l.reference_doc = @document
         `,
         { document: documentCode }
       );
@@ -298,7 +317,7 @@ export async function GET(req: Request) {
             w.name AS warehouse_name,
             l.quantity,
             TRY_CONVERT(DECIMAL(14,2), JSON_VALUE(l.notes, '$.unit_cost')) AS unit_cost,
-            JSON_VALUE(l.notes, '$.supplier_identifier') AS supplier_identifier
+            JSON_VALUE(l.notes, '$.supplier_document_number') AS supplier_document_number
           FROM equipment_stock_ledger l
           JOIN equipment_item ei ON ei.id = l.item_id
           JOIN warehouse w ON w.id = l.warehouse_id
@@ -320,7 +339,7 @@ export async function GET(req: Request) {
           row.unit_cost === null || row.unit_cost === undefined
             ? null
             : Number(row.unit_cost),
-        supplier_identifier: row.supplier_identifier || null,
+        supplier_document_number: row.supplier_document_number || null,
       }));
 
       return NextResponse.json({
@@ -329,6 +348,14 @@ export async function GET(req: Request) {
           document_code: documentCode,
           receipt_date: header.receipt_date,
           total_items: Number(header.total_items) || 0,
+          total_value:
+            header.total_value === null || header.total_value === undefined
+              ? null
+              : Number(header.total_value),
+          supplier_identifier: header.supplier_identifier || null,
+          supplier_name: header.supplier_name || null,
+          created_by: header.created_by || null,
+          created_by_name: header.created_by_name || null,
           note: header.note || null,
           lines,
         },
@@ -337,19 +364,43 @@ export async function GET(req: Request) {
 
     const result = await query(
       `
+        WITH receipt_summary AS (
+          SELECT
+            reference_doc AS document_code,
+            MIN(movement_date) AS receipt_date,
+            SUM(quantity) AS total_items,
+            SUM(
+              quantity * COALESCE(
+                TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(notes, '$.unit_cost')),
+                0
+              )
+            ) AS total_value,
+            COALESCE(
+              MAX(JSON_VALUE(notes, '$.doc_note')),
+              MAX(CASE WHEN notes IS NOT NULL AND notes NOT LIKE '{%' THEN notes END)
+            ) AS note,
+            MAX(JSON_VALUE(notes, '$.doc_supplier_id')) AS supplier_identifier,
+            MAX(created_by) AS created_by
+          FROM equipment_stock_ledger
+          WHERE movement_type = 'RECEIPT'
+          GROUP BY reference_doc
+        )
         SELECT TOP 25
-          reference_doc AS document_code,
-          MIN(movement_date) AS receipt_date,
-          SUM(quantity) AS total_items,
-          COALESCE(
-            MAX(JSON_VALUE(notes, '$.doc_note')),
-            MAX(CASE WHEN notes IS NOT NULL AND notes NOT LIKE '{%' THEN notes END)
-          ) AS note,
-          MAX(JSON_VALUE(notes, '$.supplier_identifier')) AS supplier_identifier
-        FROM equipment_stock_ledger
-        WHERE movement_type = 'RECEIPT'
-        GROUP BY reference_doc
-        ORDER BY receipt_date DESC
+          rs.document_code,
+          rs.receipt_date,
+          rs.total_items,
+          rs.total_value,
+          rs.note,
+          rs.supplier_identifier,
+          rs.created_by,
+          s.name AS supplier_name,
+          au.full_name AS created_by_name
+        FROM receipt_summary rs
+        LEFT JOIN supplier s
+          ON s.supplier_identifier = rs.supplier_identifier
+        LEFT JOIN app_user au
+          ON au.national_id = rs.created_by
+        ORDER BY rs.receipt_date DESC
       `
     );
 
@@ -357,8 +408,15 @@ export async function GET(req: Request) {
       id: row.document_code,
       document_code: row.document_code,
       receipt_date: row.receipt_date,
-      supplier_name: row.supplier_identifier || null,
+      supplier_identifier: row.supplier_identifier || null,
+      supplier_name: row.supplier_name || null,
       total_items: Number(row.total_items) || 0,
+      total_value:
+        row.total_value === null || row.total_value === undefined
+          ? undefined
+          : Number(row.total_value),
+      created_by: row.created_by || undefined,
+      created_by_name: row.created_by_name || undefined,
       status: "נקלט",
       note: row.note || undefined,
     }));
@@ -400,6 +458,17 @@ export async function POST(req: Request) {
       typeof body.note === "string" && body.note.trim().length
         ? body.note.trim()
         : null;
+    const supplierIdentifier =
+      typeof body.supplier_identifier === "string" &&
+      body.supplier_identifier.trim().length
+        ? body.supplier_identifier.trim()
+        : null;
+    if (!supplierIdentifier) {
+      return NextResponse.json(
+        { error: "יש לבחור ספק עבור התעודה." },
+        { status: 400 }
+      );
+    }
     const providedDoc =
       typeof body.document_code === "string" && body.document_code.trim().length
         ? body.document_code.trim()
@@ -411,6 +480,7 @@ export async function POST(req: Request) {
       documentCode,
       note,
       createdBy: session?.national_id || "system",
+      supplierId: supplierIdentifier,
     });
 
     const summary = result.recordset?.[0];
@@ -421,6 +491,10 @@ export async function POST(req: Request) {
         document_code: documentCode,
         receipt_date: summary?.receipt_date,
         total_items: Number(summary?.total_items ?? 0),
+        total_value:
+          summary?.total_value === null || summary?.total_value === undefined
+            ? undefined
+            : Number(summary.total_value),
         status: "נקלט",
       },
     });

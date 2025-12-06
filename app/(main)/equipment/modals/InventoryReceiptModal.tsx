@@ -3,7 +3,7 @@
 import { Modal, Button } from "@/app/components/ui";
 import { inputStyle, labelStyle } from "@/app/styles/components";
 import { colors, radii, spacing } from "@/app/styles/foundations";
-import type { EquipmentItem, Warehouse } from "@/type";
+import type { EquipmentItem, Supplier, Warehouse } from "@/type";
 import type { ReceiptLine } from "../types";
 import { px } from "../utils";
 
@@ -15,8 +15,12 @@ type InventoryReceiptModalProps = {
   inventoryNote: string;
   activeWarehouses: Warehouse[];
   items: EquipmentItem[];
+  suppliers: Supplier[];
+  selectedSupplierId: string;
+  onSupplierChange: (value: string) => void;
   onInventoryNoteChange: (value: string) => void;
   onAddLine: () => void;
+  onDuplicateLine: (index: number) => void;
   onRemoveLine: (index: number) => void;
   onLineChange: <K extends keyof ReceiptLine>(
     index: number,
@@ -37,8 +41,12 @@ export function InventoryReceiptModal({
   inventoryNote,
   activeWarehouses,
   items,
+  suppliers,
+  selectedSupplierId,
+  onSupplierChange,
   onInventoryNoteChange,
   onAddLine,
+  onDuplicateLine,
   onRemoveLine,
   onLineChange,
   onSubmit,
@@ -100,6 +108,30 @@ export function InventoryReceiptModal({
           marginTop: spacing.md,
         }}
       >
+        <div>
+          <label style={labelStyle}>ספק*</label>
+          <select
+            style={inputStyle}
+            value={selectedSupplierId}
+            onChange={(e) => onSupplierChange(e.target.value)}
+            disabled={!suppliers.length}
+          >
+            <option value="">בחר ספק</option>
+            {suppliers.map((supplier) => (
+              <option
+                key={supplier.supplier_identifier}
+                value={supplier.supplier_identifier}
+              >
+                {supplier.name} · {supplier.supplier_identifier}
+              </option>
+            ))}
+          </select>
+          {!suppliers.length && (
+            <div style={{ color: colors.danger, fontSize: 12 }}>
+              אין ספקים פעילים במערכת. יש להגדיר ספק לפני קליטת מלאי.
+            </div>
+          )}
+        </div>
         {receiptLines.map((line, index) => (
           <div
             key={`receipt-modal-line-${index}`}
@@ -107,71 +139,90 @@ export function InventoryReceiptModal({
               border: `1px solid ${colors.border}`,
               borderRadius: radii.card,
               padding: px(spacing.md),
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+              display: "flex",
+              flexWrap: "wrap",
               gap: spacing.sm,
+              alignItems: "flex-end",
             }}
           >
-            <select
-              style={inputStyle}
-              value={line.item_id}
-              onChange={(e) => onLineChange(index, "item_id", e.target.value)}
+            <div style={{ flex: "1 1 200px" }}>
+              <select
+                style={inputStyle}
+                value={line.item_id}
+                onChange={(e) => onLineChange(index, "item_id", e.target.value)}
+              >
+                <option value="">בחר פריט</option>
+                {items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.internal_sku} · {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: "1 1 200px" }}>
+              <select
+                style={inputStyle}
+                value={line.warehouse_id}
+                onChange={(e) =>
+                  onLineChange(index, "warehouse_id", e.target.value)
+                }
+                disabled={!activeWarehouses.length}
+              >
+                <option value="">בחר מחסן</option>
+                {activeWarehouses.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.code} · {warehouse.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ width: 120 }}>
+              <input
+                type="number"
+                min="0"
+                style={inputStyle}
+                placeholder="כמות"
+                value={line.quantity}
+                onChange={(e) =>
+                  onLineChange(index, "quantity", e.target.value)
+                }
+              />
+            </div>
+            <div style={{ flex: "1 1 200px" }}>
+              <input
+                type="text"
+                style={inputStyle}
+                placeholder="מספר תעודת ספק"
+                value={line.supplier_document_number}
+                onChange={(e) =>
+                  onLineChange(index, "supplier_document_number", e.target.value)
+                }
+              />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: spacing.xs,
+              }}
             >
-              <option value="">בחר פריט</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.internal_sku} · {item.name}
-                </option>
-              ))}
-            </select>
-            <select
-              style={inputStyle}
-              value={line.warehouse_id}
-              onChange={(e) =>
-                onLineChange(index, "warehouse_id", e.target.value)
-              }
-              disabled={!activeWarehouses.length}
-            >
-              <option value="">בחר מחסן</option>
-              {activeWarehouses.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.code} · {warehouse.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min="0"
-              style={inputStyle}
-              placeholder="כמות"
-              value={line.quantity}
-              onChange={(e) => onLineChange(index, "quantity", e.target.value)}
-            />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              style={inputStyle}
-              placeholder="עלות ליחידה"
-              value={line.unit_cost}
-              onChange={(e) => onLineChange(index, "unit_cost", e.target.value)}
-            />
-            <input
-              type="text"
-              style={inputStyle}
-              placeholder="מספר ספק"
-              value={line.supplier_identifier}
-              onChange={(e) =>
-                onLineChange(index, "supplier_identifier", e.target.value)
-              }
-            />
-            <Button
-              variant="secondary"
-              onClick={() => onRemoveLine(index)}
-              disabled={receiptLines.length === 1}
-            >
-              ✖ הסר
-            </Button>
+              <Button
+                variant="secondary"
+                title="שכפול שורה"
+                aria-label="שכפול שורה"
+                onClick={() => onDuplicateLine(index)}
+              >
+                ⧉
+              </Button>
+              <Button
+                variant="secondary"
+                title="הסר שורה"
+                aria-label="הסר שורה"
+                onClick={() => onRemoveLine(index)}
+                disabled={receiptLines.length === 1}
+              >
+                🗑️
+              </Button>
+            </div>
           </div>
         ))}
         <div>
