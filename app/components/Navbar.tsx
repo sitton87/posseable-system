@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Home,
   Users,
@@ -17,6 +17,7 @@ import {
   CalendarRange,
   UsersRound,
   Settings,
+  ChevronDown,
 } from "lucide-react";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
 import { usePermissions } from "@/app/hooks/usePagePermission";
@@ -30,6 +31,7 @@ export default function Navbar() {
   const [pinned, setPinned] = useState(false);
   const width = expanded ? NAV_EXPANDED_WIDTH : NAV_COLLAPSED_WIDTH;
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [userInfo, setUserInfo] = useState<{
     full_name: string;
     role: string;
@@ -101,7 +103,22 @@ export default function Navbar() {
     ? hasSystemAdminAccess(userInfo.role, userInfo.role_group_code)
     : false;
 
-  const baseMenuItems = [
+  type MenuChild = {
+    pageKey?: string;
+    href: string;
+    label: string;
+    query?: Record<string, string>;
+  };
+
+  type MenuItem = {
+    pageKey: string;
+    href?: string;
+    icon: ReactNode;
+    label: string;
+    children?: MenuChild[];
+  };
+
+  const baseMenuItems: MenuItem[] = [
     {
       pageKey: "dashboard",
       href: "/dashboard",
@@ -161,32 +178,126 @@ export default function Navbar() {
       href: "/equipment",
       icon: <Wrench size={22} />,
       label: "ציוד",
+      children: [
+        { href: "/equipment", label: "דף הבית", pageKey: "equipment" },
+        {
+          href: "/equipment",
+          label: "קטלוג ציוד",
+          pageKey: "equipment-catalog",
+          query: { view: "catalog" },
+        },
+        {
+          href: "/equipment",
+          label: "מלאי ומחסנים",
+          pageKey: "equipment-inventory",
+          query: { view: "inventory" },
+        },
+        {
+          href: "/equipment",
+          label: "מבנה והגדרות",
+          pageKey: "equipment-settings",
+          query: { view: "structure" },
+        },
+      ],
     },
   ];
 
   const { permissions, loading: permissionsLoading } = usePermissions();
 
-  const filteredMenuItems = (
-    isAdmin
-      ? [
-          ...baseMenuItems,
-          {
-            pageKey: "system-settings",
-            href: "/system-settings",
-            icon: <Settings size={22} />,
-            label: "הגדרות מערכת",
-          },
-        ]
-      : baseMenuItems
-  ).filter((item) => {
-    if (item.pageKey === "system-settings") {
-      return isAdmin;
+  const expandedMenuItems: MenuItem[] = isAdmin
+    ? [
+        ...baseMenuItems,
+        {
+          pageKey: "system-settings",
+          href: "/system-settings",
+          icon: <Settings size={22} />,
+          label: "הגדרות מערכת",
+        },
+      ]
+    : baseMenuItems;
+
+  const hasAccess = (key?: string, fallback?: string) => {
+    if (permissionsLoading) return true;
+    if (key) {
+      const level = permissions[key];
+      if (level && level !== "none") {
+        return true;
+      }
     }
-    if (permissionsLoading) {
-      return true;
+    if (fallback) {
+      const fallbackLevel = permissions[fallback];
+      if (fallbackLevel && fallbackLevel !== "none") {
+        return true;
+      }
     }
-    return (permissions[item.pageKey] ?? "none") !== "none";
-  });
+    return false;
+  };
+
+  const filteredMenuItems = expandedMenuItems
+    .map((item) => {
+      if (!item.children?.length) return item;
+      const visibleChildren = item.children.filter((child) =>
+        hasAccess(child.pageKey, item.pageKey)
+      );
+      return { ...item, children: visibleChildren };
+    })
+    .filter((item) => {
+      if (item.children?.length) {
+        return item.children.length > 0;
+      }
+      if (item.pageKey === "system-settings") {
+        return isAdmin;
+      }
+      return hasAccess(item.pageKey);
+    });
+
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const currentTopLevel = filteredMenuItems.find((item) => {
+    if (!pathname) return false;
+    if (item.href === "/") return pathname === "/";
+    return pathname.startsWith(item.href || "");
+  })?.pageKey;
+  const previousTopLevelRef = useRef<string | undefined>(currentTopLevel);
+
+  useEffect(() => {
+    setOpenMenus((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      filteredMenuItems.forEach((item) => {
+        if (!item.children?.length) return;
+        if (item.pageKey === currentTopLevel) {
+          if (next[item.pageKey] !== true) {
+            next[item.pageKey] = true;
+            changed = true;
+          }
+          return;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [currentTopLevel, filteredMenuItems]);
+
+  useEffect(() => {
+    const prevTopLevel = previousTopLevelRef.current;
+    if (prevTopLevel === "equipment" && currentTopLevel !== "equipment") {
+      setOpenMenus((prev) => {
+        if (!prev.equipment) {
+          return prev;
+        }
+        return { ...prev, equipment: false };
+      });
+    }
+    previousTopLevelRef.current = currentTopLevel;
+  }, [currentTopLevel]);
+
+  const toggleMenu = (pageKey: string) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [pageKey]: !prev[pageKey],
+    }));
+  };
 
   return (
     <div
@@ -215,25 +326,130 @@ export default function Navbar() {
         <div className="flex-1 overflow-y-auto px-2 py-3">
           <nav className="flex flex-col gap-1">
             {filteredMenuItems.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname?.startsWith(item.href);
+              const hasChildren = Boolean(item.children?.length);
+              const childIsActive = (child: MenuChild) => {
+                if (!pathname) return false;
+                const pathMatch =
+                  child.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(child.href);
+                if (!pathMatch) return false;
+                if (!child.query) return true;
+                if (!searchParams) return false;
+                return Object.entries(child.query).every(
+                  ([key, value]) => searchParams.get(key) === value
+                );
+              };
+              const isActive = hasChildren
+                ? item.children!.some(childIsActive)
+                : item.href === "/"
+                ? pathname === "/"
+                : item.href
+                ? pathname?.startsWith(item.href)
+                : false;
+              const isOpen = openMenus[item.pageKey] ?? isActive;
+
+              if (!hasChildren) {
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href || "#"}
+                    className={clsx(
+                      "flex items-center rounded-lg px-3 py-2 text-sm font-semibold transition",
+                      expanded ? "gap-3" : "justify-center",
+                      isActive
+                        ? "bg-sky-100 text-sky-700 shadow-inner"
+                        : "text-gray-600 hover:bg-gray-100"
+                    )}
+                  >
+                    {item.icon}
+                    {expanded && <span>{item.label}</span>}
+                  </Link>
+                );
+              }
+
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
+                <div
+                  key={item.pageKey}
                   className={clsx(
-                    "flex items-center rounded-lg px-3 py-2 text-sm font-semibold transition",
-                    expanded ? "gap-3" : "justify-center",
-                    isActive
-                      ? "bg-sky-100 text-sky-700 shadow-inner"
-                      : "text-gray-600 hover:bg-gray-100"
+                    "rounded-lg",
+                    isActive && "bg-sky-50 text-sky-700 shadow-inner"
                   )}
                 >
-                  {item.icon}
-                  {expanded && <span>{item.label}</span>}
-                </Link>
+                  <div
+                    className={clsx(
+                      "flex items-center px-3 py-2 text-sm font-semibold transition",
+                      expanded ? "gap-3" : "justify-center",
+                      isActive ? "text-sky-700" : "text-gray-600"
+                    )}
+                  >
+                    <div
+                      className={clsx(
+                        "flex flex-1 items-center",
+                        expanded ? "gap-3" : "justify-center"
+                      )}
+                    >
+                      {item.icon}
+                      {expanded && <span>{item.label}</span>}
+                    </div>
+                    {expanded && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          toggleMenu(item.pageKey);
+                        }}
+                        className="text-gray-500 transition hover:text-gray-700"
+                        aria-label={
+                          isOpen
+                            ? `סגירת תפריט ${item.label}`
+                            : `פתיחת תפריט ${item.label}`
+                        }
+                      >
+                        <ChevronDown
+                          size={18}
+                          className={clsx(
+                            "transition-transform",
+                            isOpen ? "rotate-180" : "rotate-0"
+                          )}
+                        />
+                      </button>
+                    )}
+                  </div>
+                  {expanded && (
+                    <div
+                      className={clsx(
+                        "flex flex-col gap-1 overflow-hidden px-4 text-sm transition-all",
+                        isOpen
+                          ? "max-h-96 pb-2"
+                          : "max-h-0 pb-0 opacity-0 pointer-events-none"
+                      )}
+                    >
+                      {item.children!.map((child) => {
+                        const childActive = childIsActive(child);
+                        const childHref =
+                          child.query && Object.keys(child.query).length
+                            ? `${child.href}?${new URLSearchParams(
+                                child.query
+                              ).toString()}`
+                            : child.href;
+                        return (
+                          <Link
+                            key={`${child.href}-${child.label}`}
+                            href={childHref}
+                            className={clsx(
+                              "rounded-md px-3 py-1 text-xs font-semibold transition",
+                              childActive
+                                ? "bg-sky-100 text-sky-700"
+                                : "text-gray-600 hover:bg-gray-100"
+                            )}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>

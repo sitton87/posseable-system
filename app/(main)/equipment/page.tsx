@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type {
   EquipmentItem,
   EquipmentFamily,
@@ -20,6 +21,7 @@ import {
   typography,
 } from "@/app/styles/foundations";
 import { CatalogTab } from "./tabs/CatalogTab";
+import { HomeTab } from "./tabs/HomeTab";
 import { InventoryTab } from "./tabs/InventoryTab";
 import { StructureTab } from "./tabs/StructureTab";
 import { EquipmentFormModal } from "./modals/EquipmentFormModal";
@@ -50,21 +52,27 @@ import {
 
 const TAB_CONFIG = [
   {
+    id: "home",
+    label: "דף הבית",
+    description: "סקירה כללית של הציוד, מחסנים וקיצורי דרך.",
+    permissionKey: "equipment",
+  },
+  {
     id: "catalog",
     label: "קטלוג ציוד",
-    description: "ניהול מלא של פריטי הציוד, סטטוסים ופעולות תחזוקה.",
+    description: "",
     permissionKey: "equipment-catalog",
   },
   {
     id: "inventory",
     label: "מלאי ומחסנים",
-    description: "שליטה במיקומי המחסנים, קליטת מלאי ותיעוד תעודות.",
+    description: "",
     permissionKey: "equipment-inventory",
   },
   {
     id: "structure",
     label: "הגדרות מבנה",
-    description: "יצירה ותחזוקה של משפחות, קטגוריות ושדות עזר לציוד.",
+    description: "",
     permissionKey: "equipment-settings",
   },
 ] as const;
@@ -82,6 +90,15 @@ const createDefaultFilters = (): FiltersState => ({
 });
 
 export default function EquipmentPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get("view");
+  const initialTab = (
+    viewParam && TAB_CONFIG.some((tab) => tab.id === viewParam)
+      ? viewParam
+      : "home"
+  ) as EquipmentTabId;
   const [data, setData] = useState<EquipmentPageData>({
     items: [],
     families: [],
@@ -143,8 +160,26 @@ export default function EquipmentPage() {
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(
     null
   );
-  const [activeTab, setActiveTab] = useState<EquipmentTabId>("catalog");
-  const goToStructureTab = useCallback(() => setActiveTab("structure"), []);
+  const [activeTab, setActiveTab] = useState<EquipmentTabId>(initialTab);
+  const handleTabChange = useCallback(
+    (tabId: EquipmentTabId) => {
+      setActiveTab(tabId);
+      const params = new URLSearchParams(searchParams.toString());
+      if (tabId === "home") {
+        params.delete("view");
+      } else {
+        params.set("view", tabId);
+      }
+      const queryString = params.toString();
+      const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
+      router.replace(nextUrl, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+  const goToStructureTab = useCallback(
+    () => handleTabChange("structure"),
+    [handleTabChange]
+  );
 
   const formatDateInputValue = (value?: string | Date | null) => {
     if (!value) return "";
@@ -217,6 +252,9 @@ export default function EquipmentPage() {
   const availableTabs = useMemo(
     () =>
       TAB_CONFIG.filter((tab) => {
+        if (tab.id === "home") {
+          return baseEquipmentPermission.permission !== "none";
+        }
         if (tab.id === "catalog") {
           return catalogPermission.permission !== "none";
         }
@@ -226,6 +264,7 @@ export default function EquipmentPage() {
         return structurePermission.permission !== "none";
       }),
     [
+      baseEquipmentPermission.permission,
       catalogPermission.permission,
       inventoryPermission.permission,
       structurePermission.permission,
@@ -241,11 +280,33 @@ export default function EquipmentPage() {
     }
   }, [availableTabs, activeTab]);
 
+  useEffect(() => {
+    const view = searchParams.get("view");
+    if (!view) {
+      if (activeTab !== "home") {
+        setActiveTab("home");
+      }
+      return;
+    }
+    if (view !== activeTab && availableTabs.some((tab) => tab.id === view)) {
+      setActiveTab(view as EquipmentTabId);
+    }
+  }, [searchParams, availableTabs, activeTab]);
+
   const tabPermissionMap = {
+    home: baseEquipmentPermission,
     catalog: catalogPermission,
     inventory: inventoryPermission,
     structure: structurePermission,
-  } as const;
+  } satisfies Record<
+    EquipmentTabId,
+    {
+      permission: ReturnType<typeof usePagePermission>["permission"];
+      canRead: boolean;
+      canEdit: boolean;
+      loading: boolean;
+    }
+  >;
 
   const canEditCatalog = catalogPermission.canEdit;
   const canEditInventory = inventoryPermission.canEdit;
@@ -423,11 +484,14 @@ export default function EquipmentPage() {
   }, [filters.family, filters.category, data.categories]);
 
   useEffect(() => {
-    if (activeTab !== "inventory") {
+    if (activeTab === "inventory") {
+      loadReceiptHistory();
       return;
     }
-    loadReceiptHistory();
-  }, [activeTab, loadReceiptHistory]);
+    if (activeTab === "home" && historyEntries.length === 0) {
+      loadReceiptHistory();
+    }
+  }, [activeTab, historyEntries.length, loadReceiptHistory]);
 
   const statSummary = useMemo(() => {
     const totalItems = data.items.length;
@@ -1125,59 +1189,28 @@ export default function EquipmentPage() {
         gap: spacing.lg,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: spacing.sm,
-        }}
-      >
-        {availableTabs.map((tab) => {
-          const isActive = tab.id === activeTab;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                flex: "1 1 220px",
-                minWidth: 220,
-                borderRadius: radii.card,
-                border: `1px solid ${
-                  isActive ? colors.primary : colors.border
-                }`,
-                backgroundColor: isActive ? colors.primarySoft : colors.surface,
-                color: colors.textPrimary,
-                padding: px(spacing.md),
-                textAlign: "right",
-                cursor: "pointer",
-                boxShadow: isActive ? shadows.card : "none",
-              }}
-            >
-              <div style={{ fontWeight: 700 }}>{tab.label}</div>
-              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                {tab.description}
-              </div>
-              {!tabPermissionMap[tab.id].canEdit && (
-                <div style={{ fontSize: 12, color: colors.textMuted }}>
-                  מצב קריאה בלבד
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {currentTabConfig &&
+        (currentTabConfig.description || !activeTabPermission.canEdit) && (
+          <div
+            style={{
+              fontSize: 13,
+              color: colors.textMuted,
+            }}
+          >
+            {currentTabConfig.description}
+            {!activeTabPermission.canEdit && " · מצב קריאה בלבד"}
+          </div>
+        )}
 
-      {currentTabConfig && (
-        <div
-          style={{
-            fontSize: 13,
-            color: colors.textMuted,
-          }}
-        >
-          {currentTabConfig.description}
-          {!activeTabPermission.canEdit && " · מצב קריאה בלבד"}
-        </div>
+      {activeTab === "home" && (
+        <HomeTab
+          items={data.items}
+          warehouses={data.warehouses}
+          historyEntries={historyEntries}
+          historyLoading={historyLoading}
+          statSummary={statSummary}
+          onNavigate={(tab) => handleTabChange(tab)}
+        />
       )}
 
       {activeTab === "catalog" && (
@@ -1185,7 +1218,6 @@ export default function EquipmentPage() {
           data={data}
           filters={filters}
           availableCategories={availableCategories}
-          statSummary={statSummary}
           loading={loading}
           error={error}
           canEdit={canEditCatalog}

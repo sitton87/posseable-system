@@ -16,6 +16,22 @@ export function formatNumber(value?: number | null, fallback = "—") {
   return new Intl.NumberFormat("he-IL").format(value);
 }
 
+const currencyFormatter = new Intl.NumberFormat("he-IL", {
+  style: "currency",
+  currency: "ILS",
+});
+
+export function formatCurrency(value?: number | null, fallback = "—") {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return fallback;
+  }
+  try {
+    return currencyFormatter.format(value);
+  } catch {
+    return fallback;
+  }
+}
+
 export function formatDate(value?: string | null) {
   if (!value) return "—";
   try {

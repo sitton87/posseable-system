@@ -12,7 +12,7 @@ import {
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import type { EquipmentCategory, EquipmentItem } from "@/type";
-import type { EquipmentPageData, FiltersState, StatSummary } from "../types";
+import type { EquipmentPageData, FiltersState } from "../types";
 import {
   CONDITION_OPTIONS,
   conditionBadgeMap,
@@ -20,13 +20,11 @@ import {
   EQUIPMENT_TYPE_LABELS,
 } from "../constants";
 import { formatDate, formatNumber } from "../utils";
-import { EquipmentSummaryCard } from "../components";
 
 type CatalogTabProps = {
   data: EquipmentPageData;
   filters: FiltersState;
   availableCategories: EquipmentCategory[];
-  statSummary: StatSummary;
   loading: boolean;
   error: string | null;
   canEdit: boolean;
@@ -68,7 +66,6 @@ export function CatalogTab({
   data,
   filters,
   availableCategories,
-  statSummary,
   loading,
   error,
   canEdit,
@@ -90,15 +87,47 @@ export function CatalogTab({
 
   return (
     <>
-      <EquipmentSummaryCard
-        statSummary={statSummary}
-        error={error}
-        onRefresh={onRefresh}
-        onCreate={onCreateItem}
-        canCreate={canEdit}
-      />
-
       <Card>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: spacing.sm,
+            marginBottom: spacing.lg,
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>קטלוג הציוד</h3>
+            <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+              תצוגה ועריכה של כל פריטי הציוד במערכת
+            </p>
+            {error && (
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  color: colors.danger,
+                  fontSize: 12,
+                }}
+              >
+                {error}
+              </p>
+            )}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: spacing.sm,
+              flexWrap: "wrap",
+            }}
+          >
+            <Button variant="secondary" onClick={onRefresh}>
+              רענון נתונים
+            </Button>
+            {canEdit && <Button onClick={onCreateItem}>+ פריט חדש</Button>}
+          </div>
+        </div>
         <div
           style={{
             display: "grid",

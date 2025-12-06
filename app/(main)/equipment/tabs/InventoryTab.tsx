@@ -8,7 +8,7 @@ import {
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import type { ReceiptHistoryEntry } from "../types";
-import { formatDate, px } from "../utils";
+import { formatCurrency, formatDate, px } from "../utils";
 
 type InventoryTabProps = {
   historyEntries: ReceiptHistoryEntry[];
@@ -21,17 +21,6 @@ type InventoryTabProps = {
 };
 
 const muted = colors.textMuted;
-const currencyFormatter = new Intl.NumberFormat("he-IL", {
-  style: "currency",
-  currency: "ILS",
-});
-
-function formatCurrency(value?: number | null) {
-  if (value === undefined || value === null || Number.isNaN(value)) {
-    return "—";
-  }
-  return currencyFormatter.format(value);
-}
 
 export function InventoryTab({
   historyEntries,
