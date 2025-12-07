@@ -256,6 +256,8 @@ export type Donor = {
   is_active: boolean;
   created_at: Date | string;
   total_donations?: number;
+  donation_count?: number;
+  last_donation_date?: string | Date | null;
 };
 
 export type Supplier = {

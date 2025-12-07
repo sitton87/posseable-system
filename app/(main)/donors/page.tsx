@@ -1,26 +1,105 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useState, useEffect } from "react";
-import { Donor } from "@/type";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import type { Donor } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
+import {
+  inputStyle,
+  labelStyle,
+  tableCellStyle,
+  tableHeaderStyle,
+  tableStyle,
+  withCenteredControl,
+} from "@/app/styles/components";
+import { colors, spacing, radii } from "@/app/styles/foundations";
 import { formatPhoneNumber } from "@/lib/utils/format";
-import { colors, radii, spacing } from "@/app/styles/foundations";
+import { useDraftManager, type DraftEntry } from "@/app/hooks/useDraftManager";
 
-const px = (value: number) => `${value}px`;
+type DonorFormState = {
+  national_id: string;
+  full_name: string;
+  organization: string;
+  phone: string;
+  email: string;
+  notes: string;
+  is_active: boolean;
+};
+
+type DonorStats = {
+  total_donors: number;
+  active_donors: number;
+  total_donation_events: number;
+  total_donations: number;
+  highest_donation: number;
+  average_donation: number;
+};
+
+type DonorTask = {
+  id: string;
+  donorName: string;
+  summary: string;
+  dueDate?: string | null;
+  status: "pending" | "done";
+  emphasis: "call" | "meet" | "thank-you";
+};
+
+type DonationRecord = {
+  id: string;
+  transaction_date: string;
+  amount: number;
+  currency?: string | null;
+  description?: string | null;
+};
+
+type DonorTabId = "home" | "list";
+
+type DonorFilters = {
+  search: string;
+  status: "all" | "active" | "inactive";
+};
+
+type HomeTabProps = {
+  stats: DonorStats;
+  tasks: DonorTask[];
+  onToggleTask: (taskId: string) => void;
+  onRefresh: () => void;
+  loading: boolean;
+};
+
+type DonorListTabProps = {
+  donors: Donor[];
+  loading: boolean;
+  error: string | null;
+  onAdd: () => void;
+  onEdit: (donor: Donor) => void;
+  onDelete: (id: string) => void;
+  onView: (donor: Donor) => void;
+  onRefresh: () => void;
+  drafts: DraftEntry<DonorFormState>[];
+  onResumeDraft: (id: string) => void;
+  onDeleteDraft: (id: string) => void;
+  filters: DonorFilters;
+  onFilterChange: <K extends keyof DonorFilters>(
+    key: K,
+    value: DonorFilters[K]
+  ) => void;
+  onClearFilters: () => void;
+};
+
 const muted = colors.textMuted;
-const sectionBoxStyle: CSSProperties = {
+const px = (value: number) => `${value}px`;
+const draftBorderColor = "#8bd4a1";
+const draftSurfaceColor = "#e6f5ec";
+
+const sectionBoxStyle = {
   marginBottom: spacing.lg,
   padding: spacing.lg,
   background: colors.surfaceAlt,
   borderRadius: radii.card,
 };
-const smallButtonStyle: CSSProperties = {
-  fontSize: 12,
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
-};
-const pillStyle = (active: boolean): CSSProperties => ({
+
+const pillStyle = (active: boolean) => ({
   padding: "4px 8px",
   borderRadius: radii.button,
   fontSize: 12,
@@ -29,61 +108,596 @@ const pillStyle = (active: boolean): CSSProperties => ({
   color: active ? colors.success : colors.danger,
 });
 
-export default function DonorsPage() {
-  const [donors, setDonors] = useState<Donor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingDonor, setEditingDonor] = useState<Donor | null>(null);
-  const [viewingDonor, setViewingDonor] = useState<Donor | null>(null);
-  const [showViewModal, setShowViewModal] = useState(false);
+const createEmptyDonorForm = (): DonorFormState => ({
+  national_id: "",
+  full_name: "",
+  organization: "",
+  phone: "",
+  email: "",
+  notes: "",
+  is_active: true,
+});
 
-  const [formData, setFormData] = useState({
-    national_id: "",
-    full_name: "",
-    organization: "",
-    phone: "",
-    email: "",
-    notes: "",
-    is_active: true,
+const defaultStats: DonorStats = {
+  total_donors: 0,
+  active_donors: 0,
+  total_donation_events: 0,
+  total_donations: 0,
+  highest_donation: 0,
+  average_donation: 0,
+};
+
+const formatCurrency = (value?: number | null) => {
+  const num = typeof value === "number" ? value : 0;
+  return `₪${num.toLocaleString("he-IL", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+};
+
+const formatDate = (value?: string | Date | null) => {
+  if (!value) return "—";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("he-IL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const generateDraftId = () =>
+  typeof window !== "undefined" && window.crypto?.randomUUID
+    ? window.crypto.randomUUID()
+    : `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const buildTasks = (donors: Donor[]): DonorTask[] => {
+  const tasks: DonorTask[] = [];
+
+  donors
+    .filter((donor) => (donor.total_donations || 0) === 0)
+    .slice(0, 3)
+    .forEach((donor) =>
+      tasks.push({
+        id: `new-${donor.national_id}`,
+        donorName: donor.full_name,
+        summary: "שיחת הכרות עם תורם חדש",
+        dueDate: null,
+        status: "pending",
+        emphasis: "call",
+      })
+    );
+
+  const staleDonors = donors.filter((donor) => {
+    if (!donor.last_donation_date) return false;
+    const last = new Date(donor.last_donation_date);
+    if (Number.isNaN(last.getTime())) return false;
+    const diffDays = (Date.now() - last.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays > 180;
   });
 
-  useEffect(() => {
-    fetchDonors();
-  }, []);
+  staleDonors.slice(0, 3).forEach((donor) => {
+    let dueDate: string | null = null;
+    const lastVal = donor.last_donation_date;
+    if (lastVal) {
+      const parsed =
+        lastVal instanceof Date ? lastVal : new Date(lastVal as string);
+      if (!Number.isNaN(parsed.getTime())) {
+        dueDate = parsed.toISOString();
+      }
+    }
 
-  const fetchDonors = async () => {
+    tasks.push({
+      id: `follow-${donor.national_id}`,
+      donorName: donor.full_name,
+      summary: "תיאום שיחת עדכון על פעילות הארגון",
+      dueDate,
+      status: "pending",
+      emphasis: "meet",
+    });
+  });
+
+  donors
+    .filter((donor) => (donor.total_donations || 0) > 20000)
+    .slice(0, 2)
+    .forEach((donor) =>
+      tasks.push({
+        id: `thanks-${donor.national_id}`,
+        donorName: donor.full_name,
+        summary: "שליחת מכתב תודה אישי",
+        dueDate: null,
+        status: "pending",
+        emphasis: "thank-you",
+      })
+    );
+
+  return tasks;
+};
+
+function DonorsHomeTab({
+  stats,
+  tasks,
+  onToggleTask,
+  onRefresh,
+  loading,
+}: HomeTabProps) {
+  return (
+    <Card>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: spacing.sm,
+        }}
+      >
+        <div>
+          <h2 style={{ margin: 0 }}>דף הבית · תורמים</h2>
+          <p style={{ margin: "4px 0 0", color: muted, fontSize: 13 }}>
+            מבט על בריאות מערך התורמים ומעקב משימות.
+          </p>
+        </div>
+        <Button variant="secondary" onClick={onRefresh} disabled={loading}>
+          רענן נתונים
+        </Button>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: spacing.md,
+          marginTop: spacing.lg,
+        }}
+      >
+        {[
+          { label: 'סה"כ תורמים', value: stats.total_donors },
+          {
+            label: 'סה"כ תרומות',
+            value: formatCurrency(stats.total_donations),
+          },
+          {
+            label: "התרומה הגבוהה ביותר",
+            value: formatCurrency(stats.highest_donation),
+          },
+          {
+            label: "ממוצע תרומה",
+            value: formatCurrency(stats.average_donation),
+          },
+        ].map((item) => (
+          <div
+            key={item.label}
+            style={{
+              background: colors.surfaceAlt,
+              borderRadius: radii.card,
+              padding: spacing.lg,
+              border: `1px solid ${colors.borderMuted}`,
+            }}
+          >
+            <div style={{ color: muted, fontSize: 13 }}>{item.label}</div>
+            <div style={{ fontSize: 24, fontWeight: 800 }}>{item.value}</div>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: spacing.md,
+          gap: spacing.sm,
+        }}
+      >
+        <div>
+          <h3 style={{ margin: 0 }}>משימות מעקב</h3>
+          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            את מי צריך לעדכן, להודות או לחזק.
+          </p>
+        </div>
+      </div>
+      {tasks.length === 0 ? (
+        <div style={{ padding: spacing.lg, color: muted, textAlign: "center" }}>
+          אין משימות פתוחות כעת.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.sm,
+          }}
+        >
+          {tasks.map((task) => (
+            <div
+              key={task.id}
+              style={{
+                border: `1px solid ${colors.borderMuted}`,
+                borderRadius: radii.card,
+                padding: spacing.md,
+                display: "flex",
+                alignItems: "center",
+                gap: spacing.md,
+                background:
+                  task.status === "done" ? colors.successSoft : colors.surface,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={task.status === "done"}
+                onChange={() => onToggleTask(task.id)}
+                aria-label={`סמן משימה עבור ${task.donorName}`}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>{task.donorName}</div>
+                <div style={{ color: muted, fontSize: 13 }}>{task.summary}</div>
+              </div>
+              {task.dueDate && (
+                <div style={{ fontSize: 13, color: muted }}>
+                  עדכון אחרון: {formatDate(task.dueDate)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function DonorListTab({
+  donors,
+  loading,
+  error,
+  onAdd,
+  onEdit,
+  onDelete,
+  onView,
+  onRefresh,
+  drafts,
+  onResumeDraft,
+  onDeleteDraft,
+  filters,
+  onFilterChange,
+  onClearFilters,
+}: DonorListTabProps) {
+  const smallButtonStyle = {
+    fontSize: 12,
+    padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+  };
+  const filterControlStyle = withCenteredControl(inputStyle);
+
+  return (
+    <Card>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: spacing.sm,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2 style={{ margin: 0 }}>רשימת תורמים</h2>
+          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            ניהול ועריכת כל התורמים במערכת.
+          </p>
+          {error && (
+            <p style={{ marginTop: 4, color: colors.danger, fontSize: 12 }}>
+              {error}
+            </p>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: spacing.sm }}>
+          <Button variant="secondary" onClick={onRefresh} disabled={loading}>
+            רענון רשימה
+          </Button>
+          <Button onClick={onAdd}>+ תורם חדש</Button>
+        </div>
+      </div>
+      {drafts.length > 0 && (
+        <div
+          style={{
+            marginTop: spacing.md,
+            padding: spacing.md,
+            borderRadius: radii.card,
+            border: `1px solid ${draftBorderColor}`,
+            background: draftSurfaceColor,
+          }}
+        >
+          <strong>טיוטות אישיות ({drafts.length})</strong>
+          <div
+            style={{
+              marginTop: spacing.sm,
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.xs,
+            }}
+          >
+            {drafts.map((draft) => (
+              <div
+                key={draft.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: spacing.sm,
+                  borderBottom: `1px solid ${draftBorderColor}`,
+                  paddingBottom: spacing.xs,
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    {draft.payload.full_name || "תורם ללא שם"}
+                  </div>
+                  <div style={{ fontSize: 12, color: muted }}>
+                    עודכן {new Date(draft.updatedAt).toLocaleString("he-IL")}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: spacing.xs }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onResumeDraft(draft.id)}
+                  >
+                    המשך
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => onDeleteDraft(draft.id)}
+                    aria-label="מחק טיוטה"
+                  >
+                    🗑️
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: spacing.md,
+          marginTop: spacing.md,
+        }}
+      >
+        <input
+          type="text"
+          style={filterControlStyle}
+          placeholder="חיפוש לפי שם, ת.ז, ארגון או אימייל"
+          value={filters.search}
+          onChange={(e) => onFilterChange("search", e.target.value)}
+        />
+        <select
+          style={filterControlStyle}
+          value={filters.status}
+          onChange={(e) =>
+            onFilterChange("status", e.target.value as DonorFilters["status"])
+          }
+        >
+          <option value="all">כל התורמים</option>
+          <option value="active">תורמים פעילים</option>
+          <option value="inactive">תורמים לא פעילים</option>
+        </select>
+      </div>
+      <div
+        style={{
+          marginTop: spacing.sm,
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        <Button variant="ghost" onClick={onClearFilters}>
+          ניקוי פילטרים
+        </Button>
+      </div>
+      <div style={{ marginTop: spacing.lg }}>
+        {loading ? (
+          <div
+            style={{ padding: spacing.lg, textAlign: "center", color: muted }}
+          >
+            טוען נתונים...
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ ...tableStyle, width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderStyle}>ת.ז</th>
+                  <th style={tableHeaderStyle}>שם</th>
+                  <th style={tableHeaderStyle}>ארגון</th>
+                  <th style={tableHeaderStyle}>טלפון</th>
+                  <th style={tableHeaderStyle}>סה\"כ תרומות</th>
+                  <th style={tableHeaderStyle}>כמות תרומות</th>
+                  <th style={tableHeaderStyle}>תרומה אחרונה</th>
+                  <th style={tableHeaderStyle}>סטטוס</th>
+                  <th style={tableHeaderStyle}>פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {donors.map((donor) => (
+                  <tr key={donor.national_id}>
+                    <td style={tableCellStyle}>{donor.national_id}</td>
+                    <td style={{ ...tableCellStyle, fontWeight: 600 }}>
+                      {donor.full_name}
+                    </td>
+                    <td style={tableCellStyle}>{donor.organization || "—"}</td>
+                    <td style={tableCellStyle}>
+                      {formatPhoneNumber(donor.phone)}
+                    </td>
+                    <td style={tableCellStyle}>
+                      {formatCurrency(donor.total_donations)}
+                    </td>
+                    <td style={tableCellStyle}>{donor.donation_count || 0}</td>
+                    <td style={tableCellStyle}>
+                      {formatDate(donor.last_donation_date)}
+                    </td>
+                    <td style={tableCellStyle}>
+                      <span style={pillStyle(donor.is_active)}>
+                        {donor.is_active ? "פעיל" : "לא פעיל"}
+                      </span>
+                    </td>
+                    <td style={tableCellStyle}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          gap: spacing.xs,
+                        }}
+                      >
+                        <Button
+                          variant="secondary"
+                          style={smallButtonStyle}
+                          onClick={() => onView(donor)}
+                        >
+                          👁️
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          style={smallButtonStyle}
+                          onClick={() => onEdit(donor)}
+                        >
+                          ✏️
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          style={{ ...smallButtonStyle, color: colors.danger }}
+                          onClick={() => onDelete(donor.national_id)}
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {donors.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={tableCellStyle}>
+                      אין תורמים להצגה. לחץ על "תורם חדש" כדי להתחיל.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+export default function DonorsPage() {
+  const searchParams = useSearchParams();
+  const activeTab: DonorTabId =
+    searchParams?.get("view") === "list" ? "list" : "home";
+
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [stats, setStats] = useState<DonorStats>(defaultStats);
+  const [tasks, setTasks] = useState<DonorTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<DonorFilters>({
+    search: "",
+    status: "all",
+  });
+
+  const [showModal, setShowModal] = useState(false);
+  const [formState, setFormState] = useState<DonorFormState>(
+    createEmptyDonorForm()
+  );
+  const [editingDonor, setEditingDonor] = useState<Donor | null>(null);
+  const [formDirty, setFormDirty] = useState(false);
+  const [draftPromptOpen, setDraftPromptOpen] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+
+  const {
+    drafts: donorDrafts,
+    saveDraft: saveDonorDraft,
+    deleteDraft: deleteDonorDraft,
+  } = useDraftManager<DonorFormState>("donor");
+
+  const [viewingDonor, setViewingDonor] = useState<Donor | null>(null);
+  const [donationHistory, setDonationHistory] = useState<DonationRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchDonors = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch("/api/donors", { credentials: "include" });
       const data = await res.json();
-      if (data.success) {
-        setDonors(data.donors);
+      if (!data.success) {
+        throw new Error(data.error || "שגיאה בטעינת הנתונים");
       }
-    } catch (err) {
-      console.error("Error fetching donors:", err);
-      alert("שגיאה בטעינת תורמים");
+      setDonors(data.donors || []);
+      setStats(data.stats || defaultStats);
+      setTasks(buildTasks(data.donors || []));
+    } catch (err: any) {
+      console.error("Error loading donors:", err);
+      setError(err.message || "שגיאה בטעינת הנתונים");
     } finally {
       setLoading(false);
     }
+  }, [setDonors]);
+
+  useEffect(() => {
+    fetchDonors();
+  }, [fetchDonors]);
+
+  const filteredDonors = useMemo(() => {
+    const term = filters.search.trim().toLowerCase();
+    return donors.filter((donor) => {
+      if (filters.status === "active" && !donor.is_active) return false;
+      if (filters.status === "inactive" && donor.is_active) return false;
+      if (term) {
+        const haystack = [
+          donor.full_name,
+          donor.national_id,
+          donor.organization,
+          donor.email,
+          donor.phone,
+        ]
+          .filter(Boolean)
+          .map((value) => String(value).toLowerCase());
+        const matches = haystack.some((value) => value.includes(term));
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [donors, filters]);
+
+  const handleFilterChange = <K extends keyof DonorFilters>(
+    key: K,
+    value: DonorFilters[K]
+  ) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleAdd = () => {
+  const handleClearFilters = () => {
+    setFilters({ search: "", status: "all" });
+  };
+
+  const handleInputChange = <K extends keyof DonorFormState>(
+    key: K,
+    value: DonorFormState[K]
+  ) => {
+    setFormState((prev) => ({ ...prev, [key]: value }));
+    setFormDirty(true);
+  };
+
+  const openCreateModal = () => {
     setEditingDonor(null);
-    setFormData({
-      national_id: "",
-      full_name: "",
-      organization: "",
-      phone: "",
-      email: "",
-      notes: "",
-      is_active: true,
-    });
+    setFormState(createEmptyDonorForm());
+    setFormDirty(false);
+    setCurrentDraftId(null);
+    setDraftPromptOpen(false);
     setShowModal(true);
   };
 
-  const handleEdit = (donor: Donor) => {
+  const openEditModal = (donor: Donor) => {
     setEditingDonor(donor);
-    setFormData({
+    setFormState({
       national_id: donor.national_id,
       full_name: donor.full_name,
       organization: donor.organization || "",
@@ -92,16 +706,50 @@ export default function DonorsPage() {
       notes: donor.notes || "",
       is_active: donor.is_active,
     });
+    setFormDirty(false);
+    setCurrentDraftId(null);
+    setDraftPromptOpen(false);
     setShowModal(true);
   };
 
+  const requestCloseModal = () => {
+    if (formDirty) {
+      setDraftPromptOpen(true);
+      return;
+    }
+    closeFormModal();
+  };
+
+  const closeFormModal = () => {
+    setShowModal(false);
+    setFormState(createEmptyDonorForm());
+    setEditingDonor(null);
+    setFormDirty(false);
+    setCurrentDraftId(null);
+    setDraftPromptOpen(false);
+  };
+
+  const handleSaveDonorDraft = () => {
+    const draftId = currentDraftId || generateDraftId();
+    saveDonorDraft(draftId, formState);
+    setCurrentDraftId(draftId);
+    setFormDirty(false);
+    setDraftPromptOpen(false);
+    closeFormModal();
+  };
+
+  const handleDiscardDraft = () => {
+    setDraftPromptOpen(false);
+    setFormDirty(false);
+    closeFormModal();
+  };
+
   const handleSubmit = async () => {
-    if (!/^\d{9}$/.test(formData.national_id)) {
+    if (!/^\d{9}$/.test(formState.national_id)) {
       alert("תעודת זהות חייבת להכיל 9 ספרות");
       return;
     }
-
-    if (!formData.full_name.trim()) {
+    if (!formState.full_name.trim()) {
       alert("שם התורם הוא שדה חובה");
       return;
     }
@@ -109,15 +757,14 @@ export default function DonorsPage() {
     try {
       const url = editingDonor ? "/api/donors/update" : "/api/donors/add";
       const method = editingDonor ? "PUT" : "POST";
-
-      const body: any = {
-        national_id: formData.national_id,
-        full_name: formData.full_name,
-        organization: formData.organization || null,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        notes: formData.notes || null,
-        is_active: formData.is_active,
+      const body = {
+        national_id: formState.national_id,
+        full_name: formState.full_name,
+        organization: formState.organization || null,
+        phone: formState.phone || null,
+        email: formState.email || null,
+        notes: formState.notes || null,
+        is_active: formState.is_active,
       };
 
       const res = await fetch(url, {
@@ -128,23 +775,25 @@ export default function DonorsPage() {
       });
 
       const data = await res.json();
-
-      if (data.success) {
-        alert(editingDonor ? "תורם עודכן בהצלחה!" : "תורם נוסף בהצלחה!");
-        setShowModal(false);
-        fetchDonors();
-      } else {
-        alert("שגיאה: " + data.error);
+      if (!data.success) {
+        throw new Error(data.error || "שמירת תורם נכשלה");
       }
-    } catch (err) {
+
+      if (currentDraftId) {
+        deleteDonorDraft(currentDraftId);
+        setCurrentDraftId(null);
+      }
+
+      closeFormModal();
+      fetchDonors();
+    } catch (err: any) {
       console.error("Error saving donor:", err);
-      alert("שגיאה בשמירת תורם");
+      alert(err.message || "שגיאה בשמירת תורם");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("האם אתה בטוח שברצונך לבטל את התורם?")) return;
-
+  const handleDeleteDonor = async (id: string) => {
+    if (!confirm("האם למחוק את התורם?")) return;
     try {
       const res = await fetch(
         `/api/donors/update?national_id=${encodeURIComponent(id)}`,
@@ -154,179 +803,120 @@ export default function DonorsPage() {
         }
       );
       const data = await res.json();
-
-      if (data.success) {
-        alert("תורם בוטל בהצלחה!");
-        fetchDonors();
-      } else {
-        alert("שגיאה: " + data.error);
+      if (!data.success) {
+        throw new Error(data.error || "מחיקת תורם נכשלה");
       }
-    } catch (err) {
-      console.error("Error deleting donor:", err);
-      alert("שגיאה במחיקת תורם");
+      fetchDonors();
+    } catch (err: any) {
+      console.error("Error removing donor:", err);
+      alert(err.message || "שגיאה במחיקת התורם");
     }
   };
-  const closeViewModal = () => {
-    setShowViewModal(false);
-    setViewingDonor(null);
+
+  const loadDonorHistory = useCallback(async (nationalId: string) => {
+    try {
+      setHistoryLoading(true);
+      const res = await fetch(
+        `/api/donors/history?national_id=${encodeURIComponent(nationalId)}`,
+        { credentials: "include" }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "שגיאה בטעינת היסטוריה");
+      }
+      setDonationHistory(data.donations || []);
+    } catch (err: any) {
+      console.error("Error loading donor history:", err);
+      setDonationHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  const openViewModal = (donor: Donor) => {
+    setViewingDonor(donor);
+    setDonationHistory([]);
+    setHistoryLoading(true);
+    loadDonorHistory(donor.national_id);
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: spacing.xl, textAlign: "center" }}>
-        <div>טוען תורמים...</div>
-      </div>
+  const closeViewModal = () => {
+    setViewingDonor(null);
+    setDonationHistory([]);
+    setHistoryLoading(false);
+  };
+
+  const handleResumeDraft = (draftId: string) => {
+    const draft = donorDrafts.find((entry) => entry.id === draftId);
+    if (!draft) return;
+    setFormState(draft.payload);
+    setEditingDonor(null);
+    setCurrentDraftId(draftId);
+    setFormDirty(false);
+    setDraftPromptOpen(false);
+    setShowModal(true);
+  };
+
+  const handleToggleTask = (taskId: string) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, status: task.status === "done" ? "pending" : "done" }
+          : task
+      )
     );
-  }
+  };
 
   return (
-    <div style={{ padding: spacing.xl }}>
-      <Card style={{ marginBottom: spacing.lg }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: spacing.md,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
-              ❤️ ניהול תורמים
-            </h2>
-            <div style={{ color: muted, fontSize: 13, marginTop: 4 }}>
-              סה״כ {donors.length} תורמים במערכת
-            </div>
-          </div>
-          <Button onClick={handleAdd}>+ הוסף תורם</Button>
-        </div>
-      </Card>
+    <div
+      style={{
+        padding: spacing.xl,
+        display: "flex",
+        flexDirection: "column",
+        gap: spacing.lg,
+      }}
+    >
+      {activeTab === "home" && (
+        <DonorsHomeTab
+          stats={stats}
+          tasks={tasks}
+          onToggleTask={handleToggleTask}
+          onRefresh={fetchDonors}
+          loading={loading}
+        />
+      )}
 
-      <Card>
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: "0 8px",
-            }}
-          >
-            <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
-              <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "center", padding: 8 }}>ת.ז</th>
-                <th style={{ textAlign: "center", padding: 8 }}>שם</th>
-                <th style={{ textAlign: "center", padding: 8 }}>ארגון</th>
-                <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
-                <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
-                <th style={{ textAlign: "center", padding: 8 }}>סה״כ תרומות</th>
-                <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
-                <th style={{ textAlign: "center", padding: 8 }}>פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {donors.map((d) => (
-                <tr
-                  key={d.national_id}
-                  style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
-                >
-                  <td
-                    style={{
-                      padding: 8,
-                      color: muted,
-                      fontFamily: "monospace",
-                      textAlign: "center",
-                    }}
-                  >
-                    {d.national_id}
-                  </td>
-                  <td style={{ padding: 8, fontWeight: 600, textAlign: "center" }}>
-                    {d.full_name}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {d.organization || "—"}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {formatPhoneNumber(d.phone)}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8, color: muted }}>
-                    {d.email || "—"}
-                  </td>
-                  <td
-                    style={{
-                      textAlign: "center",
-                      padding: 8,
-                      fontWeight: 600,
-                    }}
-                  >
-                    ₪{(d.total_donations || 0).toLocaleString()}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8 }}>
-                    <span style={pillStyle(d.is_active)}>
-                      {d.is_active ? "פעיל" : "לא פעיל"}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8 }}>
-                    <Button
-                      variant="secondary"
-                      style={{ ...smallButtonStyle, marginLeft: 4 }}
-                      onClick={() => {
-                        setViewingDonor(d);
-                        setShowViewModal(true);
-                      }}
-                      title="צפייה"
-                      aria-label="צפייה"
-                    >
-                      👁️
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      style={{ ...smallButtonStyle, marginLeft: 4 }}
-                      onClick={() => handleEdit(d)}
-                      title="עריכה"
-                      aria-label="עריכה"
-                    >
-                      ✏️
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      style={{ ...smallButtonStyle, color: colors.danger }}
-                      onClick={() => handleDelete(d.national_id)}
-                      title="מחיקה"
-                      aria-label="מחיקה"
-                    >
-                      🗑️
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {donors.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    style={{ textAlign: "center", padding: 20, color: muted }}
-                  >
-                    אין תורמים במערכת. לחץ על "הוסף תורם" להתחיל.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {activeTab === "list" && (
+        <DonorListTab
+          donors={filteredDonors}
+          loading={loading}
+          error={error}
+          onAdd={openCreateModal}
+          onEdit={openEditModal}
+          onDelete={handleDeleteDonor}
+          onView={openViewModal}
+          onRefresh={fetchDonors}
+          drafts={donorDrafts}
+          onResumeDraft={handleResumeDraft}
+          onDeleteDraft={deleteDonorDraft}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+        />
+      )}
 
       <Modal
         open={showModal}
-        onClose={() => setShowModal(false)}
-        width="min(600px, 90vw)"
+        onClose={requestCloseModal}
+        width="min(640px, 95vw)"
         style={{ padding: spacing.xxl }}
+        escEnabled={!draftPromptOpen}
       >
-        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
-          {editingDonor ? "ערוך תורם" : "הוסף תורם חדש"}
+        <h3 style={{ margin: "0 0 16px", fontSize: 20 }}>
+          {editingDonor ? "עריכת תורם" : "תורם חדש"}
         </h3>
-
         <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+          <h4 style={{ margin: "0 0 12px", fontSize: 14, color: muted }}>
             📋 פרטים אישיים
           </h4>
           <div
@@ -344,11 +934,10 @@ export default function DonorsPage() {
                 type="text"
                 maxLength={9}
                 style={inputStyle}
-                value={formData.national_id}
+                value={formState.national_id}
                 onChange={(e) =>
-                  setFormData({ ...formData, national_id: e.target.value })
+                  handleInputChange("national_id", e.target.value)
                 }
-                placeholder="9 ספרות"
                 disabled={!!editingDonor}
               />
             </div>
@@ -359,18 +948,15 @@ export default function DonorsPage() {
               <input
                 type="text"
                 style={inputStyle}
-                value={formData.full_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
-                }
-                placeholder="הזן שם מלא"
+                value={formState.full_name}
+                onChange={(e) => handleInputChange("full_name", e.target.value)}
               />
             </div>
           </div>
         </div>
 
         <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+          <h4 style={{ margin: "0 0 12px", fontSize: 14, color: muted }}>
             🏢 פרטי התקשרות
           </h4>
           <div style={{ marginBottom: spacing.md }}>
@@ -378,11 +964,10 @@ export default function DonorsPage() {
             <input
               type="text"
               style={inputStyle}
-              value={formData.organization}
+              value={formState.organization}
               onChange={(e) =>
-                setFormData({ ...formData, organization: e.target.value })
+                handleInputChange("organization", e.target.value)
               }
-              placeholder="שם הארגון"
             />
           </div>
           <div
@@ -397,11 +982,8 @@ export default function DonorsPage() {
               <input
                 type="tel"
                 style={inputStyle}
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                placeholder="050-1234567"
+                value={formState.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
               />
             </div>
             <div>
@@ -409,46 +991,37 @@ export default function DonorsPage() {
               <input
                 type="email"
                 style={inputStyle}
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                placeholder="example@email.com"
+                value={formState.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
               />
             </div>
           </div>
         </div>
 
         <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
+          <h4 style={{ margin: "0 0 12px", fontSize: 14, color: muted }}>
             📝 הערות והעדפות
           </h4>
-          <div style={{ marginBottom: spacing.md }}>
-            <label style={labelStyle}>הערות</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              placeholder="הערות נוספות..."
-            />
-          </div>
+          <textarea
+            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+            value={formState.notes}
+            onChange={(e) => handleInputChange("notes", e.target.value)}
+          />
           <div
-            style={{ display: "flex", alignItems: "center", gap: spacing.sm }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: spacing.sm,
+              marginTop: spacing.sm,
+            }}
           >
             <input
               type="checkbox"
-              id="active"
-              checked={formData.is_active}
-              onChange={(e) =>
-                setFormData({ ...formData, is_active: e.target.checked })
-              }
+              checked={formState.is_active}
+              onChange={(e) => handleInputChange("is_active", e.target.checked)}
+              id="donor-active"
             />
-            <label
-              htmlFor="active"
-              style={{ fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-            >
+            <label htmlFor="donor-active" style={{ fontWeight: 600 }}>
               תורם פעיל
             </label>
           </div>
@@ -457,27 +1030,23 @@ export default function DonorsPage() {
         <div
           style={{
             display: "flex",
-            gap: spacing.md,
             justifyContent: "flex-end",
+            gap: spacing.sm,
           }}
         >
-          <Button
-            variant="secondary"
-            onClick={() => setShowModal(false)}
-            type="button"
-          >
+          <Button variant="secondary" onClick={requestCloseModal}>
             ביטול
           </Button>
-          <Button onClick={handleSubmit} type="button">
-            {editingDonor ? "עדכן" : "הוסף"}
+          <Button onClick={handleSubmit}>
+            {editingDonor ? "עדכון תורם" : "שמור תורם"}
           </Button>
         </div>
       </Modal>
 
       <Modal
-        open={showViewModal && !!viewingDonor}
+        open={Boolean(viewingDonor)}
         onClose={closeViewModal}
-        width="min(600px, 90vw)"
+        width="min(680px, 96vw)"
         style={{ padding: spacing.xxl }}
       >
         {viewingDonor && (
@@ -488,34 +1057,21 @@ export default function DonorsPage() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: spacing.lg,
-                gap: spacing.md,
-                flexWrap: "wrap",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
-                פרטי תורם
-              </h3>
-              <Button
-                variant="secondary"
-                onClick={closeViewModal}
-                type="button"
-              >
+              <div>
+                <h3 style={{ margin: 0 }}>{viewingDonor.full_name}</h3>
+                <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+                  תעודת זהות: {viewingDonor.national_id}
+                </p>
+              </div>
+              <Button variant="secondary" onClick={closeViewModal}>
                 ✕ סגור
               </Button>
             </div>
 
             <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4
-                style={{
-                  margin: "0 0 12px 0",
-                  fontSize: 14,
-                  color: muted,
-                  borderBottom: `2px solid ${colors.borderMuted}`,
-                  paddingBottom: spacing.sm,
-                }}
-              >
-                📋 פרטים כלליים
-              </h4>
+              <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>פרטים כלליים</h4>
               <div
                 style={{
                   display: "grid",
@@ -523,18 +1079,6 @@ export default function DonorsPage() {
                   gap: spacing.md,
                 }}
               >
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>תעודת זהות</div>
-                  <div style={{ fontFamily: "monospace" }}>
-                    {viewingDonor.national_id}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>שם מלא</div>
-                  <div style={{ fontWeight: 600 }}>
-                    {viewingDonor.full_name}
-                  </div>
-                </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>ארגון</div>
                   <div>{viewingDonor.organization || "—"}</div>
@@ -545,28 +1089,6 @@ export default function DonorsPage() {
                     {viewingDonor.is_active ? "פעיל" : "לא פעיל"}
                   </span>
                 </div>
-              </div>
-            </div>
-
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4
-                style={{
-                  margin: "0 0 12px 0",
-                  fontSize: 14,
-                  color: muted,
-                  borderBottom: `2px solid ${colors.borderMuted}`,
-                  paddingBottom: spacing.sm,
-                }}
-              >
-                📞 פרטי התקשרות
-              </h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: spacing.md,
-                }}
-              >
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>טלפון</div>
                   <div>{formatPhoneNumber(viewingDonor.phone)}</div>
@@ -579,23 +1101,76 @@ export default function DonorsPage() {
             </div>
 
             <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4
-                style={{
-                  margin: "0 0 12px 0",
-                  fontSize: 14,
-                  color: muted,
-                  borderBottom: `2px solid ${colors.borderMuted}`,
-                  paddingBottom: spacing.sm,
-                }}
-              >
-                📝 הערות
-              </h4>
-              <div style={{ whiteSpace: "pre-wrap" }}>
+              <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>הערות</h4>
+              <div style={{ whiteSpace: "pre-wrap", minHeight: 40 }}>
                 {viewingDonor.notes || "—"}
               </div>
             </div>
+
+            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
+              <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>
+                היסטוריית תרומות
+              </h4>
+              {historyLoading ? (
+                <div style={{ textAlign: "center", color: muted }}>
+                  טוען היסטוריה...
+                </div>
+              ) : donationHistory.length === 0 ? (
+                <div style={{ textAlign: "center", color: muted }}>
+                  לא נמצאו תרומות קודמות.
+                </div>
+              ) : (
+                <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                  <table style={{ width: "100%", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ textAlign: "right", color: muted }}>
+                        <th>תאריך</th>
+                        <th>תיאור</th>
+                        <th>סכום</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {donationHistory.map((record) => (
+                        <tr key={record.id}>
+                          <td>{formatDate(record.transaction_date)}</td>
+                          <td>{record.description || "—"}</td>
+                          <td>{formatCurrency(record.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </>
         )}
+      </Modal>
+
+      <Modal
+        open={draftPromptOpen}
+        onClose={() => setDraftPromptOpen(false)}
+        width="min(420px, 90vw)"
+      >
+        <h3 style={{ marginTop: 0 }}>לשמור את התורם כטיוטה?</h3>
+        <p style={{ color: muted }}>
+          הטיוטה תישמר עבורך בלבד ותאפשר לך לחזור בהמשך מבלי לאבד נתונים.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: spacing.sm,
+            marginTop: spacing.lg,
+          }}
+        >
+          <Button variant="ghost" onClick={() => setDraftPromptOpen(false)}>
+            המשך לערוך
+          </Button>
+          <Button variant="secondary" onClick={handleDiscardDraft}>
+            בטל
+          </Button>
+          <Button onClick={handleSaveDonorDraft}>שמור כטיוטה</Button>
+        </div>
       </Modal>
     </div>
   );

@@ -160,6 +160,15 @@ export default function Navbar() {
       href: "/donors",
       icon: <Heart size={22} />,
       label: "תורמים",
+      children: [
+        { href: "/donors", label: "דף הבית", pageKey: "donors" },
+        {
+          href: "/donors",
+          label: "רשימת תורמים",
+          pageKey: "donors-list",
+          query: { view: "list" },
+        },
+      ],
     },
     {
       pageKey: "finance",
@@ -281,12 +290,12 @@ export default function Navbar() {
 
   useEffect(() => {
     const prevTopLevel = previousTopLevelRef.current;
-    if (prevTopLevel === "equipment" && currentTopLevel !== "equipment") {
+    if (prevTopLevel && prevTopLevel !== currentTopLevel) {
       setOpenMenus((prev) => {
-        if (!prev.equipment) {
+        if (!prev[prevTopLevel]) {
           return prev;
         }
-        return { ...prev, equipment: false };
+        return { ...prev, [prevTopLevel]: false };
       });
     }
     previousTopLevelRef.current = currentTopLevel;
