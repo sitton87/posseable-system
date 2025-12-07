@@ -8,7 +8,7 @@ import {
 } from "@/app/styles/components";
 import { colors, radii, shadows, spacing } from "@/app/styles/foundations";
 import type { EquipmentItem, Warehouse } from "@/type";
-import type { ReceiptHistoryEntry, StatSummary } from "../types";
+import type { InventoryDocumentSummary, StatSummary } from "../types";
 import { getConditionLabel } from "../constants";
 import {
   formatCurrency,
@@ -20,19 +20,28 @@ import {
 type HomeTabProps = {
   items: EquipmentItem[];
   warehouses: Warehouse[];
-  historyEntries: ReceiptHistoryEntry[];
-  historyLoading: boolean;
+  documents: InventoryDocumentSummary[];
+  documentsLoading: boolean;
   statSummary: StatSummary;
   onNavigate: (tab: "catalog" | "inventory" | "structure") => void;
 };
 
 const muted = colors.textMuted;
+const ACTION_LABELS: Record<string, string> = {
+  RECEIPT: "קליטת ספק",
+  DONATION: "תרומה נכנסת",
+  DISPOSAL: "השמדה",
+  TRANSFER: "העברה",
+  ACTIVITY_OUT: "שיוך לפעילות",
+  ACTIVITY_RETURN: "החזרת פעילות",
+  STOCKTAKE_ADJUST: "התאמת מלאי",
+};
 
 export function HomeTab({
   items,
   warehouses,
-  historyEntries,
-  historyLoading,
+  documents,
+  documentsLoading,
   statSummary,
   onNavigate,
 }: HomeTabProps) {
@@ -40,7 +49,7 @@ export function HomeTab({
   const repairItems = items
     .filter((item) => item.condition === "damaged")
     .slice(0, 5);
-  const recentReceipts = historyEntries.slice(0, 5);
+  const recentDocuments = documents.slice(0, 5);
 
   const kpis = [
     {
@@ -210,7 +219,7 @@ export function HomeTab({
             <div>
               <h3 style={{ margin: 0 }}>תעודות מלאי אחרונות</h3>
               <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-                חמש הקליטות האחרונות שבוצעו במערכת.
+                חמש התעודות האחרונות שנרשמו במערכת.
               </p>
             </div>
             <Button
@@ -221,7 +230,7 @@ export function HomeTab({
               ניהול מלאי
             </Button>
           </div>
-          {historyLoading ? (
+          {documentsLoading ? (
             <div
               style={{
                 padding: px(spacing.md),
@@ -231,7 +240,7 @@ export function HomeTab({
             >
               טוען תעודות...
             </div>
-          ) : recentReceipts.length === 0 ? (
+          ) : recentDocuments.length === 0 ? (
             <div
               style={{
                 padding: px(spacing.md),
@@ -243,25 +252,30 @@ export function HomeTab({
             </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table style={{ ...tableStyle, minWidth: 420 }}>
+                <table style={{ ...tableStyle, minWidth: 520 }}>
                 <thead>
                   <tr>
                     <th style={tableHeaderStyle}>מספר תעודה</th>
+                      <th style={tableHeaderStyle}>סוג פעולה</th>
                     <th style={tableHeaderStyle}>משתמש</th>
                     <th style={tableHeaderStyle}>ערך כספי</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentReceipts.map((entry) => (
-                    <tr key={entry.document_code}>
-                      <td style={tableCellStyle}>{entry.document_code}</td>
+                    {recentDocuments.map((entry) => (
+                      <tr key={entry.id}>
+                        <td style={tableCellStyle}>
+                          {entry.document_number}
+                        </td>
+                        <td style={tableCellStyle}>
+                          {ACTION_LABELS[entry.action_type] ||
+                            entry.action_type}
+                        </td>
                       <td style={tableCellStyle}>
-                        {entry.created_by_name ||
-                          entry.created_by ||
-                          "—"}
+                          {entry.created_by_name || entry.created_by || "—"}
                       </td>
                       <td style={tableCellStyle}>
-                        {formatCurrency(entry.total_value)}
+                          {formatCurrency(entry.total_value)}
                       </td>
                     </tr>
                   ))}

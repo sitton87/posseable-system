@@ -36,52 +36,6 @@ export type EquipmentFormState = {
   supplier_identifier: string;
 };
 
-export type ReceiptLine = {
-  item_id: string;
-  warehouse_id: string;
-  quantity: string;
-  supplier_document_number: string;
-  unit_cost?: string;
-};
-
-export type ReceiptHistoryEntry = {
-  id: string;
-  document_code: string;
-  receipt_date: string;
-  supplier_identifier?: string;
-  supplier_name?: string;
-  total_items: number;
-  status: string;
-  total_value?: number;
-  created_by?: string;
-  created_by_name?: string;
-  lines?: ReceiptLine[];
-  note?: string;
-};
-
-export type ReceiptDetailLine = {
-  item_id: string;
-  item_name: string;
-  warehouse_id: string;
-  warehouse_name: string;
-  quantity: number;
-  unit_cost?: number | null;
-  supplier_document_number?: string | null;
-};
-
-export type ReceiptDetail = {
-  document_code: string;
-  receipt_date: string;
-  total_items: number;
-  note?: string | null;
-  supplier_identifier?: string | null;
-  supplier_name?: string | null;
-  total_value?: number | null;
-  created_by?: string | null;
-  created_by_name?: string | null;
-  lines: ReceiptDetailLine[];
-};
-
 export type WarehouseStockEntry = {
   item_id: string;
   item_name: string;
@@ -137,4 +91,70 @@ export type StatSummary = {
   totalUnits: number;
   consumables: number;
   rentals: number;
+};
+
+export type InventoryDocumentAction =
+  | "RECEIPT"
+  | "DONATION"
+  | "DISPOSAL"
+  | "TRANSFER"
+  | "ACTIVITY_OUT"
+  | "ACTIVITY_RETURN"
+  | "STOCKTAKE_ADJUST";
+
+export type InventoryDocumentFormLine = {
+  item_id: string;
+  quantity: string;
+  source_warehouse_id: string;
+  target_warehouse_id: string;
+  supplier_document_number: string;
+};
+
+export type InventoryDocumentFormState = {
+  action_type: InventoryDocumentAction;
+  activity_id: string;
+  supplier_identifier: string;
+  reference_number: string;
+  notes: string;
+  external_party: string;
+  lines: InventoryDocumentFormLine[];
+};
+
+export type InventoryDocumentSummary = {
+  id: string;
+  document_number: number;
+  action_type: InventoryDocumentAction;
+  document_date: string;
+  source_warehouse_id?: string | null;
+  source_warehouse_name?: string | null;
+  target_warehouse_id?: string | null;
+  target_warehouse_name?: string | null;
+  supplier_identifier?: string | null;
+  supplier_name?: string | null;
+  external_party?: string | null;
+  total_quantity: number;
+  total_value?: number | null;
+  reference_number?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
+};
+
+export type InventoryDocumentLine = {
+  id: string;
+  item_id: string;
+  item_name: string;
+  internal_sku?: string | null;
+  quantity: number;
+  unit_cost?: number | null;
+  source_warehouse_id?: string | null;
+  source_warehouse_name?: string | null;
+  target_warehouse_id?: string | null;
+  target_warehouse_name?: string | null;
+  supplier_document_number?: string | null;
+  reference_note?: string | null;
+};
+
+export type InventoryDocumentDetail = InventoryDocumentSummary & {
+  lines: InventoryDocumentLine[];
 };

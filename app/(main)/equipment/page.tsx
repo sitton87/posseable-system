@@ -25,26 +25,25 @@ import { HomeTab } from "./tabs/HomeTab";
 import { InventoryTab } from "./tabs/InventoryTab";
 import { StructureTab } from "./tabs/StructureTab";
 import { EquipmentFormModal } from "./modals/EquipmentFormModal";
-import { InventoryReceiptModal } from "./modals/InventoryReceiptModal";
+import { InventoryDocumentModal } from "./modals/InventoryDocumentModal";
+import { InventoryDocumentDetailModal } from "./modals/InventoryDocumentDetailModal";
 import { WarehouseModal } from "./modals/WarehouseModal";
 import { StructureModal } from "./modals/StructureModal";
-import { HistoryModal } from "./modals/HistoryModal";
 import { ViewItemModal } from "./modals/ViewItemModal";
 import { WarehouseInventoryModal } from "./modals/WarehouseInventoryModal";
 import type {
   EquipmentFormState,
   EquipmentPageData,
   FiltersState,
-  ReceiptDetail,
-  ReceiptHistoryEntry,
-  ReceiptLine,
+  InventoryDocumentDetail,
+  InventoryDocumentFormState,
+  InventoryDocumentSummary,
   StructureFormState,
   WarehouseFormState,
   WarehouseStockEntry,
 } from "./types";
 import {
   createEmptyFormState,
-  createEmptyReceiptLine,
   createEmptyStructureFormState,
   createEmptyWarehouseFormState,
   px,
@@ -114,29 +113,19 @@ export default function EquipmentPage() {
   const [formState, setFormState] = useState<EquipmentFormState>(
     createEmptyFormState()
   );
-  const [receiptLines, setReceiptLines] = useState<ReceiptLine[]>([
-    createEmptyReceiptLine(),
-  ]);
-  const [receiptSupplierId, setReceiptSupplierId] = useState("");
   const [editingItem, setEditingItem] = useState<EquipmentItem | null>(null);
   const [viewingItem, setViewingItem] = useState<EquipmentItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [inventoryNote, setInventoryNote] = useState("");
-  const [showInventoryModal, setShowInventoryModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] =
-    useState<ReceiptHistoryEntry | null>(null);
-  const [historyEntries, setHistoryEntries] = useState<ReceiptHistoryEntry[]>(
-    []
-  );
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [receiptDetail, setReceiptDetail] = useState<ReceiptDetail | null>(
-    null
-  );
-  const [receiptDetailLoading, setReceiptDetailLoading] = useState(false);
-  const [editingReceiptCode, setEditingReceiptCode] = useState<string | null>(
-    null
-  );
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [documentSubmitting, setDocumentSubmitting] = useState(false);
+  const [inventoryDocuments, setInventoryDocuments] = useState<
+    InventoryDocumentSummary[]
+  >([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentDetail, setDocumentDetail] =
+    useState<InventoryDocumentDetail | null>(null);
+  const [documentDetailOpen, setDocumentDetailOpen] = useState(false);
+  const [documentDetailLoading, setDocumentDetailLoading] = useState(false);
   const [warehouseInventoryModalOpen, setWarehouseInventoryModalOpen] =
     useState(false);
   const [inventoryWarehouse, setInventoryWarehouse] =
@@ -314,61 +303,39 @@ export default function EquipmentPage() {
   const currentTabConfig = TAB_CONFIG.find((tab) => tab.id === activeTab);
   const activeTabPermission = tabPermissionMap[activeTab];
 
-  const loadReceiptHistory = useCallback(async () => {
+  const loadInventoryDocuments = useCallback(async () => {
     try {
-      setHistoryLoading(true);
-      const res = await fetch("/api/equipment/receipts");
+      setDocumentsLoading(true);
+      const res = await fetch("/api/inventory/documents");
       if (!res.ok) {
         const message = await res.text();
-        throw new Error(message || "שגיאה בטעינת היסטוריית קליטות");
+        throw new Error(message || "שגיאה בטעינת תעודות מלאי");
       }
       const payload = await res.json();
-      const normalized = (payload.data || []).map((entry: any) => ({
-        id: entry.id || entry.document_code,
-        document_code: entry.document_code,
-        receipt_date: entry.receipt_date,
-        supplier_identifier: entry.supplier_identifier ?? undefined,
-        supplier_name: entry.supplier_name ?? undefined,
-        total_items: entry.total_items ?? 0,
-        total_value: entry.total_value ?? undefined,
-        created_by: entry.created_by ?? undefined,
-        created_by_name: entry.created_by_name ?? undefined,
-        status: entry.status ?? "נקלט",
-        note: entry.note ?? undefined,
-      }));
-      setHistoryEntries(normalized);
+      setInventoryDocuments(payload.documents || []);
     } catch (err) {
-      console.error("Error loading receipt history:", err);
+      console.error("Error loading inventory documents:", err);
     } finally {
-      setHistoryLoading(false);
+      setDocumentsLoading(false);
     }
   }, []);
 
-  const loadReceiptDetail = useCallback(
-    async (documentCode: string, options?: { updateState?: boolean }) => {
-      const shouldUpdateState = options?.updateState ?? true;
-      if (shouldUpdateState) {
-        setReceiptDetail(null);
-        setReceiptDetailLoading(true);
-      }
+  const loadInventoryDocumentDetail = useCallback(
+    async (documentId: string) => {
+      setDocumentDetailLoading(true);
+      setDocumentDetail(null);
       try {
-        const res = await fetch(
-          `/api/equipment/receipts?document=${encodeURIComponent(documentCode)}`
-        );
+        const params = new URLSearchParams({ id: documentId });
+        const res = await fetch(`/api/inventory/documents?${params.toString()}`);
         if (!res.ok) {
           const message = await res.text();
           throw new Error(message || "שגיאה בטעינת תעודה");
         }
         const payload = await res.json();
-        const detail: ReceiptDetail = payload.receipt;
-        if (shouldUpdateState) {
-          setReceiptDetail(detail);
-        }
-        return detail;
+        setDocumentDetail(payload.document);
+        return payload.document as InventoryDocumentDetail;
       } finally {
-        if (shouldUpdateState) {
-          setReceiptDetailLoading(false);
-        }
+        setDocumentDetailLoading(false);
       }
     },
     []
@@ -485,13 +452,13 @@ export default function EquipmentPage() {
 
   useEffect(() => {
     if (activeTab === "inventory") {
-      loadReceiptHistory();
+      loadInventoryDocuments();
       return;
     }
-    if (activeTab === "home" && historyEntries.length === 0) {
-      loadReceiptHistory();
+    if (activeTab === "home" && inventoryDocuments.length === 0) {
+      loadInventoryDocuments();
     }
-  }, [activeTab, historyEntries.length, loadReceiptHistory]);
+  }, [activeTab, inventoryDocuments.length, loadInventoryDocuments]);
 
   const statSummary = useMemo(() => {
     const totalItems = data.items.length;
@@ -552,11 +519,6 @@ export default function EquipmentPage() {
     [data.categories, data.items]
   );
 
-  const activeWarehouses = useMemo(
-    () => data.warehouses.filter((warehouse) => warehouse.is_active),
-    [data.warehouses]
-  );
-
   const handleFilterChange = (
     key: keyof FiltersState,
     value: FiltersState[typeof key]
@@ -566,46 +528,6 @@ export default function EquipmentPage() {
 
   const handleClearFilters = () => {
     setFilters(createDefaultFilters());
-  };
-
-  const openInventoryModal = () => {
-    setEditingReceiptCode(null);
-    setReceiptLines([createEmptyReceiptLine()]);
-    setInventoryNote("");
-    setReceiptSupplierId("");
-    setShowInventoryModal(true);
-  };
-
-  const closeInventoryModal = () => {
-    setEditingReceiptCode(null);
-    setReceiptSupplierId("");
-    setShowInventoryModal(false);
-  };
-
-  const selectReceipt = (entry: ReceiptHistoryEntry | null) => {
-    setSelectedReceipt(entry);
-    if (entry) {
-      loadReceiptDetail(entry.document_code).catch((err: any) => {
-        console.error("Error loading receipt detail:", err);
-        alert(err?.message || "שגיאה בטעינת התעודה");
-      });
-    } else {
-      setReceiptDetail(null);
-      setReceiptDetailLoading(false);
-    }
-  };
-
-  const openHistoryModal = (entry: ReceiptHistoryEntry | null = null) => {
-    selectReceipt(entry);
-    setShowHistoryModal(true);
-    if (!historyEntries.length) {
-      loadReceiptHistory();
-    }
-  };
-
-  const closeHistoryModal = () => {
-    selectReceipt(null);
-    setShowHistoryModal(false);
   };
 
   const openStructureModal = async (mode: "family" | "category") => {
@@ -637,6 +559,19 @@ export default function EquipmentPage() {
   const closeWarehouseModal = () => {
     setShowWarehouseModal(false);
     setEditingWarehouseId(null);
+  };
+
+  const openDocumentModal = () => {
+    setDocumentModalOpen(true);
+  };
+
+  const closeDocumentModal = () => {
+    setDocumentModalOpen(false);
+  };
+
+  const closeDocumentDetailModal = () => {
+    setDocumentDetailOpen(false);
+    setDocumentDetail(null);
   };
 
   const openWarehouseInventoryModal = (warehouse: Warehouse) => {
@@ -791,38 +726,123 @@ export default function EquipmentPage() {
     setWarehouseForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleEditReceipt = async (entry: ReceiptHistoryEntry) => {
-    try {
-      const detail = await loadReceiptDetail(entry.document_code, {
-        updateState: false,
-      });
-      const mappedLines =
-        detail?.lines?.map((line) => ({
+  const handleViewInventoryDocument = useCallback(
+    async (documentId: string) => {
+      setDocumentDetailOpen(true);
+      try {
+        await loadInventoryDocumentDetail(documentId);
+      } catch (err: any) {
+        console.error("Error loading inventory document detail:", err);
+        alert(err?.message || "שגיאה בטעינת התעודה");
+        setDocumentDetailOpen(false);
+      }
+    },
+    [loadInventoryDocumentDetail]
+  );
+
+  const handleSubmitInventoryDocument = useCallback(
+    async (form: InventoryDocumentFormState) => {
+      const actionType = form.action_type;
+
+      if (actionType === "RECEIPT" && !form.supplier_identifier) {
+        alert("בקליטת ספק יש לבחור ספק.");
+        return;
+      }
+
+      const sanitizedLines = form.lines
+        .map((line) => {
+          const quantity = Number(line.quantity);
+          if (!line.item_id || Number.isNaN(quantity) || quantity === 0) {
+            return null;
+          }
+
+          const trimmedSource = line.source_warehouse_id?.trim() || "";
+          const trimmedTarget = line.target_warehouse_id?.trim() || "";
+          const supplierDoc =
+            line.supplier_document_number?.trim() || null;
+
+          let sourceWarehouse: string | null = null;
+          let targetWarehouse: string | null = null;
+
+          if (actionType === "TRANSFER") {
+            sourceWarehouse = trimmedSource || null;
+            targetWarehouse = trimmedTarget || null;
+            if (!sourceWarehouse || !targetWarehouse) {
+              return null;
+            }
+          } else if (actionType === "DISPOSAL") {
+            sourceWarehouse = trimmedTarget || null;
+            if (!sourceWarehouse) {
+              return null;
+            }
+          } else {
+            targetWarehouse = trimmedTarget || null;
+            if (!targetWarehouse) {
+              return null;
+            }
+          }
+
+          return {
           item_id: line.item_id,
-          warehouse_id: line.warehouse_id,
-          quantity: line.quantity?.toString() || "",
-          supplier_document_number: line.supplier_document_number || "",
-          unit_cost:
-            line.unit_cost === null || line.unit_cost === undefined
-              ? ""
-              : line.unit_cost.toString(),
-        })) || [];
-      setReceiptLines(
-        mappedLines.length ? mappedLines : [createEmptyReceiptLine()]
-      );
-      setInventoryNote(detail?.note || "");
-      setReceiptSupplierId(
-        detail?.supplier_identifier || entry.supplier_identifier || ""
-      );
-      setEditingReceiptCode(entry.document_code);
-      setShowInventoryModal(true);
-      selectReceipt(null);
-      setShowHistoryModal(false);
+            quantity,
+            unit_cost: null,
+            source_warehouse_id: sourceWarehouse,
+            target_warehouse_id: targetWarehouse,
+            supplier_document_number: supplierDoc,
+            reference_note: null,
+          };
+        })
+        .filter(
+          (
+            line
+          ): line is {
+            item_id: string;
+            quantity: number;
+            unit_cost: number | null;
+            source_warehouse_id: string | null;
+            target_warehouse_id: string | null;
+            supplier_document_number: string | null;
+            reference_note: null;
+          } => Boolean(line)
+        );
+
+      if (!sanitizedLines.length) {
+        alert("יש להזין לפחות שורה אחת עם כמות תקינה.");
+        return;
+      }
+
+      setDocumentSubmitting(true);
+      try {
+        const res = await fetch("/api/inventory/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action_type: form.action_type,
+            activity_id: form.activity_id ? Number(form.activity_id) : undefined,
+            supplier_identifier: form.supplier_identifier || undefined,
+            reference_number: form.reference_number || undefined,
+            notes: form.notes || undefined,
+            external_party: form.external_party || undefined,
+            lines: sanitizedLines,
+          }),
+        });
+
+        if (!res.ok) {
+          const message = await res.text();
+          throw new Error(message || "שגיאה בשמירת התעודה");
+        }
+
+        setDocumentModalOpen(false);
+        await Promise.all([fetchEquipment(), loadInventoryDocuments()]);
     } catch (err: any) {
-      console.error("Error preparing receipt for edit:", err);
-      alert(err?.message || "שגיאה בטעינת התעודה לעריכה");
+        console.error("Error creating inventory document:", err);
+        alert(err?.message || "שגיאה בשמירת התעודה");
+      } finally {
+        setDocumentSubmitting(false);
     }
-  };
+    },
+    [fetchEquipment, loadInventoryDocuments]
+  );
 
   const handleDelete = async (id: string) => {
     if (!confirm("האם למחוק (להפסיק להפעיל) פריט זה?")) return;
@@ -981,8 +1001,8 @@ export default function EquipmentPage() {
     const code = warehouseForm.code.trim().toUpperCase();
     const name = warehouseForm.name.trim();
     if (isEditingWarehouse) {
-      if (!code || code.length > 20) {
-        alert("קוד המחסן נדרש (עד 20 תווים)");
+    if (!code || code.length > 20) {
+      alert("קוד המחסן נדרש (עד 20 תווים)");
         return;
       }
     } else if (code && code.length > 20) {
@@ -1049,143 +1069,6 @@ export default function EquipmentPage() {
     }
   };
 
-  const handleReceiptLineChange = <K extends keyof ReceiptLine>(
-    index: number,
-    key: K,
-    value: ReceiptLine[K]
-  ) => {
-    setReceiptLines((prev) =>
-      prev.map((line, idx) => {
-        if (idx !== index) return line;
-        const next = { ...line, [key]: value };
-        if (key === "item_id") {
-          const selectedItem = data.items.find((item) => item.id === value);
-          if (selectedItem) {
-            const cost =
-              selectedItem.purchase_cost ?? selectedItem.unit_cost ?? null;
-            if (cost !== null && cost !== undefined) {
-              next.unit_cost = cost.toString();
-            } else {
-              next.unit_cost = "";
-            }
-          } else {
-            next.unit_cost = "";
-          }
-        }
-        return next;
-      })
-    );
-  };
-
-  const addReceiptLine = () => {
-    setReceiptLines((prev) => [...prev, createEmptyReceiptLine()]);
-  };
-
-  const duplicateReceiptLine = (index: number) => {
-    setReceiptLines((prev) => {
-      const source = prev[index];
-      if (!source) return prev;
-      const clone = {
-        ...createEmptyReceiptLine(),
-        supplier_document_number: source.supplier_document_number,
-      };
-      return [
-        ...prev.slice(0, index + 1),
-        { ...clone },
-        ...prev.slice(index + 1),
-      ];
-    });
-  };
-
-  const removeReceiptLine = (index: number) => {
-    setReceiptLines((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleInventorySubmit = async () => {
-    if (!receiptSupplierId) {
-      alert("יש לבחור ספק לתעודה.");
-      return;
-    }
-    const normalizedLines = receiptLines
-      .map((line) => ({
-        item_id: line.item_id.trim(),
-        warehouse_id: line.warehouse_id.trim(),
-        quantity: Number(line.quantity),
-        supplier_document_number: line.supplier_document_number?.trim() || null,
-        unit_cost:
-          line.unit_cost && line.unit_cost.toString().trim().length
-            ? Number(line.unit_cost)
-            : null,
-      }))
-      .filter(
-        (line) =>
-          line.item_id &&
-          line.warehouse_id &&
-          Number.isFinite(line.quantity) &&
-          line.quantity > 0
-      );
-
-    if (!normalizedLines.length) {
-      alert("יש להזין לפחות שורת קליטה אחת עם פריט, מחסן וכמות חיובית.");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/equipment/receipts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          lines: normalizedLines,
-          note: inventoryNote || null,
-          document_code: editingReceiptCode,
-          supplier_identifier: receiptSupplierId,
-        }),
-      });
-
-      const payload = await res.json();
-      if (!res.ok || !payload.success) {
-        throw new Error(payload.error || "שגיאה בשמירת תעודת הקליטה");
-      }
-
-      alert("תעודת הקליטה נשמרה בהצלחה.");
-      setReceiptLines([createEmptyReceiptLine()]);
-      setInventoryNote("");
-      setReceiptSupplierId("");
-      closeInventoryModal();
-      fetchEquipment();
-      loadReceiptHistory();
-      if (editingReceiptCode) {
-        setEditingReceiptCode(null);
-        if (
-          selectedReceipt &&
-          selectedReceipt.document_code === editingReceiptCode
-        ) {
-          setSelectedReceipt((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  document_code:
-                    payload.receipt?.document_code || prev.document_code,
-                  total_items: payload.receipt?.total_items ?? prev.total_items,
-                  note: inventoryNote || prev.note,
-                }
-              : prev
-          );
-          loadReceiptDetail(
-            payload.receipt?.document_code || editingReceiptCode
-          ).catch((err: any) => {
-            console.error("Error refreshing receipt detail:", err);
-          });
-        }
-      }
-    } catch (err: any) {
-      console.error("Error saving inventory receipt:", err);
-      alert(err?.message || "שגיאה בשמירת תעודת הקליטה");
-    }
-  };
-
   return (
     <div
       style={{
@@ -1197,23 +1080,23 @@ export default function EquipmentPage() {
     >
       {currentTabConfig &&
         (currentTabConfig.description || !activeTabPermission.canEdit) && (
-          <div
-            style={{
-              fontSize: 13,
-              color: colors.textMuted,
-            }}
-          >
-            {currentTabConfig.description}
-            {!activeTabPermission.canEdit && " · מצב קריאה בלבד"}
-          </div>
+        <div
+          style={{
+            fontSize: 13,
+            color: colors.textMuted,
+          }}
+        >
+          {currentTabConfig.description}
+          {!activeTabPermission.canEdit && " · מצב קריאה בלבד"}
+        </div>
         )}
 
       {activeTab === "home" && (
         <HomeTab
           items={data.items}
           warehouses={data.warehouses}
-          historyEntries={historyEntries}
-          historyLoading={historyLoading}
+          documents={inventoryDocuments}
+          documentsLoading={documentsLoading}
           statSummary={statSummary}
           onNavigate={(tab) => handleTabChange(tab)}
         />
@@ -1239,12 +1122,12 @@ export default function EquipmentPage() {
 
       {activeTab === "inventory" && (
         <InventoryTab
-          historyEntries={historyEntries}
-          historyLoading={historyLoading}
+          documents={inventoryDocuments}
+          documentsLoading={documentsLoading}
           canEdit={canEditInventory}
-          onOpenInventoryModal={openInventoryModal}
-          onOpenHistoryModal={openHistoryModal}
-          onEditReceipt={handleEditReceipt}
+          onOpenDocumentModal={openDocumentModal}
+          onViewDocument={handleViewInventoryDocument}
+          onRefreshDocuments={loadInventoryDocuments}
           onGoToStructure={goToStructureTab}
         />
       )}
@@ -1262,28 +1145,14 @@ export default function EquipmentPage() {
         />
       )}
 
-      <InventoryReceiptModal
-        open={showInventoryModal}
-        onClose={closeInventoryModal}
-        documentCode={editingReceiptCode}
-        receiptLines={receiptLines}
-        inventoryNote={inventoryNote}
-        activeWarehouses={activeWarehouses}
+      <InventoryDocumentModal
+        open={documentModalOpen}
+        onClose={closeDocumentModal}
+        submitting={documentSubmitting}
         items={data.items}
+        warehouses={data.warehouses}
         suppliers={data.suppliers}
-        selectedSupplierId={receiptSupplierId}
-        onSupplierChange={setReceiptSupplierId}
-        onInventoryNoteChange={setInventoryNote}
-        onAddLine={addReceiptLine}
-        onDuplicateLine={duplicateReceiptLine}
-        onRemoveLine={removeReceiptLine}
-        onLineChange={handleReceiptLineChange}
-        onSubmit={handleInventorySubmit}
-        onReset={() => {
-          setReceiptLines([createEmptyReceiptLine()]);
-          setInventoryNote("");
-          setReceiptSupplierId("");
-        }}
+        onSubmit={handleSubmitInventoryDocument}
       />
 
       <WarehouseModal
@@ -1296,16 +1165,11 @@ export default function EquipmentPage() {
         onChange={handleWarehouseChange}
       />
 
-      <HistoryModal
-        open={showHistoryModal}
-        selected={selectedReceipt}
-        entries={historyEntries}
-        onClose={closeHistoryModal}
-        onSelect={selectReceipt}
-        detail={receiptDetail}
-        detailLoading={receiptDetailLoading}
-        onEdit={handleEditReceipt}
-        canEdit={canEditInventory}
+      <InventoryDocumentDetailModal
+        open={documentDetailOpen}
+        onClose={closeDocumentDetailModal}
+        document={documentDetail}
+        loading={documentDetailLoading}
       />
 
       <StructureModal

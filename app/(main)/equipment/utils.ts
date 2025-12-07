@@ -1,7 +1,7 @@
 import type {
   EquipmentFormState,
-  ReceiptHistoryEntry,
-  ReceiptLine,
+  InventoryDocumentFormLine,
+  InventoryDocumentFormState,
   StructureFormState,
   WarehouseFormState,
 } from "./types";
@@ -79,13 +79,25 @@ export const createEmptyFormState = (): EquipmentFormState => ({
   supplier_identifier: "",
 });
 
-export const createEmptyReceiptLine = (): ReceiptLine => ({
-  item_id: "",
-  warehouse_id: "",
-  quantity: "",
-  supplier_document_number: "",
-  unit_cost: "",
-});
+export const createEmptyInventoryDocumentLine =
+  (): InventoryDocumentFormLine => ({
+    item_id: "",
+    quantity: "",
+    source_warehouse_id: "",
+    target_warehouse_id: "",
+    supplier_document_number: "",
+  });
+
+export const createEmptyInventoryDocumentForm =
+  (): InventoryDocumentFormState => ({
+    action_type: "RECEIPT",
+    activity_id: "",
+    supplier_identifier: "",
+    reference_number: "",
+    notes: "",
+    external_party: "",
+    lines: [createEmptyInventoryDocumentLine()],
+  });
 
 export const createEmptyStructureFormState = (): StructureFormState => ({
   entityType: "family",
