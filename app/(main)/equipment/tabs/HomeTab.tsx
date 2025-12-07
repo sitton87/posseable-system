@@ -31,9 +31,7 @@ const ACTION_LABELS: Record<string, string> = {
   RECEIPT: "קליטת ספק",
   DONATION: "תרומה נכנסת",
   DISPOSAL: "השמדה",
-  TRANSFER: "העברה",
-  ACTIVITY_OUT: "שיוך לפעילות",
-  ACTIVITY_RETURN: "החזרת פעילות",
+  TRANSFER: "העברת מלאי",
   STOCKTAKE_ADJUST: "התאמת מלאי",
 };
 

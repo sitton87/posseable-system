@@ -27,6 +27,7 @@ type EquipmentFormModalProps = {
     key: K,
     value: EquipmentFormState[K]
   ) => void;
+  escEnabled?: boolean;
 };
 
 export function EquipmentFormModal({
@@ -41,6 +42,7 @@ export function EquipmentFormModal({
   canEdit,
   suppliers,
   onChange,
+  escEnabled = true,
 }: EquipmentFormModalProps) {
   const handleSubmit = () => {
     if (canEdit) {
@@ -126,6 +128,7 @@ export function EquipmentFormModal({
       onClose={onClose}
       width="min(960px, 95vw)"
       style={{ padding: spacing.xxl }}
+      escEnabled={escEnabled}
     >
       <h3 style={{ marginTop: 0, fontSize: 20, fontWeight: 800 }}>
         {editingItem ? "עריכת פריט ציוד" : "פריט ציוד חדש"}

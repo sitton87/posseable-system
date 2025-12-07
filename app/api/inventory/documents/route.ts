@@ -24,7 +24,6 @@ type DocumentLinePayload = {
   source_warehouse_id: string | null;
   target_warehouse_id: string | null;
   supplier_document_number: string | null;
-  reference_note: string | null;
 };
 
 let inventoryDocumentColumnsEnsured = false;
@@ -35,6 +34,24 @@ async function ensureInventoryDocumentColumns() {
     IF COL_LENGTH('dbo.inventory_document', 'external_party') IS NULL
     BEGIN
       ALTER TABLE dbo.inventory_document ADD external_party NVARCHAR(200) NULL;
+    END
+  `);
+  await query(`
+    IF COL_LENGTH('dbo.inventory_document', 'donor_national_id') IS NULL
+    BEGIN
+      ALTER TABLE dbo.inventory_document ADD donor_national_id VARCHAR(9) NULL;
+      IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'donor')
+      BEGIN
+        ALTER TABLE dbo.inventory_document
+        ADD CONSTRAINT FK_inventory_document_donor FOREIGN KEY (donor_national_id)
+        REFERENCES dbo.donor(national_id);
+      END
+    END
+  `);
+  await query(`
+    IF COL_LENGTH('dbo.inventory_document', 'supplier_document_type') IS NULL
+    BEGIN
+      ALTER TABLE dbo.inventory_document ADD supplier_document_type NVARCHAR(100) NULL;
     END
   `);
   await query(`
@@ -51,13 +68,17 @@ DECLARE @Now DATETIME2(3) = SYSUTCDATETIME();
 DECLARE @EffectiveDocumentDate DATETIME2(3) = COALESCE(@documentDate, @Now);
 DECLARE @NormalizedActionType NVARCHAR(40) = UPPER(@actionType);
 
+DECLARE @DocumentIdentifier UNIQUEIDENTIFIER = NULL;
+DECLARE @ExistingDocumentId UNIQUEIDENTIFIER = @documentId;
+DECLARE @DocumentNumber BIGINT = NULL;
+DECLARE @LedgerMovementType NVARCHAR(20) = 'adjustment';
+
 DECLARE @Lines TABLE (
   line_no INT IDENTITY(1,1),
   item_id UNIQUEIDENTIFIER NOT NULL,
   quantity DECIMAL(18,2) NOT NULL,
   unit_cost DECIMAL(18,2) NULL,
   supplier_document_number NVARCHAR(100) NULL,
-  reference_note NVARCHAR(200) NULL,
   source_warehouse_id UNIQUEIDENTIFIER NULL,
   target_warehouse_id UNIQUEIDENTIFIER NULL
 );
@@ -67,7 +88,6 @@ INSERT INTO @Lines (
   quantity,
   unit_cost,
   supplier_document_number,
-  reference_note,
   source_warehouse_id,
   target_warehouse_id
 )
@@ -76,21 +96,20 @@ SELECT
   TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(value, '$.quantity')),
   TRY_CONVERT(DECIMAL(18,2), JSON_VALUE(value, '$.unit_cost')),
   NULLIF(JSON_VALUE(value, '$.supplier_document_number'), ''),
-  NULLIF(JSON_VALUE(value, '$.reference_note'), ''),
   TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(value, '$.source_warehouse_id')),
   TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(value, '$.target_warehouse_id'))
 FROM OPENJSON(@linesJson);
+
+UPDATE l
+SET
+  unit_cost = COALESCE(l.unit_cost, ei.purchase_cost, 0)
+FROM @Lines l
+JOIN equipment_item ei ON ei.id = l.item_id;
 
 IF NOT EXISTS (SELECT 1 FROM @Lines)
 BEGIN
   THROW 61000, 'NO_LINES', 1;
 END;
-
-UPDATE l
-SET
-  source_warehouse_id = COALESCE(l.source_warehouse_id, @sourceWarehouseId),
-  target_warehouse_id = COALESCE(l.target_warehouse_id, @targetWarehouseId)
-FROM @Lines l;
 
 IF EXISTS (
   SELECT 1
@@ -146,7 +165,7 @@ BEGIN
   END;
 END;
 
-IF @NormalizedActionType IN ('TRANSFER', 'ACTIVITY_OUT', 'ACTIVITY_RETURN')
+IF @NormalizedActionType = 'TRANSFER'
 BEGIN
   IF EXISTS (
     SELECT 1
@@ -177,6 +196,54 @@ BEGIN
   THROW 61009, 'WAREHOUSE_NOT_FOUND', 1;
 END;
 
+IF @ExistingDocumentId IS NOT NULL
+BEGIN
+  SELECT
+    @DocumentNumber = document_number
+  FROM inventory_document
+  WHERE id = @ExistingDocumentId;
+
+  IF @DocumentNumber IS NULL
+  BEGIN
+    THROW 61011, 'DOCUMENT_NOT_FOUND', 1;
+  END;
+
+  DECLARE @Revert TABLE (
+    item_id UNIQUEIDENTIFIER NOT NULL,
+    warehouse_id UNIQUEIDENTIFIER NOT NULL,
+    quantity DECIMAL(18,2) NOT NULL
+  );
+
+  INSERT INTO @Revert (item_id, warehouse_id, quantity)
+  SELECT
+    item_id,
+    warehouse_id,
+    quantity
+  FROM equipment_stock_ledger
+  WHERE reference_doc = CONVERT(NVARCHAR(50), @DocumentNumber);
+
+  MERGE equipment_stock AS target
+  USING @Revert AS source
+    ON target.item_id = source.item_id
+   AND target.warehouse_id = source.warehouse_id
+  WHEN MATCHED THEN
+    UPDATE SET
+      quantity = target.quantity - source.quantity,
+      updated_at = @Now
+  WHEN NOT MATCHED THEN
+    INSERT (item_id, warehouse_id, quantity, reserved_qty, updated_at)
+    VALUES (source.item_id, source.warehouse_id, -source.quantity, 0, @Now);
+
+  DELETE FROM equipment_stock WHERE quantity <= 0;
+
+  DELETE FROM equipment_stock_ledger
+  WHERE reference_doc = CONVERT(NVARCHAR(50), @DocumentNumber);
+
+  DELETE FROM inventory_document_line WHERE document_id = @ExistingDocumentId;
+
+  SET @DocumentIdentifier = @ExistingDocumentId;
+END
+
 DECLARE @StockAdjustments TABLE (
   item_id UNIQUEIDENTIFIER NOT NULL,
   warehouse_id UNIQUEIDENTIFIER NOT NULL,
@@ -190,7 +257,6 @@ DECLARE @LedgerRows TABLE (
   quantity DECIMAL(18,2) NOT NULL,
   unit_cost DECIMAL(18,2) NULL,
   supplier_document_number NVARCHAR(100) NULL,
-  reference_note NVARCHAR(200) NULL,
   direction NVARCHAR(10) NOT NULL,
   source_warehouse_id UNIQUEIDENTIFIER NULL,
   target_warehouse_id UNIQUEIDENTIFIER NULL
@@ -198,6 +264,7 @@ DECLARE @LedgerRows TABLE (
 
 IF @NormalizedActionType IN ('RECEIPT', 'DONATION')
 BEGIN
+  SET @LedgerMovementType = 'receipt';
   INSERT INTO @StockAdjustments (item_id, warehouse_id, delta)
   SELECT item_id, target_warehouse_id, quantity FROM @Lines;
 
@@ -207,7 +274,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     direction,
     source_warehouse_id,
     target_warehouse_id
@@ -218,7 +284,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     'IN',
     source_warehouse_id,
     target_warehouse_id
@@ -226,6 +291,7 @@ BEGIN
 END
 ELSE IF @NormalizedActionType = 'DISPOSAL'
 BEGIN
+  SET @LedgerMovementType = 'delete';
   INSERT INTO @StockAdjustments (item_id, warehouse_id, delta)
   SELECT item_id, source_warehouse_id, -quantity FROM @Lines;
 
@@ -235,7 +301,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     direction,
     source_warehouse_id,
     target_warehouse_id
@@ -246,7 +311,6 @@ BEGIN
     -quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     'OUT',
     source_warehouse_id,
     target_warehouse_id
@@ -254,6 +318,7 @@ BEGIN
 END
 ELSE IF @NormalizedActionType IN ('TRANSFER', 'ACTIVITY_OUT', 'ACTIVITY_RETURN')
 BEGIN
+  SET @LedgerMovementType = 'adjustment';
   INSERT INTO @StockAdjustments (item_id, warehouse_id, delta)
   SELECT item_id, source_warehouse_id, -quantity FROM @Lines
   UNION ALL
@@ -265,7 +330,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     direction,
     source_warehouse_id,
     target_warehouse_id
@@ -276,7 +340,6 @@ BEGIN
     -quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     'OUT',
     source_warehouse_id,
     target_warehouse_id
@@ -288,7 +351,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     'IN',
     source_warehouse_id,
     target_warehouse_id
@@ -296,6 +358,7 @@ BEGIN
 END
 ELSE IF @NormalizedActionType = 'STOCKTAKE_ADJUST'
 BEGIN
+  SET @LedgerMovementType = 'adjustment';
   INSERT INTO @StockAdjustments (item_id, warehouse_id, delta)
   SELECT item_id, target_warehouse_id, quantity FROM @Lines;
 
@@ -305,7 +368,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     direction,
     source_warehouse_id,
     target_warehouse_id
@@ -316,7 +378,6 @@ BEGIN
     quantity,
     unit_cost,
     supplier_document_number,
-    reference_note,
     CASE WHEN quantity >= 0 THEN 'IN' ELSE 'OUT' END,
     source_warehouse_id,
     target_warehouse_id
@@ -337,20 +398,23 @@ SELECT
 FROM @StockAdjustments
 GROUP BY item_id, warehouse_id;
 
-IF EXISTS (
-  SELECT 1
-  FROM @Aggregated agg
-  LEFT JOIN equipment_stock es
-    ON es.item_id = agg.item_id
-   AND es.warehouse_id = agg.warehouse_id
-  WHERE agg.delta < 0
-    AND (
-      es.item_id IS NULL
-      OR es.quantity + agg.delta < 0
-    )
-)
+IF @NormalizedActionType IN ('DISPOSAL', 'TRANSFER')
 BEGIN
-  THROW 61010, 'INSUFFICIENT_STOCK', 1;
+  IF EXISTS (
+    SELECT 1
+    FROM @Aggregated agg
+    LEFT JOIN equipment_stock es
+      ON es.item_id = agg.item_id
+     AND es.warehouse_id = agg.warehouse_id
+    WHERE agg.delta < 0
+      AND (
+        es.item_id IS NULL
+        OR es.quantity + agg.delta < 0
+      )
+  )
+  BEGIN
+    THROW 61010, 'INSUFFICIENT_STOCK', 1;
+  END;
 END;
 
 DECLARE @Inserted TABLE (
@@ -375,39 +439,66 @@ BEGIN TRY
 
   DELETE FROM equipment_stock WHERE quantity <= 0;
 
-  INSERT INTO inventory_document (
-    action_type,
-    document_date,
-    source_warehouse_id,
-    target_warehouse_id,
-    activity_id,
-    supplier_identifier,
-    reference_number,
-    notes,
-    external_party,
-    created_by,
-    created_at
-  )
-  OUTPUT inserted.id, inserted.document_number
-  INTO @Inserted
-  VALUES (
-    @NormalizedActionType,
-    @EffectiveDocumentDate,
-    @sourceWarehouseId,
-    @targetWarehouseId,
-    @activityId,
-    @supplierIdentifier,
-    NULLIF(@referenceNumber, ''),
-    NULLIF(@notes, ''),
-    NULLIF(@externalParty, ''),
-    @createdBy,
-    @Now
-  );
+  IF @DocumentIdentifier IS NULL
+  BEGIN
+    INSERT INTO inventory_document (
+      action_type,
+      document_date,
+      source_warehouse_id,
+      target_warehouse_id,
+      activity_id,
+      supplier_identifier,
+      supplier_document_type,
+      donor_national_id,
+      reference_number,
+      notes,
+      external_party,
+      created_by,
+      created_at
+    )
+    OUTPUT inserted.id, inserted.document_number
+    INTO @Inserted
+    VALUES (
+      @NormalizedActionType,
+      @EffectiveDocumentDate,
+      NULL,
+      NULL,
+      NULL,
+      @supplierIdentifier,
+      NULLIF(@supplierDocumentType, ''),
+      @donorId,
+      NULL,
+      NULLIF(@notes, ''),
+      NULLIF(@externalParty, ''),
+      @createdBy,
+      @Now
+    );
 
-  DECLARE @DocumentId UNIQUEIDENTIFIER =
-    (SELECT TOP 1 id FROM @Inserted);
-  DECLARE @DocumentNumber BIGINT =
-    (SELECT TOP 1 document_number FROM @Inserted);
+    SELECT
+      @DocumentIdentifier = id,
+      @DocumentNumber = document_number
+    FROM @Inserted;
+  END
+  ELSE
+  BEGIN
+    UPDATE inventory_document
+    SET
+      action_type = @NormalizedActionType,
+      document_date = @EffectiveDocumentDate,
+      source_warehouse_id = NULL,
+      target_warehouse_id = NULL,
+      activity_id = NULL,
+      supplier_identifier = @supplierIdentifier,
+      supplier_document_type = NULLIF(@supplierDocumentType, ''),
+      donor_national_id = @donorId,
+      notes = NULLIF(@notes, ''),
+      external_party = NULLIF(@externalParty, '')
+    WHERE id = @DocumentIdentifier;
+
+    SELECT @DocumentNumber = document_number
+    FROM inventory_document
+    WHERE id = @DocumentIdentifier;
+  END;
 
   INSERT INTO inventory_document_line (
     document_id,
@@ -416,26 +507,22 @@ BEGIN TRY
     target_warehouse_id,
     quantity,
     unit_cost,
-    reference_note,
     supplier_document_number,
     extra_metadata
   )
   SELECT
-    @DocumentId,
+    @DocumentIdentifier,
     item_id,
     source_warehouse_id,
     target_warehouse_id,
     quantity,
     unit_cost,
-    reference_note,
     supplier_document_number,
     CASE
       WHEN supplier_document_number IS NOT NULL
-        OR reference_note IS NOT NULL
       THEN (
         SELECT
-          supplier_document_number,
-          reference_note
+          supplier_document_number AS supplier_document_number
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )
       ELSE NULL
@@ -459,7 +546,7 @@ BEGIN TRY
     lr.item_id,
     lr.warehouse_id,
     NULL,
-    @NormalizedActionType,
+    @LedgerMovementType,
     lr.quantity,
     @EffectiveDocumentDate,
     CONVERT(NVARCHAR(50), @DocumentNumber),
@@ -467,12 +554,12 @@ BEGIN TRY
     (
       SELECT
         @notes AS document_note,
-        @referenceNumber AS reference_number,
+        @supplierDocumentType AS supplier_document_type,
         @supplierIdentifier AS supplier_identifier,
+        @donorId AS donor_national_id,
         @externalParty AS external_party,
         lr.unit_cost AS unit_cost,
         lr.supplier_document_number AS supplier_document_number,
-        lr.reference_note AS reference_note,
         lr.direction AS movement_direction,
         lr.source_warehouse_id,
         lr.target_warehouse_id
@@ -491,8 +578,8 @@ BEGIN CATCH
 END CATCH;
 
 SELECT
-  (SELECT TOP 1 id FROM @Inserted) AS id,
-  (SELECT TOP 1 document_number FROM @Inserted) AS document_number;
+  ISNULL((SELECT TOP 1 id FROM @Inserted), @DocumentIdentifier) AS id,
+  ISNULL((SELECT TOP 1 document_number FROM @Inserted), @DocumentNumber) AS document_number;
 `;
 
 type PermissionResult = {
@@ -548,11 +635,6 @@ function normalizeLines(input: any): DocumentLinePayload[] {
         line.supplier_document_number.trim().length
           ? line.supplier_document_number.trim()
           : null;
-      const referenceNote =
-        typeof line.reference_note === "string" && line.reference_note.trim().length
-          ? line.reference_note.trim()
-          : null;
-
       if (!itemId || Number.isNaN(quantity)) {
         return null;
       }
@@ -567,7 +649,6 @@ function normalizeLines(input: any): DocumentLinePayload[] {
         source_warehouse_id: sourceWarehouse,
         target_warehouse_id: targetWarehouse,
         supplier_document_number: supplierDocument,
-        reference_note: referenceNote,
       };
     })
     .filter((line): line is DocumentLinePayload => Boolean(line));
@@ -604,7 +685,6 @@ export async function GET(req: Request) {
           d.document_number,
           d.action_type,
           d.document_date,
-          d.reference_number,
           d.notes,
           d.external_party,
           d.source_warehouse_id,
@@ -613,9 +693,11 @@ export async function GET(req: Request) {
           tw.name AS target_warehouse_name,
           d.supplier_identifier,
           s.name AS supplier_name,
+          d.supplier_document_type,
+          d.donor_national_id,
+          don.full_name AS donor_name,
           d.created_by,
           au.full_name AS created_by_name,
-          d.activity_id,
           SUM(l.quantity) AS total_quantity,
           SUM(l.quantity * ISNULL(l.unit_cost, 0)) AS total_value
         FROM inventory_document d
@@ -624,6 +706,7 @@ export async function GET(req: Request) {
         LEFT JOIN warehouse tw ON tw.id = d.target_warehouse_id
         LEFT JOIN supplier s ON s.supplier_identifier = d.supplier_identifier
         LEFT JOIN app_user au ON au.national_id = d.created_by
+        LEFT JOIN donor don ON don.national_id = d.donor_national_id
         WHERE (@docId IS NULL OR d.id = @docId)
           AND (@docNumber IS NULL OR d.document_number = @docNumber)
         GROUP BY
@@ -631,7 +714,6 @@ export async function GET(req: Request) {
           d.document_number,
           d.action_type,
           d.document_date,
-          d.reference_number,
           d.notes,
           d.external_party,
           d.source_warehouse_id,
@@ -640,9 +722,11 @@ export async function GET(req: Request) {
           tw.name,
           d.supplier_identifier,
           s.name,
+          d.supplier_document_type,
+          d.donor_national_id,
+          don.full_name,
           d.created_by,
-          au.full_name,
-          d.activity_id
+          au.full_name
       `,
       {
         docId: documentId || null,
@@ -668,7 +752,6 @@ export async function GET(req: Request) {
           ei.internal_sku,
           l.quantity,
           l.unit_cost,
-          l.reference_note,
           l.source_warehouse_id,
           sw.name AS source_warehouse_name,
           l.target_warehouse_id,
@@ -690,11 +773,13 @@ export async function GET(req: Request) {
         document_number: detailRow.document_number,
         action_type: detailRow.action_type,
         document_date: detailRow.document_date,
-        reference_number: detailRow.reference_number,
         notes: detailRow.notes,
         external_party: detailRow.external_party,
         supplier_identifier: detailRow.supplier_identifier,
         supplier_name: detailRow.supplier_name,
+          supplier_document_type: detailRow.supplier_document_type,
+          donor_national_id: detailRow.donor_national_id,
+          donor_name: detailRow.donor_name,
         source_warehouse_id: detailRow.source_warehouse_id,
         source_warehouse_name: detailRow.source_warehouse_name,
         target_warehouse_id: detailRow.target_warehouse_id,
@@ -717,7 +802,6 @@ export async function GET(req: Request) {
             line.unit_cost === null || line.unit_cost === undefined
               ? null
               : Number(line.unit_cost),
-          reference_note: line.reference_note,
           source_warehouse_id: line.source_warehouse_id,
           source_warehouse_name: line.source_warehouse_name,
           target_warehouse_id: line.target_warehouse_id,
@@ -735,41 +819,57 @@ export async function GET(req: Request) {
         d.document_number,
         d.action_type,
         d.document_date,
-        d.reference_number,
         d.notes,
         d.external_party,
-        d.source_warehouse_id,
-        sw.name AS source_warehouse_name,
-        d.target_warehouse_id,
-        tw.name AS target_warehouse_name,
         d.supplier_identifier,
         s.name AS supplier_name,
+        d.supplier_document_type,
+        d.donor_national_id,
+        don.full_name AS donor_name,
         d.created_by,
         au.full_name AS created_by_name,
-        SUM(l.quantity) AS total_quantity,
-        SUM(l.quantity * ISNULL(l.unit_cost, 0)) AS total_value
+        aggregates.total_quantity,
+        aggregates.total_value,
+        sourceAgg.source_warehouse_id,
+        sourceAgg.source_warehouse_name,
+        sourceAgg.source_count,
+        targetAgg.target_warehouse_id,
+        targetAgg.target_warehouse_name,
+        targetAgg.target_count
       FROM inventory_document d
-      JOIN inventory_document_line l ON l.document_id = d.id
-      LEFT JOIN warehouse sw ON sw.id = d.source_warehouse_id
-      LEFT JOIN warehouse tw ON tw.id = d.target_warehouse_id
+      JOIN (
+        SELECT
+          document_id,
+          SUM(quantity) AS total_quantity,
+          SUM(quantity * ISNULL(unit_cost, 0)) AS total_value
+        FROM inventory_document_line
+        GROUP BY document_id
+      ) aggregates ON aggregates.document_id = d.id
+      OUTER APPLY (
+        SELECT TOP 1
+          document_id,
+          source_warehouse_id,
+          w.name AS source_warehouse_name,
+          COUNT(*) OVER (PARTITION BY l.document_id) AS source_count
+        FROM inventory_document_line l
+        LEFT JOIN warehouse w ON w.id = l.source_warehouse_id
+        WHERE l.document_id = d.id AND l.source_warehouse_id IS NOT NULL
+        ORDER BY l.source_warehouse_id
+      ) sourceAgg
+      OUTER APPLY (
+        SELECT TOP 1
+          document_id,
+          target_warehouse_id,
+          w.name AS target_warehouse_name,
+          COUNT(*) OVER (PARTITION BY l.document_id) AS target_count
+        FROM inventory_document_line l
+        LEFT JOIN warehouse w ON w.id = l.target_warehouse_id
+        WHERE l.document_id = d.id AND l.target_warehouse_id IS NOT NULL
+        ORDER BY l.target_warehouse_id
+      ) targetAgg
       LEFT JOIN supplier s ON s.supplier_identifier = d.supplier_identifier
       LEFT JOIN app_user au ON au.national_id = d.created_by
-      GROUP BY
-        d.id,
-        d.document_number,
-        d.action_type,
-        d.document_date,
-        d.reference_number,
-        d.notes,
-        d.external_party,
-        d.source_warehouse_id,
-        sw.name,
-        d.target_warehouse_id,
-        tw.name,
-        d.supplier_identifier,
-        s.name,
-        d.created_by,
-        au.full_name
+      LEFT JOIN donor don ON don.national_id = d.donor_national_id
       ORDER BY d.document_date DESC, d.document_number DESC
     `,
     { limit: 50 }
@@ -781,15 +881,21 @@ export async function GET(req: Request) {
       document_number: row.document_number,
       action_type: row.action_type,
       document_date: row.document_date,
-      reference_number: row.reference_number,
       notes: row.notes,
       external_party: row.external_party,
       supplier_identifier: row.supplier_identifier,
       supplier_name: row.supplier_name,
-      source_warehouse_id: row.source_warehouse_id,
-      source_warehouse_name: row.source_warehouse_name,
-      target_warehouse_id: row.target_warehouse_id,
-      target_warehouse_name: row.target_warehouse_name,
+      supplier_document_type: row.supplier_document_type,
+      donor_national_id: row.donor_national_id,
+      donor_name: row.donor_name,
+      source_warehouse_id:
+        row.source_count > 1 ? null : row.source_warehouse_id || null,
+      source_warehouse_name:
+        row.source_count > 1 ? null : row.source_warehouse_name || null,
+      target_warehouse_id:
+        row.target_count > 1 ? null : row.target_warehouse_id || null,
+      target_warehouse_name:
+        row.target_count > 1 ? null : row.target_warehouse_name || null,
       total_quantity: Number(row.total_quantity) || 0,
       total_value:
         row.total_value === null || row.total_value === undefined
@@ -801,7 +907,10 @@ export async function GET(req: Request) {
   });
 }
 
-export async function POST(req: Request) {
+async function saveInventoryDocument(
+  req: Request,
+  method: "POST" | "PUT"
+) {
   const permission = await ensureInventoryPermission("write");
   if (!permission.allowed || !permission.session) {
     return NextResponse.json(
@@ -810,9 +919,9 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: any = null;
   await ensureInventoryDocumentColumns();
 
+  let body: any = null;
   try {
     body = await req.json();
   } catch {
@@ -838,46 +947,81 @@ export async function POST(req: Request) {
     );
   }
 
-  const sourceWarehouseId =
-    typeof body?.source_warehouse_id === "string" && body.source_warehouse_id
-      ? body.source_warehouse_id
-      : null;
-  const targetWarehouseId =
-    typeof body?.target_warehouse_id === "string" && body.target_warehouse_id
-      ? body.target_warehouse_id
-      : null;
-
-  const activityId =
-    typeof body?.activity_id === "number"
-      ? body.activity_id
-      : typeof body?.activity_id === "string" && body.activity_id.trim()
-      ? Number(body.activity_id)
-      : null;
-
   const supplierIdentifier =
     typeof body?.supplier_identifier === "string" && body.supplier_identifier.trim()
       ? body.supplier_identifier.trim()
       : null;
 
-  const documentDate =
-    typeof body?.document_date === "string" && body.document_date
-      ? new Date(body.document_date)
+  if (actionType === "RECEIPT" && !supplierIdentifier) {
+    return NextResponse.json(
+      { error: "בקליטת ספק יש לבחור ספק." },
+      { status: 400 }
+    );
+  }
+
+  const donorId =
+    actionType === "DONATION" &&
+    typeof body?.donor_national_id === "string" &&
+    body.donor_national_id.trim().length
+      ? body.donor_national_id.trim()
       : null;
+
+  if (actionType === "DONATION" && !donorId) {
+    return NextResponse.json(
+      { error: "יש לבחור תורם לתעודת תרומה." },
+      { status: 400 }
+    );
+  }
+
+  const supplierDocumentType =
+    actionType === "RECEIPT" &&
+    typeof body?.supplier_document_type === "string" &&
+    body.supplier_document_type.trim().length
+      ? body.supplier_document_type.trim()
+      : "";
+
+  const externalParty =
+    actionType === "DISPOSAL" &&
+    typeof body?.external_party === "string" &&
+    body.external_party.trim().length
+      ? body.external_party.trim()
+      : null;
+
+  const notes =
+    typeof body?.notes === "string" && body.notes.trim().length
+      ? body.notes
+      : null;
+
+  const editingDocumentId =
+    typeof body?.document_id === "string" && body.document_id.trim().length
+      ? body.document_id.trim()
+      : null;
+
+  if (method === "POST" && editingDocumentId) {
+    return NextResponse.json(
+      { error: "לא ניתן לעדכן תעודה קיימת באמצעות יצירה חדשה." },
+      { status: 400 }
+    );
+  }
+
+  if (method === "PUT" && !editingDocumentId) {
+    return NextResponse.json(
+      { error: "נדרש מזהה תעודה לעדכון." },
+      { status: 400 }
+    );
+  }
 
   const result = await query(SAVE_DOCUMENT_SQL, {
     actionType,
-    documentDate,
-    sourceWarehouseId,
-    targetWarehouseId,
-    activityId,
+    documentDate: null,
     supplierIdentifier,
-    referenceNumber:
-      typeof body?.reference_number === "string" ? body.reference_number : null,
-    notes: typeof body?.notes === "string" ? body.notes : null,
-    externalParty:
-      typeof body?.external_party === "string" ? body.external_party : null,
+    supplierDocumentType,
+    donorId,
+    notes,
+    externalParty,
     createdBy: permission.session.national_id,
     linesJson: JSON.stringify(lines),
+    documentId: editingDocumentId,
   });
 
   const inserted = result.recordset?.[0];
@@ -886,5 +1030,13 @@ export async function POST(req: Request) {
     success: true,
     document: inserted,
   });
+}
+
+export async function POST(req: Request) {
+  return saveInventoryDocument(req, "POST");
+}
+
+export async function PUT(req: Request) {
+  return saveInventoryDocument(req, "PUT");
 }
 

@@ -11,8 +11,13 @@ import {
   withCenteredControl,
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
+import type { DraftEntry } from "@/app/hooks/useDraftManager";
 import type { EquipmentCategory, EquipmentItem } from "@/type";
-import type { EquipmentPageData, FiltersState } from "../types";
+import type {
+  EquipmentFormState,
+  EquipmentPageData,
+  FiltersState,
+} from "../types";
 import {
   CONDITION_OPTIONS,
   conditionBadgeMap,
@@ -28,6 +33,9 @@ type CatalogTabProps = {
   loading: boolean;
   error: string | null;
   canEdit: boolean;
+  drafts?: DraftEntry<EquipmentFormState>[];
+  onResumeDraft?: (draftId: string) => void;
+  onDeleteDraft?: (draftId: string) => void;
   onFilterChange: (
     key: keyof FiltersState,
     value: FiltersState[typeof key]
@@ -42,11 +50,27 @@ type CatalogTabProps = {
 
 const filterControlStyle = withCenteredControl(inputStyle);
 const muted = colors.textMuted;
+const draftBorderColor = "#8bd4a1";
+const draftSurfaceColor = "#e6f5ec";
 const stockCardStyle = {
   border: `1px solid ${colors.border}`,
   borderRadius: spacing.sm,
   padding: spacing.md,
   background: colors.surfaceAlt,
+};
+const draftListContainer = {
+  border: `1px solid ${draftBorderColor}`,
+  borderRadius: spacing.md,
+  padding: spacing.md,
+  background: draftSurfaceColor,
+};
+const draftRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: spacing.md,
+  padding: `${spacing.sm} 0`,
+  borderBottom: `1px solid ${draftBorderColor}`,
 };
 const stockTableHeader = {
   textAlign: "center" as const,
@@ -69,6 +93,9 @@ export function CatalogTab({
   loading,
   error,
   canEdit,
+  drafts,
+  onResumeDraft,
+  onDeleteDraft,
   onFilterChange,
   onRefresh,
   onCreateItem,
@@ -128,6 +155,94 @@ export function CatalogTab({
             {canEdit && <Button onClick={onCreateItem}>+ פריט חדש</Button>}
           </div>
         </div>
+        {drafts && drafts.length > 0 && (
+          <div style={{ ...draftListContainer, marginBottom: spacing.lg }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: spacing.md,
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <strong>טיוטות שמורות ({drafts.length})</strong>
+                <p style={{ margin: 0, color: muted, fontSize: 12 }}>
+                  הטיוטות מוצגות רק לך עד לסיום השמירה כמסמך רשמי.
+                </p>
+              </div>
+            </div>
+            <div style={{ marginTop: spacing.sm }}>
+              {drafts.map((draft, index) => (
+                <div
+                  key={draft.id}
+                  style={{
+                    ...draftRowStyle,
+                    borderBottom:
+                      index === drafts.length - 1
+                        ? "none"
+                        : draftRowStyle.borderBottom,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: spacing.sm,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...badgeStyle,
+                          background: colors.success,
+                          color: "#fff",
+                        }}
+                      >
+                        טיוטה
+                      </span>
+                      <strong style={{ fontSize: 14 }}>
+                        {draft.payload.name?.trim() || "פריט חדש"}
+                      </strong>
+                    </div>
+                    <p
+                      style={{
+                        margin: "4px 0 0",
+                        color: muted,
+                        fontSize: 12,
+                      }}
+                    >
+                      עודכן {new Date(draft.updatedAt).toLocaleString("he-IL")}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: spacing.sm,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Button
+                      onClick={() => onResumeDraft?.(draft.id)}
+                      aria-label="המשך עריכת טיוטה"
+                    >
+                      המשך
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => onDeleteDraft?.(draft.id)}
+                      aria-label="מחיקת טיוטה"
+                    >
+                      🗑️
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div
           style={{
             display: "grid",

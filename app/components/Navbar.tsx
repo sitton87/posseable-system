@@ -299,6 +299,13 @@ export default function Navbar() {
     }));
   };
 
+  const handleParentTrigger = (pageKey: string) => {
+    if (!expanded) {
+      setExpanded(true);
+    }
+    toggleMenu(pageKey);
+  };
+
   return (
     <div
       className={`fixed right-0 top-0 h-full bg-white shadow-lg border-l transition-all duration-300`}
@@ -382,6 +389,15 @@ export default function Navbar() {
                       expanded ? "gap-3" : "justify-center",
                       isActive ? "text-sky-700" : "text-gray-600"
                     )}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleParentTrigger(item.pageKey)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleParentTrigger(item.pageKey);
+                      }
+                    }}
                   >
                     <div
                       className={clsx(
@@ -396,6 +412,7 @@ export default function Navbar() {
                       <button
                         type="button"
                         onClick={(e) => {
+                          e.stopPropagation();
                           toggleMenu(item.pageKey);
                         }}
                         className="text-gray-500 transition hover:text-gray-700"

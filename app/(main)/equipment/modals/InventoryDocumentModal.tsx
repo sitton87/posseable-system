@@ -10,7 +10,7 @@ import {
   tableStyle,
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
-import type { EquipmentItem, Supplier, Warehouse } from "@/type";
+import type { Donor, EquipmentItem, Supplier, Warehouse } from "@/type";
 import type {
   InventoryDocumentAction,
   InventoryDocumentFormLine,
@@ -27,8 +27,17 @@ type InventoryDocumentModalProps = {
   items: EquipmentItem[];
   warehouses: Warehouse[];
   suppliers: Supplier[];
+  donors: Donor[];
+  initialState?: InventoryDocumentFormState | null;
+  editingDocumentId?: string | null;
+  editingDocumentNumber?: number | null;
   onClose: () => void;
-  onSubmit: (form: InventoryDocumentFormState) => void;
+  onSubmit: (
+    form: InventoryDocumentFormState,
+    options?: { documentId?: string | null }
+  ) => void;
+  onStateChange?: (state: InventoryDocumentFormState) => void;
+  escEnabled?: boolean;
 };
 
 const muted = colors.textMuted;
@@ -37,10 +46,16 @@ const ACTION_OPTIONS: { value: InventoryDocumentAction; label: string }[] = [
   { value: "DONATION", label: "תרומה נכנסת" },
   { value: "DISPOSAL", label: "השמדה" },
   { value: "TRANSFER", label: "העברת מלאי" },
-  { value: "ACTIVITY_OUT", label: "שיוך לפעילות" },
-  { value: "ACTIVITY_RETURN", label: "החזרת פעילות" },
   { value: "STOCKTAKE_ADJUST", label: "התאמת מלאי" },
 ];
+
+const STOCK_ADJUST_LABELS: Record<
+  InventoryDocumentFormLine["adjust_direction"],
+  string
+> = {
+  increase: "הוספה למלאי",
+  decrease: "הפחתה מהמלאי",
+};
 
 export function InventoryDocumentModal({
   open,
@@ -48,8 +63,14 @@ export function InventoryDocumentModal({
   items,
   warehouses,
   suppliers,
+  donors,
+  initialState,
+  editingDocumentId,
+  editingDocumentNumber,
   onClose,
   onSubmit,
+  onStateChange,
+  escEnabled = true,
 }: InventoryDocumentModalProps) {
   const [formState, setFormState] = useState<InventoryDocumentFormState>(
     createEmptyInventoryDocumentForm()
@@ -57,18 +78,27 @@ export function InventoryDocumentModal({
 
   useEffect(() => {
     if (open) {
-      setFormState(createEmptyInventoryDocumentForm());
+      if (initialState) {
+        setFormState(initialState);
+      } else {
+        setFormState(createEmptyInventoryDocumentForm());
+      }
     }
-  }, [open]);
+  }, [open, initialState]);
+
+  useEffect(() => {
+    if (!open) return;
+    onStateChange?.(formState);
+  }, [formState, onStateChange, open]);
 
   const actionType = formState.action_type;
   const requiresSupplier = actionType === "RECEIPT";
   const allowsSupplier = actionType === "RECEIPT" || actionType === "DONATION";
-  const requiresActivity = ["ACTIVITY_OUT", "ACTIVITY_RETURN"].includes(
-    actionType
-  );
-  const requiresExternalParty = ["DONATION", "DISPOSAL"].includes(actionType);
+  const requiresDonor = actionType === "DONATION";
+  const requiresExternalParty = actionType === "DISPOSAL";
   const isStockAdjust = actionType === "STOCKTAKE_ADJUST";
+  const hideSupplierDocField =
+    actionType === "TRANSFER" || actionType === "STOCKTAKE_ADJUST";
 
   const handleFieldChange = <K extends keyof InventoryDocumentFormState>(
     key: K,
@@ -79,11 +109,19 @@ export function InventoryDocumentModal({
       if (!allowsSupplier) {
         next.supplier_identifier = "";
       }
-      if (!requiresActivity) {
-        next.activity_id = "";
+      if (!requiresDonor) {
+        next.donor_national_id = "";
       }
       if (!requiresExternalParty) {
         next.external_party = "";
+      }
+      if (key === "action_type") {
+        next.supplier_document_type = "";
+        next.lines = next.lines.map((line) => ({
+          ...line,
+          supplier_document_number: "",
+          adjust_direction: line.adjust_direction ?? "increase",
+        }));
       }
       return next;
     });
@@ -171,16 +209,26 @@ export function InventoryDocumentModal({
     [suppliers]
   );
 
+  const donorOptions = useMemo(
+    () =>
+      donors.map((donor) => ({
+        value: donor.national_id,
+        label: donor.full_name,
+      })),
+    [donors]
+  );
+
   const handleSubmit = () => {
-    onSubmit(formState);
+    onSubmit(formState, { documentId: editingDocumentId || null });
   };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      width="min(920px, 96vw)"
+      width="min(980px, 96vw)"
       style={{ padding: spacing.xxl }}
+      escEnabled={escEnabled}
     >
       <div
         style={{
@@ -191,10 +239,17 @@ export function InventoryDocumentModal({
         }}
       >
         <div>
-          <h3 style={{ margin: 0 }}>תעודת מלאי חדשה</h3>
+          <h3 style={{ margin: 0 }}>
+            {editingDocumentId
+              ? `עריכת תעודה #${editingDocumentNumber ?? ""}`.trim()
+              : "תעודת מלאי חדשה"}
+          </h3>
           <p style={{ margin: 0, color: muted, fontSize: 13 }}>
             התאריך יירשם אוטומטית בעת השמירה – מלא רק את סוג הפעולה והפרטים
             הנדרשים.
+          </p>
+          <p style={{ margin: 0, color: muted, fontSize: 12 }}>
+            לאחר יצירה לא ניתן למחוק תעודות, רק לעדכן אותן.
           </p>
         </div>
         <div style={{ display: "flex", gap: spacing.sm }}>
@@ -202,7 +257,11 @@ export function InventoryDocumentModal({
             ✖ סגור
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "שומר..." : "שמירת תעודה"}
+            {submitting
+              ? "שומר..."
+              : editingDocumentId
+              ? "עדכון תעודה"
+              : "שמירת תעודה"}
           </Button>
         </div>
       </div>
@@ -256,19 +315,27 @@ export function InventoryDocumentModal({
           </label>
         )}
 
-        {requiresActivity && (
+        {requiresDonor && (
           <label style={labelStyle}>
-            מזהה פעילות
-            <input
-              type="number"
-              min={0}
-              value={formState.activity_id}
+            תורם
+            <select
+              value={formState.donor_national_id}
               onChange={(event) =>
-                handleFieldChange("activity_id", event.target.value)
+                handleFieldChange("donor_national_id", event.target.value)
               }
-              style={{ ...inputStyle, marginTop: spacing.xs }}
-              placeholder="לדוגמה: 1024"
-            />
+              style={{
+                ...inputStyle,
+                marginTop: spacing.xs,
+                borderColor: colors.primary,
+              }}
+            >
+              <option value="">בחר תורם</option>
+              {donorOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
         )}
 
@@ -287,18 +354,20 @@ export function InventoryDocumentModal({
           </label>
         )}
 
-        <label style={labelStyle}>
-          מס' אסמכתא / מסמך
-          <input
-            type="text"
-            value={formState.reference_number}
-            onChange={(event) =>
-              handleFieldChange("reference_number", event.target.value)
-            }
-            style={{ ...inputStyle, marginTop: spacing.xs }}
-            placeholder="מספר פנימי, אסמכתא חיצונית וכד'"
-          />
-        </label>
+        {actionType === "RECEIPT" && (
+          <label style={labelStyle}>
+            סוג תעודת ספק
+            <input
+              type="text"
+              value={formState.supplier_document_type}
+              onChange={(event) =>
+                handleFieldChange("supplier_document_type", event.target.value)
+              }
+              style={{ ...inputStyle, marginTop: spacing.xs }}
+              placeholder="לדוגמה: חשבונית / תעודת משלוח"
+            />
+          </label>
+        )}
 
         <label style={{ ...labelStyle, gridColumn: "1 / -1" }}>
           הערות לתעודה
@@ -335,8 +404,7 @@ export function InventoryDocumentModal({
 
       {isStockAdjust && (
         <div style={{ color: muted, fontSize: 13, marginBottom: spacing.sm }}>
-          בשורת התאמת מלאי יש להזין את הפרש הכמות (חיובי להוספה, שלילי להורדה)
-          עבור המחסן שנבחר.
+          הזן את ההפרש לספירת המלאי ובחר אם מדובר בהוספה או הפחתה מהמלאי במחסן.
         </div>
       )}
 
@@ -344,7 +412,7 @@ export function InventoryDocumentModal({
         <table
           style={{
             ...tableStyle,
-            minWidth: actionType === "TRANSFER" ? 820 : 640,
+            minWidth: actionType === "TRANSFER" ? 920 : 720,
           }}
         >
           <thead>
@@ -353,9 +421,14 @@ export function InventoryDocumentModal({
               {actionType === "TRANSFER" && (
                 <th style={tableHeaderStyle}>מחסן שולח</th>
               )}
-              <th style={tableHeaderStyle}>מחסן יעד</th>
+              <th style={tableHeaderStyle}>
+                {actionType === "DISPOSAL" ? "מחסן מקור" : "מחסן יעד"}
+              </th>
               <th style={tableHeaderStyle}>כמות</th>
-              <th style={tableHeaderStyle}>מס' מסמך ספק</th>
+              {isStockAdjust && <th style={tableHeaderStyle}>כיוון התאמה</th>}
+              {!hideSupplierDocField && (
+                <th style={tableHeaderStyle}>מס' מסמך ספק</th>
+              )}
               <th style={tableHeaderStyle}>פעולות</th>
             </tr>
           </thead>
@@ -431,21 +504,47 @@ export function InventoryDocumentModal({
                     style={inputStyle}
                   />
                 </td>
-                <td style={tableCellStyle}>
-                  <input
-                    type="text"
-                    value={line.supplier_document_number}
-                    onChange={(event) =>
-                      handleLineChange(
-                        index,
-                        "supplier_document_number",
-                        event.target.value
-                      )
-                    }
-                    style={inputStyle}
-                    placeholder="מס' חשבונית/מסמך"
-                  />
-                </td>
+                {isStockAdjust && (
+                  <td style={tableCellStyle}>
+                    <select
+                      value={line.adjust_direction}
+                      onChange={(event) =>
+                        handleLineChange(
+                          index,
+                          "adjust_direction",
+                          event.target
+                            .value as InventoryDocumentFormLine["adjust_direction"]
+                        )
+                      }
+                      style={inputStyle}
+                    >
+                      {Object.entries(STOCK_ADJUST_LABELS).map(
+                        ([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </td>
+                )}
+                {!hideSupplierDocField && (
+                  <td style={tableCellStyle}>
+                    <input
+                      type="text"
+                      value={line.supplier_document_number}
+                      onChange={(event) =>
+                        handleLineChange(
+                          index,
+                          "supplier_document_number",
+                          event.target.value
+                        )
+                      }
+                      style={inputStyle}
+                      placeholder="מס' חשבונית/מסמך"
+                    />
+                  </td>
+                )}
                 <td style={tableCellStyle}>
                   <div
                     style={{

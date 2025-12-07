@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type {
   EquipmentItem,
@@ -9,9 +9,10 @@ import type {
   EquipmentCategory,
   Warehouse,
 } from "@/type";
-import { Button, Card } from "@/app/components/ui";
+import { Button, Card, Modal } from "@/app/components/ui";
 import { AccessDenied } from "@/app/components/AccessDenied";
 import { usePagePermission } from "@/app/hooks/usePagePermission";
+import { useDraftManager } from "@/app/hooks/useDraftManager";
 import { inputStyle, labelStyle } from "@/app/styles/components";
 import {
   colors,
@@ -44,6 +45,8 @@ import type {
 } from "./types";
 import {
   createEmptyFormState,
+  createEmptyInventoryDocumentForm,
+  createEmptyInventoryDocumentLine,
   createEmptyStructureFormState,
   createEmptyWarehouseFormState,
   px,
@@ -88,6 +91,28 @@ const createDefaultFilters = (): FiltersState => ({
   status: "active",
 });
 
+const generateDraftId = (prefix: string) => {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
+    return `${prefix}-${window.crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const cloneEquipmentState = (state: EquipmentFormState) =>
+  JSON.parse(JSON.stringify(state)) as EquipmentFormState;
+
+const cloneDocumentState = (state: InventoryDocumentFormState) =>
+  JSON.parse(JSON.stringify(state)) as InventoryDocumentFormState;
+
+const areDocumentStatesEqual = (
+  a: InventoryDocumentFormState | null,
+  b: InventoryDocumentFormState | null
+) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+};
+
 export default function EquipmentPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -104,6 +129,7 @@ export default function EquipmentPage() {
     categories: [],
     warehouses: [],
     suppliers: [],
+    donors: [],
   });
   const [filters, setFilters] = useState<FiltersState>(createDefaultFilters());
   const [loading, setLoading] = useState(true);
@@ -126,6 +152,13 @@ export default function EquipmentPage() {
     useState<InventoryDocumentDetail | null>(null);
   const [documentDetailOpen, setDocumentDetailOpen] = useState(false);
   const [documentDetailLoading, setDocumentDetailLoading] = useState(false);
+  const [documentFormState, setDocumentFormState] =
+    useState<InventoryDocumentFormState>(createEmptyInventoryDocumentForm());
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
+    null
+  );
+  const [editingDocumentNumber, setEditingDocumentNumber] =
+    useState<number | null>(null);
   const [warehouseInventoryModalOpen, setWarehouseInventoryModalOpen] =
     useState(false);
   const [inventoryWarehouse, setInventoryWarehouse] =
@@ -150,6 +183,32 @@ export default function EquipmentPage() {
     null
   );
   const [activeTab, setActiveTab] = useState<EquipmentTabId>(initialTab);
+  const {
+    drafts: equipmentDrafts,
+    saveDraft: saveEquipmentDraft,
+    deleteDraft: deleteEquipmentDraft,
+  } = useDraftManager<EquipmentFormState>("equipmentItem");
+  const {
+    drafts: documentDrafts,
+    saveDraft: saveDocumentDraft,
+    deleteDraft: deleteDocumentDraft,
+  } = useDraftManager<InventoryDocumentFormState>("inventoryDocument");
+  const [equipmentFormDirty, setEquipmentFormDirty] = useState(false);
+  const [equipmentDraftPromptOpen, setEquipmentDraftPromptOpen] =
+    useState(false);
+  const [currentEquipmentDraftId, setCurrentEquipmentDraftId] = useState<
+    string | null
+  >(null);
+  const [documentFormDirty, setDocumentFormDirty] = useState(false);
+  const [documentDraftPromptOpen, setDocumentDraftPromptOpen] =
+    useState(false);
+  const [currentDocumentDraftId, setCurrentDocumentDraftId] = useState<
+    string | null
+  >(null);
+  const documentBaseStateRef = useRef<InventoryDocumentFormState | null>(null);
+  const documentCurrentStateRef = useRef<InventoryDocumentFormState | null>(
+    null
+  );
   const handleTabChange = useCallback(
     (tabId: EquipmentTabId) => {
       setActiveTab(tabId);
@@ -321,9 +380,12 @@ export default function EquipmentPage() {
   }, []);
 
   const loadInventoryDocumentDetail = useCallback(
-    async (documentId: string) => {
-      setDocumentDetailLoading(true);
-      setDocumentDetail(null);
+    async (documentId: string, options?: { skipState?: boolean }) => {
+      const shouldUpdateState = !options?.skipState;
+      if (shouldUpdateState) {
+        setDocumentDetailLoading(true);
+        setDocumentDetail(null);
+      }
       try {
         const params = new URLSearchParams({ id: documentId });
         const res = await fetch(`/api/inventory/documents?${params.toString()}`);
@@ -332,10 +394,14 @@ export default function EquipmentPage() {
           throw new Error(message || "שגיאה בטעינת תעודה");
         }
         const payload = await res.json();
-        setDocumentDetail(payload.document);
+        if (shouldUpdateState) {
+          setDocumentDetail(payload.document);
+        }
         return payload.document as InventoryDocumentDetail;
       } finally {
-        setDocumentDetailLoading(false);
+        if (shouldUpdateState) {
+          setDocumentDetailLoading(false);
+        }
       }
     },
     []
@@ -423,6 +489,7 @@ export default function EquipmentPage() {
         categories: payload.categories || [],
         warehouses: payload.warehouses || [],
         suppliers: payload.suppliers || [],
+        donors: payload.donors || [],
       });
     } catch (err: any) {
       if (err?.name === "AbortError") return;
@@ -561,17 +628,96 @@ export default function EquipmentPage() {
     setEditingWarehouseId(null);
   };
 
+  const applyDocumentFormState = useCallback(
+    (
+      nextState: InventoryDocumentFormState,
+      options?: {
+        draftId?: string | null;
+        editingId?: string | null;
+        editingNumber?: number | null;
+      }
+    ) => {
+      const cloned = cloneDocumentState(nextState);
+      setDocumentFormState(cloned);
+      documentBaseStateRef.current = cloneDocumentState(cloned);
+      documentCurrentStateRef.current = cloneDocumentState(cloned);
+      setDocumentFormDirty(false);
+      setCurrentDocumentDraftId(options?.draftId ?? null);
+      setEditingDocumentId(options?.editingId ?? null);
+      setEditingDocumentNumber(options?.editingNumber ?? null);
+    },
+    []
+  );
+
   const openDocumentModal = () => {
+    applyDocumentFormState(createEmptyInventoryDocumentForm(), {
+      draftId: null,
+      editingId: null,
+      editingNumber: null,
+    });
+    setDocumentDraftPromptOpen(false);
     setDocumentModalOpen(true);
   };
 
   const closeDocumentModal = () => {
     setDocumentModalOpen(false);
+    setDocumentFormDirty(false);
+    setCurrentDocumentDraftId(null);
+    setEditingDocumentId(null);
+    setEditingDocumentNumber(null);
+    setDocumentFormState(createEmptyInventoryDocumentForm());
+    documentBaseStateRef.current = null;
+    documentCurrentStateRef.current = null;
+    setDocumentDraftPromptOpen(false);
   };
 
   const closeDocumentDetailModal = () => {
     setDocumentDetailOpen(false);
     setDocumentDetail(null);
+  };
+
+  const requestCloseDocumentModal = () => {
+    if (documentFormDirty) {
+      setDocumentDraftPromptOpen(true);
+      return;
+    }
+    closeDocumentModal();
+  };
+
+  const handleSaveDocumentDraft = () => {
+    const current =
+      documentCurrentStateRef.current || cloneDocumentState(documentFormState);
+    const draftId = currentDocumentDraftId || generateDraftId("doc");
+    saveDocumentDraft(draftId, cloneDocumentState(current));
+    setCurrentDocumentDraftId(draftId);
+    setDocumentDraftPromptOpen(false);
+    setDocumentFormDirty(false);
+    closeDocumentModal();
+  };
+
+  const handleDiscardDocumentDraft = () => {
+    setDocumentDraftPromptOpen(false);
+    setDocumentFormDirty(false);
+    closeDocumentModal();
+  };
+
+  const handleDismissDocumentPrompt = () => {
+    setDocumentDraftPromptOpen(false);
+  };
+
+  const handleResumeDocumentDraft = (draftId: string) => {
+    const draft = documentDrafts.find((entry) => entry.id === draftId);
+    if (!draft) return;
+    applyDocumentFormState(draft.payload, { draftId });
+    setDocumentDraftPromptOpen(false);
+    setDocumentModalOpen(true);
+  };
+
+  const handleDeleteDocumentDraft = (draftId: string) => {
+    deleteDocumentDraft(draftId);
+    if (currentDocumentDraftId === draftId) {
+      setCurrentDocumentDraftId(null);
+    }
   };
 
   const openWarehouseInventoryModal = (warehouse: Warehouse) => {
@@ -626,6 +772,9 @@ export default function EquipmentPage() {
   const openCreateModal = () => {
     setEditingItem(null);
     setFormState(createEmptyFormState());
+    setCurrentEquipmentDraftId(null);
+    setEquipmentFormDirty(false);
+    setEquipmentDraftPromptOpen(false);
     setShowFormModal(true);
   };
 
@@ -666,6 +815,64 @@ export default function EquipmentPage() {
 
     setFormState(nextState);
     setShowFormModal(true);
+    setEquipmentFormDirty(false);
+    setCurrentEquipmentDraftId(null);
+    setEquipmentDraftPromptOpen(false);
+  };
+
+  const closeEquipmentModal = () => {
+    setShowFormModal(false);
+    setEditingItem(null);
+    setFormState(createEmptyFormState());
+    setEquipmentFormDirty(false);
+    setCurrentEquipmentDraftId(null);
+    setEquipmentDraftPromptOpen(false);
+  };
+
+  const requestCloseEquipmentModal = () => {
+    if (equipmentFormDirty) {
+      setEquipmentDraftPromptOpen(true);
+      return;
+    }
+    closeEquipmentModal();
+  };
+
+  const handleSaveEquipmentDraft = () => {
+    const draftId =
+      currentEquipmentDraftId || editingItem?.id || generateDraftId("item");
+    saveEquipmentDraft(draftId, cloneEquipmentState(formState));
+    setCurrentEquipmentDraftId(draftId);
+    setEquipmentDraftPromptOpen(false);
+    setEquipmentFormDirty(false);
+    closeEquipmentModal();
+  };
+
+  const handleDiscardEquipmentDraft = () => {
+    setEquipmentDraftPromptOpen(false);
+    setEquipmentFormDirty(false);
+    closeEquipmentModal();
+  };
+
+  const handleDismissEquipmentPrompt = () => {
+    setEquipmentDraftPromptOpen(false);
+  };
+
+  const handleResumeEquipmentDraft = (draftId: string) => {
+    const draft = equipmentDrafts.find((entry) => entry.id === draftId);
+    if (!draft) return;
+    setFormState(cloneEquipmentState(draft.payload));
+    setEditingItem(null);
+    setCurrentEquipmentDraftId(draftId);
+    setEquipmentFormDirty(false);
+    setEquipmentDraftPromptOpen(false);
+    setShowFormModal(true);
+  };
+
+  const handleDeleteEquipmentDraft = (draftId: string) => {
+    deleteEquipmentDraft(draftId);
+    if (currentEquipmentDraftId === draftId) {
+      setCurrentEquipmentDraftId(null);
+    }
   };
 
   const openViewModal = (item: EquipmentItem) => {
@@ -710,6 +917,7 @@ export default function EquipmentPage() {
 
       return next;
     });
+    setEquipmentFormDirty(true);
   };
 
   const handleStructureChange = <K extends keyof StructureFormState>(
@@ -740,18 +948,36 @@ export default function EquipmentPage() {
     [loadInventoryDocumentDetail]
   );
 
+  const handleDocumentStateChange = useCallback(
+    (state: InventoryDocumentFormState) => {
+      const snapshot = cloneDocumentState(state);
+      documentCurrentStateRef.current = snapshot;
+      const baseSnapshot = documentBaseStateRef.current;
+      setDocumentFormDirty(!areDocumentStatesEqual(baseSnapshot, snapshot));
+    },
+    []
+  );
+
   const handleSubmitInventoryDocument = useCallback(
-    async (form: InventoryDocumentFormState) => {
+    async (
+      form: InventoryDocumentFormState,
+      options?: { documentId?: string | null }
+    ) => {
       const actionType = form.action_type;
+      const editingId = options?.documentId ?? null;
 
       if (actionType === "RECEIPT" && !form.supplier_identifier) {
         alert("בקליטת ספק יש לבחור ספק.");
         return;
       }
+      if (actionType === "DONATION" && !form.donor_national_id) {
+        alert("יש לבחור תורם לתעודת תרומה.");
+        return;
+      }
 
       const sanitizedLines = form.lines
         .map((line) => {
-          const quantity = Number(line.quantity);
+          let quantity = Number(line.quantity);
           if (!line.item_id || Number.isNaN(quantity) || quantity === 0) {
             return null;
           }
@@ -782,14 +1008,23 @@ export default function EquipmentPage() {
             }
           }
 
+          if (actionType === "STOCKTAKE_ADJUST") {
+            const isDecrease = line.adjust_direction === "decrease";
+            quantity = Math.abs(quantity) * (isDecrease ? -1 : 1);
+          } else {
+            quantity = Math.abs(quantity);
+          }
+
+          const includeSupplierDoc =
+            actionType !== "TRANSFER" && actionType !== "STOCKTAKE_ADJUST";
+
           return {
           item_id: line.item_id,
             quantity,
             unit_cost: null,
             source_warehouse_id: sourceWarehouse,
             target_warehouse_id: targetWarehouse,
-            supplier_document_number: supplierDoc,
-            reference_note: null,
+            supplier_document_number: includeSupplierDoc ? supplierDoc : null,
           };
         })
         .filter(
@@ -802,7 +1037,6 @@ export default function EquipmentPage() {
             source_warehouse_id: string | null;
             target_warehouse_id: string | null;
             supplier_document_number: string | null;
-            reference_note: null;
           } => Boolean(line)
         );
 
@@ -814,16 +1048,26 @@ export default function EquipmentPage() {
       setDocumentSubmitting(true);
       try {
         const res = await fetch("/api/inventory/documents", {
-          method: "POST",
+          method: editingId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action_type: form.action_type,
-            activity_id: form.activity_id ? Number(form.activity_id) : undefined,
             supplier_identifier: form.supplier_identifier || undefined,
-            reference_number: form.reference_number || undefined,
+            donor_national_id:
+              form.action_type === "DONATION"
+                ? form.donor_national_id || undefined
+                : undefined,
+            supplier_document_type:
+              form.action_type === "RECEIPT"
+                ? form.supplier_document_type || undefined
+                : undefined,
             notes: form.notes || undefined,
-            external_party: form.external_party || undefined,
+            external_party:
+              form.action_type === "DISPOSAL"
+                ? form.external_party || undefined
+                : undefined,
             lines: sanitizedLines,
+            document_id: editingId || undefined,
           }),
         });
 
@@ -832,7 +1076,12 @@ export default function EquipmentPage() {
           throw new Error(message || "שגיאה בשמירת התעודה");
         }
 
-        setDocumentModalOpen(false);
+        const draftId = currentDocumentDraftId;
+        if (draftId) {
+          deleteDocumentDraft(draftId);
+          setCurrentDocumentDraftId(null);
+        }
+        closeDocumentModal();
         await Promise.all([fetchEquipment(), loadInventoryDocuments()]);
     } catch (err: any) {
         console.error("Error creating inventory document:", err);
@@ -842,6 +1091,59 @@ export default function EquipmentPage() {
     }
     },
     [fetchEquipment, loadInventoryDocuments]
+  );
+
+  const mapDocumentDetailToForm = useCallback(
+    (detail: InventoryDocumentDetail): InventoryDocumentFormState => {
+      const base = createEmptyInventoryDocumentForm();
+      base.action_type = detail.action_type;
+      base.supplier_identifier = detail.supplier_identifier || "";
+      base.supplier_document_type = detail.supplier_document_type || "";
+      base.donor_national_id = detail.donor_national_id || "";
+      base.external_party = detail.external_party || "";
+      base.notes = detail.notes || "";
+      base.lines =
+        detail.lines && detail.lines.length
+          ? detail.lines.map((line) => ({
+              item_id: line.item_id,
+              quantity: Math.abs(line.quantity).toString(),
+              source_warehouse_id: line.source_warehouse_id || "",
+              target_warehouse_id:
+                detail.action_type === "DISPOSAL"
+                  ? line.source_warehouse_id || ""
+                  : line.target_warehouse_id || "",
+              supplier_document_number: line.supplier_document_number || "",
+              adjust_direction:
+                detail.action_type === "STOCKTAKE_ADJUST" && line.quantity < 0
+                  ? "decrease"
+                  : "increase",
+            }))
+          : [createEmptyInventoryDocumentLine()];
+      return base;
+    },
+    []
+  );
+
+  const handleEditInventoryDocument = useCallback(
+    async (documentId: string) => {
+      try {
+        const detail = await loadInventoryDocumentDetail(documentId, {
+          skipState: true,
+        });
+        const mapped = mapDocumentDetailToForm(detail);
+        applyDocumentFormState(mapped, {
+          draftId: null,
+          editingId: documentId,
+          editingNumber: detail.document_number,
+        });
+        setDocumentDraftPromptOpen(false);
+        setDocumentModalOpen(true);
+      } catch (err: any) {
+        console.error("Error preparing document for edit:", err);
+        alert(err?.message || "שגיאה בטעינת התעודה לעריכה");
+      }
+    },
+    [applyDocumentFormState, loadInventoryDocumentDetail, mapDocumentDetailToForm]
   );
 
   const handleDelete = async (id: string) => {
@@ -917,9 +1219,12 @@ export default function EquipmentPage() {
         throw new Error(response.error || "שמירת פריט נכשלה");
       }
 
-      setShowFormModal(false);
-      setEditingItem(null);
-      setFormState(createEmptyFormState());
+      const draftId = currentEquipmentDraftId;
+      if (draftId) {
+        deleteEquipmentDraft(draftId);
+        setCurrentEquipmentDraftId(null);
+      }
+      closeEquipmentModal();
       fetchEquipment();
     } catch (err: any) {
       console.error("Error saving equipment:", err);
@@ -1110,6 +1415,9 @@ export default function EquipmentPage() {
           loading={loading}
           error={error}
           canEdit={canEditCatalog}
+          drafts={equipmentDrafts}
+          onResumeDraft={handleResumeEquipmentDraft}
+          onDeleteDraft={handleDeleteEquipmentDraft}
           onFilterChange={handleFilterChange}
           onRefresh={() => fetchEquipment()}
           onCreateItem={openCreateModal}
@@ -1125,8 +1433,12 @@ export default function EquipmentPage() {
           documents={inventoryDocuments}
           documentsLoading={documentsLoading}
           canEdit={canEditInventory}
+          drafts={documentDrafts}
+          onResumeDraft={handleResumeDocumentDraft}
+          onDeleteDraft={handleDeleteDocumentDraft}
           onOpenDocumentModal={openDocumentModal}
           onViewDocument={handleViewInventoryDocument}
+          onEditDocument={handleEditInventoryDocument}
           onRefreshDocuments={loadInventoryDocuments}
           onGoToStructure={goToStructureTab}
         />
@@ -1147,12 +1459,18 @@ export default function EquipmentPage() {
 
       <InventoryDocumentModal
         open={documentModalOpen}
-        onClose={closeDocumentModal}
+        onClose={requestCloseDocumentModal}
         submitting={documentSubmitting}
         items={data.items}
         warehouses={data.warehouses}
         suppliers={data.suppliers}
+        donors={data.donors}
+        initialState={documentFormState}
+        editingDocumentId={editingDocumentId}
+        editingDocumentNumber={editingDocumentNumber ?? undefined}
         onSubmit={handleSubmitInventoryDocument}
+        onStateChange={handleDocumentStateChange}
+        escEnabled={!documentDraftPromptOpen}
       />
 
       <WarehouseModal
@@ -1188,7 +1506,7 @@ export default function EquipmentPage() {
 
       <EquipmentFormModal
         open={showFormModal}
-        onClose={() => setShowFormModal(false)}
+        onClose={requestCloseEquipmentModal}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
         formState={formState}
@@ -1198,6 +1516,7 @@ export default function EquipmentPage() {
         canEdit={canEditCatalog}
         suppliers={data.suppliers}
         onChange={handleFormChange}
+        escEnabled={!equipmentDraftPromptOpen}
       />
 
       <ViewItemModal
@@ -1217,6 +1536,62 @@ export default function EquipmentPage() {
         onTransferStock={handleTransferWarehouseStock}
         canEdit={canEditInventory}
       />
+
+      <Modal
+        open={equipmentDraftPromptOpen}
+        onClose={handleDismissEquipmentPrompt}
+        width="min(420px, 90vw)"
+      >
+        <h3 style={{ marginTop: 0 }}>לשמור את הפריט כטיוטה?</h3>
+        <p style={{ color: muted }}>
+          ניתן לשמור את הפריט כטיוטה אישית (מוצגת רק לך) ולהמשיך לעבוד עליו מאוחר
+          יותר או לבטל את הפעולה כעת.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: spacing.sm,
+            marginTop: spacing.lg,
+          }}
+        >
+          <Button variant="ghost" onClick={handleDismissEquipmentPrompt}>
+            חזרה לעריכה
+          </Button>
+          <Button variant="secondary" onClick={handleDiscardEquipmentDraft}>
+            בטל וסגור
+          </Button>
+          <Button onClick={handleSaveEquipmentDraft}>שמור כטיוטה</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={documentDraftPromptOpen}
+        onClose={handleDismissDocumentPrompt}
+        width="min(420px, 90vw)"
+      >
+        <h3 style={{ marginTop: 0 }}>לשמור את התעודה כטיוטה?</h3>
+        <p style={{ color: muted }}>
+          השמירה תשמור את מצב התעודה רק עבורך. ניתן גם לסגור ללא שמירה או לחזור
+          לעריכה.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: spacing.sm,
+            marginTop: spacing.lg,
+          }}
+        >
+          <Button variant="ghost" onClick={handleDismissDocumentPrompt}>
+            חזרה לעריכה
+          </Button>
+          <Button variant="secondary" onClick={handleDiscardDocumentDraft}>
+            בטל וסגור
+          </Button>
+          <Button onClick={handleSaveDocumentDraft}>שמור כטיוטה</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -86,14 +86,15 @@ export const createEmptyInventoryDocumentLine =
     source_warehouse_id: "",
     target_warehouse_id: "",
     supplier_document_number: "",
+    adjust_direction: "increase",
   });
 
 export const createEmptyInventoryDocumentForm =
   (): InventoryDocumentFormState => ({
     action_type: "RECEIPT",
-    activity_id: "",
+    donor_national_id: "",
     supplier_identifier: "",
-    reference_number: "",
+    supplier_document_type: "",
     notes: "",
     external_party: "",
     lines: [createEmptyInventoryDocumentLine()],

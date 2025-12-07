@@ -1,4 +1,5 @@
 import type {
+  Donor,
   EquipmentCategory,
   EquipmentFamily,
   EquipmentItem,
@@ -84,6 +85,7 @@ export type EquipmentPageData = {
   categories: EquipmentCategory[];
   warehouses: Warehouse[];
   suppliers: Supplier[];
+  donors: Donor[];
 };
 
 export type StatSummary = {
@@ -98,8 +100,6 @@ export type InventoryDocumentAction =
   | "DONATION"
   | "DISPOSAL"
   | "TRANSFER"
-  | "ACTIVITY_OUT"
-  | "ACTIVITY_RETURN"
   | "STOCKTAKE_ADJUST";
 
 export type InventoryDocumentFormLine = {
@@ -108,13 +108,14 @@ export type InventoryDocumentFormLine = {
   source_warehouse_id: string;
   target_warehouse_id: string;
   supplier_document_number: string;
+  adjust_direction: "increase" | "decrease";
 };
 
 export type InventoryDocumentFormState = {
   action_type: InventoryDocumentAction;
-  activity_id: string;
+  donor_national_id: string;
   supplier_identifier: string;
-  reference_number: string;
+  supplier_document_type: string;
   notes: string;
   external_party: string;
   lines: InventoryDocumentFormLine[];
@@ -131,10 +132,12 @@ export type InventoryDocumentSummary = {
   target_warehouse_name?: string | null;
   supplier_identifier?: string | null;
   supplier_name?: string | null;
+  supplier_document_type?: string | null;
+  donor_national_id?: string | null;
+  donor_name?: string | null;
   external_party?: string | null;
   total_quantity: number;
   total_value?: number | null;
-  reference_number?: string | null;
   notes?: string | null;
   created_by?: string | null;
   created_by_name?: string | null;
@@ -152,7 +155,6 @@ export type InventoryDocumentLine = {
   target_warehouse_id?: string | null;
   target_warehouse_name?: string | null;
   supplier_document_number?: string | null;
-  reference_note?: string | null;
 };
 
 export type InventoryDocumentDetail = InventoryDocumentSummary & {

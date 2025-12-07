@@ -112,11 +112,15 @@ export function InventoryDocumentDetailModal({
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: muted }}>ספק / גורם</div>
+              <div style={{ fontSize: 12, color: muted }}>
+                ספק / תורם / גורם
+              </div>
               <div>
                 {document.supplier_name ||
+                  document.donor_name ||
                   document.external_party ||
                   document.supplier_identifier ||
+                  document.donor_national_id ||
                   "—"}
               </div>
             </div>
@@ -141,10 +145,12 @@ export function InventoryDocumentDetailModal({
               <div style={{ fontSize: 12, color: muted }}>מחסן יעד</div>
               <div>{document.target_warehouse_name || "—"}</div>
             </div>
-            {document.reference_number && (
+            {document.supplier_document_type && (
               <div>
-                <div style={{ fontSize: 12, color: muted }}>מספר אסמכתא</div>
-                <div>{document.reference_number}</div>
+                <div style={{ fontSize: 12, color: muted }}>
+                  סוג תעודת ספק
+                </div>
+                <div>{document.supplier_document_type}</div>
               </div>
             )}
           </div>

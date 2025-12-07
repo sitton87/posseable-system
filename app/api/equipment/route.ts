@@ -147,7 +147,14 @@ export async function GET(req: Request) {
 
     sql += " ORDER BY ei.created_at DESC";
 
-    const [itemsResult, familiesResult, categoriesResult, warehousesResult, suppliersResult] =
+    const [
+      itemsResult,
+      familiesResult,
+      categoriesResult,
+      warehousesResult,
+      suppliersResult,
+      donorsResult,
+    ] =
       await Promise.all([
       query(sql, params),
       query(`
@@ -236,6 +243,20 @@ export async function GET(req: Request) {
         FROM supplier
         ORDER BY name
       `),
+      query(`
+        SELECT
+          national_id,
+          full_name,
+          organization,
+          phone,
+          email,
+          notes,
+          is_active,
+          created_at
+        FROM donor
+        WHERE is_active = 1
+        ORDER BY full_name
+      `),
     ]);
 
     const items = (itemsResult.recordset as EquipmentRecord[]).map((record) => {
@@ -265,6 +286,7 @@ export async function GET(req: Request) {
       categories: categoriesResult.recordset,
       warehouses: warehousesResult.recordset,
       suppliers: suppliersResult.recordset,
+      donors: donorsResult.recordset,
     });
   } catch (err: any) {
     console.error("Error fetching equipment:", err);

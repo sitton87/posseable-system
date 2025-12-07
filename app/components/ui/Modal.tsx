@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useModalEsc } from "@/app/hooks/useModalEsc";
 import { modalOverlay, modalCard } from "@/app/styles/components";
 
 type ModalProps = {
@@ -8,6 +9,7 @@ type ModalProps = {
   style?: CSSProperties;
   overlayStyle?: CSSProperties;
   children: ReactNode;
+  escEnabled?: boolean;
 };
 
 export function Modal({
@@ -17,7 +19,13 @@ export function Modal({
   style,
   overlayStyle,
   children,
+  escEnabled = true,
 }: ModalProps) {
+  useModalEsc({
+    enabled: open && escEnabled && typeof onClose === "function",
+    onClose: onClose ?? (() => {}),
+  });
+
   if (!open) return null;
 
   return (
