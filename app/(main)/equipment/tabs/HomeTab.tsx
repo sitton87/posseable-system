@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Card } from "@/app/components/ui";
+import { StatCardGrid } from "@/app/components/shared";
 import {
   tableCellStyle,
   tableHeaderStyle,
@@ -49,7 +50,7 @@ export function HomeTab({
     .slice(0, 5);
   const recentDocuments = documents.slice(0, 5);
 
-  const kpis = [
+  const statCards = [
     {
       label: "סה\"כ פריטים",
       value: formatNumber(statSummary.totalItems, "0"),
@@ -79,36 +80,7 @@ export function HomeTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: spacing.md,
-        }}
-      >
-        {kpis.map((kpi) => (
-          <Card
-            key={kpi.label}
-            style={{
-              padding: px(spacing.md),
-              borderRadius: radii.card,
-              boxShadow: shadows.card,
-            }}
-          >
-            <div style={{ fontSize: 12, color: muted }}>{kpi.label}</div>
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                margin: `${spacing.xs}px 0`,
-              }}
-            >
-              {kpi.value}
-            </div>
-            <div style={{ fontSize: 12, color: muted }}>{kpi.hint}</div>
-          </Card>
-        ))}
-      </div>
+      <StatCardGrid stats={statCards} />
 
       <div
         style={{

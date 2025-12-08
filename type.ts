@@ -269,6 +269,40 @@ export type Supplier = {
   email?: string | null;
   notes?: string | null;
   is_active: boolean;
+  supplier_type?: "goods" | "services" | "both";
+  services_offered?: string | null;
+  has_active_contract?: boolean;
+};
+
+export type SupplierStats = {
+  totalSuppliers: number;
+  activeSuppliers: number;
+  serviceSuppliers: number;
+  activeContracts: number;
+};
+
+export type SupplierNote = {
+  note_id: string;
+  entity_id: string;
+  title?: string | null;
+  body: string;
+  status?: string | null;
+  priority?: string | null;
+  due_date?: string | null;
+  created_by: string;
+  created_at: string;
+};
+
+export type SupplierActivityLog = {
+  activity_id: string;
+  supplier_identifier: string;
+  activity_type: string;
+  related_document_id?: string | null;
+  related_document_type?: string | null;
+  description?: string | null;
+  quantity?: number | null;
+  amount?: number | null;
+  occurred_at: string;
 };
 
 // API Response types

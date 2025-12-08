@@ -5,12 +5,17 @@ import { useSearchParams } from "next/navigation";
 import type { Donor } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import {
+  DraftList,
+  FilterToolbar,
+  StatCardGrid,
+} from "@/app/components/shared";
+import {
   inputStyle,
   labelStyle,
   tableCellStyle,
   tableHeaderStyle,
   tableStyle,
-  withCenteredControl,
+  filterControlStyle as baseFilterControlStyle,
 } from "@/app/styles/components";
 import { colors, spacing, radii } from "@/app/styles/foundations";
 import { formatPhoneNumber } from "@/lib/utils/format";
@@ -89,9 +94,6 @@ type DonorListTabProps = {
 
 const muted = colors.textMuted;
 const px = (value: number) => `${value}px`;
-const draftBorderColor = "#8bd4a1";
-const draftSurfaceColor = "#e6f5ec";
-
 const sectionBoxStyle = {
   marginBottom: spacing.lg,
   padding: spacing.lg,
@@ -221,6 +223,22 @@ function DonorsHomeTab({
   onRefresh,
   loading,
 }: HomeTabProps) {
+  const statCards = [
+    { label: 'סה"כ תורמים', value: stats.total_donors },
+    {
+      label: 'סה"כ תרומות',
+      value: formatCurrency(stats.total_donations),
+    },
+    {
+      label: "התרומה הגבוהה ביותר",
+      value: formatCurrency(stats.highest_donation),
+    },
+    {
+      label: "ממוצע תרומה",
+      value: formatCurrency(stats.average_donation),
+    },
+  ];
+
   return (
     <Card>
       <div
@@ -242,42 +260,8 @@ function DonorsHomeTab({
           רענן נתונים
         </Button>
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: spacing.md,
-          marginTop: spacing.lg,
-        }}
-      >
-        {[
-          { label: 'סה"כ תורמים', value: stats.total_donors },
-          {
-            label: 'סה"כ תרומות',
-            value: formatCurrency(stats.total_donations),
-          },
-          {
-            label: "התרומה הגבוהה ביותר",
-            value: formatCurrency(stats.highest_donation),
-          },
-          {
-            label: "ממוצע תרומה",
-            value: formatCurrency(stats.average_donation),
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            style={{
-              background: colors.surfaceAlt,
-              borderRadius: radii.card,
-              padding: spacing.lg,
-              border: `1px solid ${colors.borderMuted}`,
-            }}
-          >
-            <div style={{ color: muted, fontSize: 13 }}>{item.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 800 }}>{item.value}</div>
-          </div>
-        ))}
+      <div style={{ marginTop: spacing.lg }}>
+        <StatCardGrid stats={statCards} />
       </div>
       <div
         style={{
@@ -364,7 +348,7 @@ function DonorListTab({
     fontSize: 12,
     padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
   };
-  const filterControlStyle = withCenteredControl(inputStyle);
+  const filterControlStyle = baseFilterControlStyle;
 
   return (
     <Card>
@@ -396,71 +380,23 @@ function DonorListTab({
         </div>
       </div>
       {drafts.length > 0 && (
-        <div
-          style={{
-            marginTop: spacing.md,
-            padding: spacing.md,
-            borderRadius: radii.card,
-            border: `1px solid ${draftBorderColor}`,
-            background: draftSurfaceColor,
-          }}
-        >
-          <strong>טיוטות אישיות ({drafts.length})</strong>
-          <div
-            style={{
-              marginTop: spacing.sm,
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.xs,
-            }}
-          >
-            {drafts.map((draft) => (
-              <div
-                key={draft.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: spacing.sm,
-                  borderBottom: `1px solid ${draftBorderColor}`,
-                  paddingBottom: spacing.xs,
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>
-                    {draft.payload.full_name || "תורם ללא שם"}
-                  </div>
-                  <div style={{ fontSize: 12, color: muted }}>
-                    עודכן {new Date(draft.updatedAt).toLocaleString("he-IL")}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: spacing.xs }}>
-                  <Button
-                    variant="secondary"
-                    onClick={() => onResumeDraft(draft.id)}
-                  >
-                    המשך
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => onDeleteDraft(draft.id)}
-                    aria-label="מחק טיוטה"
-                  >
-                    🗑️
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div style={{ marginTop: spacing.md }}>
+          <DraftList
+            drafts={drafts}
+            title={`טיוטות אישיות (${drafts.length})`}
+            description="טיוטות זמינות עבורך בלבד עד לשמירה סופית."
+            onResume={onResumeDraft}
+            onDelete={onDeleteDraft}
+            getTitle={(draft) => draft.payload.full_name || "תורם ללא שם"}
+            getSubtitle={(draft) =>
+              `עודכן ${new Date(draft.updatedAt).toLocaleString("he-IL")}`
+            }
+          />
         </div>
       )}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: spacing.md,
-          marginTop: spacing.md,
-        }}
+      <FilterToolbar
+        columns="repeat(auto-fit, minmax(220px, 1fr))"
+        style={{ marginTop: spacing.md }}
       >
         <input
           type="text"
@@ -480,7 +416,7 @@ function DonorListTab({
           <option value="active">תורמים פעילים</option>
           <option value="inactive">תורמים לא פעילים</option>
         </select>
-      </div>
+      </FilterToolbar>
       <div
         style={{
           marginTop: spacing.sm,

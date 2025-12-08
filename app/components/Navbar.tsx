@@ -181,6 +181,15 @@ export default function Navbar() {
       href: "/suppliers",
       icon: <Handshake size={22} />,
       label: "ספקים",
+      children: [
+        { href: "/suppliers", label: "דף הבית", pageKey: "suppliers" },
+        {
+          href: "/suppliers",
+          label: "רשימת ספקים",
+          pageKey: "suppliers-list",
+          query: { view: "list" },
+        },
+      ],
     },
     {
       pageKey: "equipment",

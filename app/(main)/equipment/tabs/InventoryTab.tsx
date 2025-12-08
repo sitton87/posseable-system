@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, Button } from "@/app/components/ui";
+import { DraftList } from "@/app/components/shared";
 import {
   tableCellStyle,
   tableHeaderStyle,
@@ -36,24 +37,6 @@ const ACTION_LABELS: Record<string, string> = {
   TRANSFER: "העברה",
   STOCKTAKE_ADJUST: "התאמת מלאי",
 };
-const draftBorderColor = "#8bd4a1";
-const draftSurfaceColor = "#e6f5ec";
-
-const draftListContainer = {
-  border: `1px solid ${draftBorderColor}`,
-  borderRadius: spacing.md,
-  padding: spacing.md,
-  background: draftSurfaceColor,
-};
-const draftRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: spacing.md,
-  padding: `${spacing.sm} 0`,
-  borderBottom: `1px solid ${draftBorderColor}`,
-};
-
 export function InventoryTab({
   documents,
   documentsLoading,
@@ -93,96 +76,34 @@ export function InventoryTab({
               flexWrap: "wrap",
             }}
           >
-            <Button onClick={onOpenDocumentModal} disabled={!canEdit}>
-              + תעודת מלאי חדשה
-            </Button>
             <Button variant="secondary" onClick={onRefreshDocuments}>
               רענן נתונים
             </Button>
             <Button variant="secondary" onClick={onGoToStructure}>
               הגדרות מחסנים
             </Button>
+            <Button onClick={onOpenDocumentModal} disabled={!canEdit}>
+              + תעודת מלאי חדשה
+            </Button>
           </div>
         </div>
         {drafts && drafts.length > 0 && (
-          <div style={{ ...draftListContainer, marginBottom: spacing.lg }}>
-            <strong>טיוטות תעודות ({drafts.length})</strong>
-            <p style={{ margin: "4px 0 0", color: muted, fontSize: 12 }}>
-              טיוטות אלו זמינות רק לך עד להשלמה רשמית.
-            </p>
-            <div style={{ marginTop: spacing.sm }}>
-              {drafts.map((draft, index) => (
-                <div
-                  key={draft.id}
-                  style={{
-                    ...draftRowStyle,
-                    borderBottom:
-                      index === drafts.length - 1
-                        ? "none"
-                        : draftRowStyle.borderBottom,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: spacing.sm,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span
-                        style={{
-                          ...tableHeaderStyle,
-                          background: colors.success,
-                          color: "#fff",
-                          borderRadius: spacing.sm,
-                          padding: "2px 8px",
-                          fontSize: 12,
-                        }}
-                      >
-                        טיוטה
-                      </span>
-                      <strong style={{ fontSize: 14 }}>
-                        {ACTION_LABELS[draft.payload.action_type] ||
-                          draft.payload.action_type}
-                      </strong>
-                    </div>
-                    <p
-                      style={{
-                        margin: "4px 0 0",
-                        color: muted,
-                        fontSize: 12,
-                      }}
-                    >
-                      עודכן {new Date(draft.updatedAt).toLocaleString("he-IL")}
-                    </p>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: spacing.sm,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Button
-                      onClick={() => onResumeDraft?.(draft.id)}
-                      aria-label="המשך עריכת טיוטה"
-                      disabled={!canEdit}
-                    >
-                      המשך
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => onDeleteDraft?.(draft.id)}
-                      aria-label="מחיקת טיוטה"
-                    >
-                      🗑️
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div style={{ marginBottom: spacing.lg }}>
+            <DraftList
+              drafts={drafts}
+              title={`טיוטות תעודות (${drafts.length})`}
+              description="טיוטות אלו זמינות רק לך עד להשלמה רשמית."
+              onResume={onResumeDraft}
+              onDelete={onDeleteDraft}
+              disableResume={!canEdit}
+              getTitle={(draft) =>
+                ACTION_LABELS[draft.payload.action_type] ||
+                draft.payload.action_type
+              }
+              getSubtitle={(draft) =>
+                `עודכן ${new Date(draft.updatedAt).toLocaleString("he-IL")}`
+              }
+            />
           </div>
         )}
         <div>

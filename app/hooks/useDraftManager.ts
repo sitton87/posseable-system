@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export type DraftType = "equipmentItem" | "inventoryDocument" | "donor";
+export type DraftType =
+  | "equipmentItem"
+  | "inventoryDocument"
+  | "donor"
+  | "supplier";
 
 export type DraftEntry<T> = {
   id: string;

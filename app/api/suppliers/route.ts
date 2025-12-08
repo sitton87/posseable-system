@@ -15,7 +15,10 @@ export async function GET(req: Request) {
         phone,
         email,
         notes,
-        is_active
+        is_active,
+        supplier_type,
+        services_offered,
+        has_active_contract
       FROM supplier
     `;
 

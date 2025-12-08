@@ -17,6 +17,9 @@ export async function POST(req: Request) {
       email,
       notes,
       is_active,
+      supplier_type = "goods",
+      services_offered,
+      has_active_contract = false,
     } = body;
 
     if (!supplier_identifier || !identifier_type || !name) {
@@ -36,7 +39,10 @@ export async function POST(req: Request) {
         email,
         notes,
         is_active,
-        created_at
+        created_at,
+        supplier_type,
+        services_offered,
+        has_active_contract
       )
       VALUES (
         @supplier_identifier,
@@ -47,7 +53,10 @@ export async function POST(req: Request) {
         @email,
         @notes,
         @is_active,
-        GETDATE()
+        GETDATE(),
+        @supplier_type,
+        @services_offered,
+        @has_active_contract
       )
     `;
 
@@ -60,6 +69,9 @@ export async function POST(req: Request) {
       email,
       notes,
       is_active: is_active ? 1 : 0,
+      supplier_type,
+      services_offered,
+      has_active_contract: has_active_contract ? 1 : 0,
     });
 
     return NextResponse.json({ success: true });

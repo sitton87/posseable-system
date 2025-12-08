@@ -40,6 +40,8 @@ export function withCenteredControl(style: CSSProperties = {}) {
   return { ...style, ...centeredControlStyle };
 }
 
+export const filterControlStyle = withCenteredControl(inputStyle);
+
 export const fieldRow: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",

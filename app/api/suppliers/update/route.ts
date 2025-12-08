@@ -17,6 +17,9 @@ export async function PUT(req: Request) {
       email,
       notes,
       is_active,
+      supplier_type,
+      services_offered,
+      has_active_contract,
     } = body;
 
     if (!supplier_identifier) {
@@ -35,7 +38,10 @@ export async function PUT(req: Request) {
         phone = @phone,
         email = @email,
         notes = @notes,
-        is_active = @is_active
+        is_active = @is_active,
+        supplier_type = COALESCE(@supplier_type, supplier_type),
+        services_offered = @services_offered,
+        has_active_contract = COALESCE(@has_active_contract, has_active_contract)
       WHERE supplier_identifier = @supplier_identifier
     `;
 
@@ -48,6 +54,14 @@ export async function PUT(req: Request) {
       email,
       notes,
       is_active: is_active ? 1 : 0,
+      supplier_type,
+      services_offered,
+      has_active_contract:
+        typeof has_active_contract === "boolean"
+          ? has_active_contract
+            ? 1
+            : 0
+          : undefined,
     });
 
     return NextResponse.json({ success: true });

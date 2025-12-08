@@ -2,13 +2,13 @@
 
 import { Fragment, useState } from "react";
 import { Card, Button } from "@/app/components/ui";
+import { DraftList, FilterToolbar } from "@/app/components/shared";
 import {
   badgeStyle,
-  inputStyle,
   tableCellStyle,
   tableHeaderStyle,
   tableStyle,
-  withCenteredControl,
+  filterControlStyle,
 } from "@/app/styles/components";
 import { colors, spacing } from "@/app/styles/foundations";
 import type { DraftEntry } from "@/app/hooks/useDraftManager";
@@ -48,29 +48,12 @@ type CatalogTabProps = {
   onClearFilters: () => void;
 };
 
-const filterControlStyle = withCenteredControl(inputStyle);
 const muted = colors.textMuted;
-const draftBorderColor = "#8bd4a1";
-const draftSurfaceColor = "#e6f5ec";
 const stockCardStyle = {
   border: `1px solid ${colors.border}`,
   borderRadius: spacing.sm,
   padding: spacing.md,
   background: colors.surfaceAlt,
-};
-const draftListContainer = {
-  border: `1px solid ${draftBorderColor}`,
-  borderRadius: spacing.md,
-  padding: spacing.md,
-  background: draftSurfaceColor,
-};
-const draftRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: spacing.md,
-  padding: `${spacing.sm} 0`,
-  borderBottom: `1px solid ${draftBorderColor}`,
 };
 const stockTableHeader = {
   textAlign: "center" as const,
@@ -149,6 +132,9 @@ export function CatalogTab({
               flexWrap: "wrap",
             }}
           >
+            <Button variant="secondary" onClick={onClearFilters}>
+              ניקוי פילטרים
+            </Button>
             <Button variant="secondary" onClick={onRefresh}>
               רענון נתונים
             </Button>
@@ -156,101 +142,21 @@ export function CatalogTab({
           </div>
         </div>
         {drafts && drafts.length > 0 && (
-          <div style={{ ...draftListContainer, marginBottom: spacing.lg }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: spacing.md,
-                flexWrap: "wrap",
-              }}
-            >
-              <div>
-                <strong>טיוטות שמורות ({drafts.length})</strong>
-                <p style={{ margin: 0, color: muted, fontSize: 12 }}>
-                  הטיוטות מוצגות רק לך עד לסיום השמירה כמסמך רשמי.
-                </p>
-              </div>
-            </div>
-            <div style={{ marginTop: spacing.sm }}>
-              {drafts.map((draft, index) => (
-                <div
-                  key={draft.id}
-                  style={{
-                    ...draftRowStyle,
-                    borderBottom:
-                      index === drafts.length - 1
-                        ? "none"
-                        : draftRowStyle.borderBottom,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: spacing.sm,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span
-                        style={{
-                          ...badgeStyle,
-                          background: colors.success,
-                          color: "#fff",
-                        }}
-                      >
-                        טיוטה
-                      </span>
-                      <strong style={{ fontSize: 14 }}>
-                        {draft.payload.name?.trim() || "פריט חדש"}
-                      </strong>
-                    </div>
-                    <p
-                      style={{
-                        margin: "4px 0 0",
-                        color: muted,
-                        fontSize: 12,
-                      }}
-                    >
-                      עודכן {new Date(draft.updatedAt).toLocaleString("he-IL")}
-                    </p>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: spacing.sm,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Button
-                      onClick={() => onResumeDraft?.(draft.id)}
-                      aria-label="המשך עריכת טיוטה"
-                    >
-                      המשך
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => onDeleteDraft?.(draft.id)}
-                      aria-label="מחיקת טיוטה"
-                    >
-                      🗑️
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div style={{ marginBottom: spacing.lg }}>
+            <DraftList
+              drafts={drafts}
+              title={`טיוטות שמורות (${drafts.length})`}
+              description="הטיוטות מוצגות רק לך עד לסיום השמירה כמסמך רשמי."
+              onResume={onResumeDraft}
+              onDelete={onDeleteDraft}
+              getTitle={(draft) => draft.payload.name?.trim() || "פריט חדש"}
+              getSubtitle={(draft) =>
+                `עודכן ${new Date(draft.updatedAt).toLocaleString("he-IL")}`
+              }
+            />
           </div>
         )}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: spacing.md,
-            marginBottom: spacing.lg,
-          }}
-        >
+        <FilterToolbar style={{ marginBottom: spacing.lg }}>
           <input
             type="text"
             placeholder="חיפוש לפי שם, SKU או יצרן"
@@ -319,18 +225,14 @@ export function CatalogTab({
             <option value="all">כל הפריטים</option>
             <option value="inactive">לא פעילים</option>
           </select>
-        </div>
+        </FilterToolbar>
         <div
           style={{
             display: "flex",
             justifyContent: "flex-end",
             marginBottom: spacing.lg,
           }}
-        >
-          <Button variant="secondary" onClick={onClearFilters}>
-            ניקוי פילטרים
-          </Button>
-        </div>
+        ></div>
 
         <div style={{ overflowX: "auto" }}>
           <table style={tableStyle}>

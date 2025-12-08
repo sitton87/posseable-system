@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, Button } from "@/app/components/ui";
-import { statCardStyle } from "@/app/styles/components";
+import { StatCardGrid } from "@/app/components/shared";
 import { colors, spacing } from "@/app/styles/foundations";
 import type { StatSummary } from "../types";
 import { px } from "../utils";
@@ -21,6 +21,25 @@ export function EquipmentSummaryCard({
   onCreate,
   canCreate = true,
 }: EquipmentSummaryCardProps) {
+  const statCards = [
+    {
+      label: "סה״כ פריטים",
+      value: statSummary.totalItems,
+    },
+    {
+      label: "סה״כ יחידות פיזיות",
+      value: statSummary.totalUnits,
+    },
+    {
+      label: "פריטים מתכלים",
+      value: statSummary.consumables,
+    },
+    {
+      label: "פריטים מושכרים",
+      value: statSummary.rentals,
+    },
+  ];
+
   return (
     <Card>
       <div
@@ -62,46 +81,8 @@ export function EquipmentSummaryCard({
           {error}
         </div>
       )}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: spacing.md,
-          marginTop: spacing.lg,
-        }}
-      >
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>
-            סה״כ פריטים
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>
-            {statSummary.totalItems}
-          </div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>
-            סה״כ יחידות פיזיות
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>
-            {statSummary.totalUnits}
-          </div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>
-            פריטים מתכלים
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>
-            {statSummary.consumables}
-          </div>
-        </div>
-        <div style={statCardStyle}>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>
-            פריטים מושכרים
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>
-            {statSummary.rentals}
-          </div>
-        </div>
+      <div style={{ marginTop: spacing.lg }}>
+        <StatCardGrid stats={statCards} />
       </div>
     </Card>
   );
