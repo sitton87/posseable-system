@@ -24,7 +24,7 @@ import { usePermissions } from "@/app/hooks/usePagePermission";
 
 const NAV_EXPANDED_WIDTH = 224; // Tailwind w-56
 const NAV_COLLAPSED_WIDTH = 64; // Tailwind w-16
-const ORG_NAME = "עמותת Posseable";
+const ORG_NAME = "עמותת PosSEAble";
 
 export default function Navbar() {
   const [expanded, setExpanded] = useState(false);
@@ -181,15 +181,6 @@ export default function Navbar() {
       href: "/suppliers",
       icon: <Handshake size={22} />,
       label: "ספקים",
-      children: [
-        { href: "/suppliers", label: "דף הבית", pageKey: "suppliers" },
-        {
-          href: "/suppliers",
-          label: "רשימת ספקים",
-          pageKey: "suppliers-list",
-          query: { view: "list" },
-        },
-      ],
     },
     {
       pageKey: "equipment",
@@ -333,12 +324,19 @@ export default function Navbar() {
     >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex items-center gap-3 border-b px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-600 text-lg font-bold text-white">
-            P
-          </div>
+        <div
+          className="relative border-b px-4 py-3 bg-contain bg-no-repeat bg-center"
+          style={{
+            backgroundImage: "url('/logo.png')",
+            filter: "saturate(2.5) contrast(1.0)",
+          }}
+        >
+          {/* שכבת שקיפות לקריאות */}
+          <div className="absolute inset-0 bg-white/80" />
+
+          {/* טקסט ממורכז באמת */}
           {expanded && (
-            <div>
+            <div className="relative flex flex-col items-center justify-center text-center">
               <div className="text-sm font-semibold text-gray-900">
                 {ORG_NAME}
               </div>

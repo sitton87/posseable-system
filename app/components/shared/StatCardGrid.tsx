@@ -41,10 +41,20 @@ export function StatCardGrid({
             boxShadow: shadows.card,
             display: "flex",
             flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
             gap: spacing.xs,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: spacing.xs }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: spacing.xs,
+              width: "100%",
+            }}
+          >
             {stat.icon}
             <div style={{ fontSize: 12, color: colors.textMuted }}>{stat.label}</div>
           </div>
@@ -54,12 +64,15 @@ export function StatCardGrid({
               fontWeight: 700,
               margin: `${spacing.xs}px 0`,
               lineHeight: 1.1,
+              width: "100%",
             }}
           >
             {stat.value}
           </div>
           {stat.hint && (
-            <div style={{ fontSize: 12, color: colors.textMuted }}>{stat.hint}</div>
+            <div style={{ fontSize: 12, color: colors.textMuted, width: "100%" }}>
+              {stat.hint}
+            </div>
           )}
         </Card>
       ))}
