@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -181,6 +181,15 @@ export default function Navbar() {
       href: "/suppliers",
       icon: <Handshake size={22} />,
       label: "ספקים",
+      children: [
+        { href: "/suppliers", label: "דף הבית", pageKey: "suppliers" },
+        {
+          href: "/suppliers",
+          label: "רשימת ספקים",
+          pageKey: "suppliers-list",
+          query: { view: "list" },
+        },
+      ],
     },
     {
       pageKey: "equipment",
@@ -242,23 +251,27 @@ export default function Navbar() {
     return false;
   };
 
-  const filteredMenuItems = expandedMenuItems
-    .map((item) => {
-      if (!item.children?.length) return item;
-      const visibleChildren = item.children.filter((child) =>
-        hasAccess(child.pageKey, item.pageKey)
-      );
-      return { ...item, children: visibleChildren };
-    })
-    .filter((item) => {
-      if (item.children?.length) {
-        return item.children.length > 0;
-      }
-      if (item.pageKey === "system-settings") {
-        return isAdmin;
-      }
-      return hasAccess(item.pageKey);
-    });
+  const filteredMenuItems = useMemo(
+    () =>
+      expandedMenuItems
+        .map((item) => {
+          if (!item.children?.length) return item;
+          const visibleChildren = item.children.filter((child) =>
+            hasAccess(child.pageKey, item.pageKey)
+          );
+          return { ...item, children: visibleChildren };
+        })
+        .filter((item) => {
+          if (item.children?.length) {
+            return item.children.length > 0;
+          }
+          if (item.pageKey === "system-settings") {
+            return isAdmin;
+          }
+          return hasAccess(item.pageKey);
+        }),
+    [expandedMenuItems, isAdmin, permissions, permissionsLoading]
+  );
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const currentTopLevel = filteredMenuItems.find((item) => {
@@ -301,11 +314,39 @@ export default function Navbar() {
     previousTopLevelRef.current = currentTopLevel;
   }, [currentTopLevel]);
 
+  // סגירה אוטומטית של תתי-תפריטים רק כאשר הנתיב משתנה
+  const previousPathnameRef = useRef<string | null>(pathname);
+  useEffect(() => {
+    const prevPath = previousPathnameRef.current;
+    previousPathnameRef.current = pathname;
+    if (prevPath === pathname) return;
+
+    setOpenMenus((prev) => {
+      let changed = false;
+      const next: Record<string, boolean> = {};
+
+      filteredMenuItems.forEach((item) => {
+        if (!item.children?.length) return;
+        const shouldBeOpen = item.pageKey === currentTopLevel;
+        next[item.pageKey] = shouldBeOpen;
+        if (prev[item.pageKey] !== shouldBeOpen) {
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [pathname, currentTopLevel, filteredMenuItems]);
+
   const toggleMenu = (pageKey: string) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [pageKey]: !prev[pageKey],
-    }));
+    setOpenMenus((prev) => {
+      const isOpen = !!prev[pageKey];
+      // אם נפתח חדש – סגור את כולם פרט אליו. אם נסגר – השאר הכל סגור.
+      if (!isOpen) {
+        return { [pageKey]: true };
+      }
+      return {};
+    });
   };
 
   const handleParentTrigger = (pageKey: string) => {
