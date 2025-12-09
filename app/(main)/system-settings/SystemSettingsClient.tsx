@@ -136,13 +136,6 @@ export default function SystemSettingsClient({ currentRole }: Props) {
   });
   const [updateLoading, setUpdateLoading] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
-  const [testEmail, setTestEmail] = useState("");
-  const [testPassword, setTestPassword] = useState("Posseable123!");
-  const [testStatus, setTestStatus] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-  const [testLoading, setTestLoading] = useState(false);
   const [roleGroups, setRoleGroups] = useState<RoleGroupOption[]>([]);
   const [pages, setPages] = useState<AppPageRow[]>([]);
   const [selectedRoleGroup, setSelectedRoleGroup] = useState("");
@@ -478,36 +471,6 @@ export default function SystemSettingsClient({ currentRole }: Props) {
     }
   };
 
-  const handleSendTestEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!testEmail.trim()) {
-      setTestStatus({ type: "error", message: "אנא הזן כתובת דוא\"ל" });
-      return;
-    }
-    setTestLoading(true);
-    setTestStatus(null);
-    try {
-      const res = await fetch("/api/system-users/test-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: testEmail.trim(),
-          temporaryPassword: testPassword.trim(),
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "שליחת מייל הבדיקה נכשלה");
-      }
-      setTestStatus({ type: "success", message: "מייל הבדיקה נשלח בהצלחה" });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "שליחת מייל הבדיקה נכשלה";
-      setTestStatus({ type: "error", message });
-    } finally {
-      setTestLoading(false);
-    }
-  };
 
   const renderUsersTable = () => {
     if (loading) {
@@ -529,25 +492,19 @@ export default function SystemSettingsClient({ currentRole }: Props) {
 
     return (
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <table className="min-w-full divide-y divide-gray-200 text-sm text-center">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-2 text-center font-semibold text-gray-600">
-                שם מלא
-              </th>
-              <th className="px-4 py-2 text-center font-semibold text-gray-600">
-                דוא&quot;ל
-              </th>
-              <th className="px-4 py-2 text-center font-semibold text-gray-600">
-                תפקיד
-              </th>
-              <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">שם מלא</th>
+              <th className="px-4 py-2 font-semibold text-gray-600">דוא&quot;ל</th>
+              <th className="px-4 py-2 font-semibold text-gray-600">תפקיד</th>
+              <th className="px-4 py-2 font-semibold text-gray-600">
                 קבוצת ניהול
               </th>
-              <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                 חובת החלפת סיסמה
               </th>
-              <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                 נוצר בתאריך
               </th>
             </tr>
@@ -569,7 +526,7 @@ export default function SystemSettingsClient({ currentRole }: Props) {
                 <td className="px-4 py-2">
                   <span
                     className={clsx(
-                      "rounded-full px-2 py-1 text-xs font-semibold",
+                      "rounded-full px-2 py-1 text-xs font-semibold inline-flex justify-center",
                       user.must_reset
                         ? "bg-amber-100 text-amber-700"
                         : "bg-emerald-100 text-emerald-700"
@@ -924,22 +881,22 @@ export default function SystemSettingsClient({ currentRole }: Props) {
               אין קבוצות ניהול זמינות. צור לפחות קבוצה אחת כדי להגדיר הרשאות.
             </p>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <table className="min-w-full divide-y divide-gray-200 text-sm text-center">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                     דף
                   </th>
-                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                     קטגוריה
                   </th>
-                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                     ללא גישה
                   </th>
-                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                     קריאה
                   </th>
-                  <th className="px-4 py-2 text-center font-semibold text-gray-600">
+              <th className="px-4 py-2 font-semibold text-gray-600">
                     עריכה
                   </th>
                 </tr>
@@ -995,45 +952,6 @@ export default function SystemSettingsClient({ currentRole }: Props) {
             </Button>
           </div>
         </div>
-      </Card>
-
-      <Card className="space-y-4 p-6">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            שליחת מייל בדיקה
-          </h2>
-          <p className="text-sm text-gray-500">
-            בדוק שהחיבור ל-Gmail פעיל על ידי שליחת הודעה לכתובת שלך.
-          </p>
-        </div>
-        <form className="space-y-4" onSubmit={handleSendTestEmail}>
-          <Input
-            label='דוא"ל לבדיקה'
-            value={testEmail}
-            onChange={(e) => setTestEmail(e.target.value)}
-            type="email"
-          />
-          <Input
-            label="סיסמה זמנית שתופיע במייל"
-            value={testPassword}
-            onChange={(e) => setTestPassword(e.target.value)}
-          />
-          {testStatus && (
-            <p
-              className={clsx(
-                "text-sm",
-                testStatus.type === "success"
-                  ? "text-emerald-700"
-                  : "text-red-600"
-              )}
-            >
-              {testStatus.message}
-            </p>
-          )}
-          <Button type="submit" disabled={testLoading}>
-            {testLoading ? "שולח..." : "שלח מייל בדיקה"}
-          </Button>
-        </form>
       </Card>
 
       <Card className="space-y-4 p-6">
