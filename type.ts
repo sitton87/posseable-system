@@ -63,6 +63,39 @@ export type Surfer = {
   group_name?: string;
 };
 
+export type SurferStats = {
+  total: number;
+  active: number;
+  approved: number;
+  pending: number;
+  medicalApproved: number;
+  wheelchair: number;
+  grouped: number;
+};
+
+export type SurferEmergencyContact = {
+  contact_id: string;
+  surfer_id: string;
+  full_name: string;
+  relationship?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  priority?: number | null;
+  notes?: string | null;
+  created_at: Date | string;
+};
+
+export type SurferGroupMembership = {
+  id: string;
+  surfer_id: string;
+  group_id: string;
+  group_name?: string | null;
+  joined_at?: Date | string | null;
+  left_at?: Date | string | null;
+  role?: string | null;
+  notes?: string | null;
+};
+
 export type Group = {
   id: string; // uniqueidentifier (GUID)
   name: string;

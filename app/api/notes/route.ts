@@ -8,6 +8,7 @@ const ENTITY_PAGE_MAP: Record<string, { pageKey: string }> = {
   supplier: { pageKey: "suppliers" },
   donor: { pageKey: "donors" },
   equipment: { pageKey: "equipment" },
+  surfer: { pageKey: "surfers" },
 };
 
 function getPermissionKey(entityType: string) {

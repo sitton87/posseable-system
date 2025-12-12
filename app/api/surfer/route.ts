@@ -1,60 +1,76 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function GET(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("surfers", "read");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const activeOnly = searchParams.get("active");
     const program = searchParams.get("program");
     const status = searchParams.get("status");
+    const search = searchParams.get("search");
 
     let sql = `
       SELECT
-        national_id,
-        full_name,
-        phone,
-        email,
-        residence,
-        age,
-        date_of_birth,
-        gender,
-        status,
-        program,
-        group_id,
-        medical_approval,
-        medical_condition,
-        needs_wheelchair,
-        volunteers_needed,
-        special_requirements,
-        emergency_contact_name,
-        emergency_contact_phone,
-        active,
-        notes,
-        created_at
-      FROM surfer
+        s.national_id,
+        s.full_name,
+        s.phone,
+        s.email,
+        s.residence,
+        s.age,
+        s.date_of_birth,
+        s.gender,
+        s.status,
+        s.program,
+        s.group_id,
+        g.name AS group_name,
+        s.medical_approval,
+        s.medical_condition,
+        s.needs_wheelchair,
+        s.volunteers_needed,
+        s.special_requirements,
+        s.emergency_contact_name,
+        s.emergency_contact_phone,
+        s.active,
+        s.notes,
+        s.created_at
+      FROM surfer s
+      LEFT JOIN [group] g ON s.group_id = g.id
       WHERE 1=1
     `;
 
     const params: any = {};
 
-    // Filter by active status
     if (activeOnly === "true") {
-      sql += " AND active = 1";
+      sql += " AND s.active = 1";
+    } else if (activeOnly === "false") {
+      sql += " AND s.active = 0";
     }
 
-    // Filter by program
     if (program) {
-      sql += " AND program = @program";
+      sql += " AND s.program = @program";
       params.program = program;
     }
 
-    // Filter by status
     if (status) {
-      sql += " AND status = @status";
+      sql += " AND s.status = @status";
       params.status = status;
     }
 
-    sql += " ORDER BY created_at DESC";
+    if (search) {
+      sql += ` AND (
+        s.full_name LIKE @search OR
+        s.national_id LIKE @search OR
+        s.phone LIKE @search OR
+        s.email LIKE @search
+      )`;
+      params.search = `%${search}%`;
+    }
+
+    sql += " ORDER BY s.created_at DESC";
 
     const result = await query(sql, params);
 

@@ -2,7 +2,7 @@
 USE [master]
 GO
 
-/****** Object:  Database [PosseableDB]    Script Date: 08/12/2025 20:23:56 ******/
+/****** Object:  Database [PosseableDB]    Script Date: 10/12/2025 21:07:16 ******/
 CREATE DATABASE [PosseableDB]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -87,7 +87,7 @@ GO
 USE [PosseableDB]
 GO
 
-/****** Object:  User [posseable_user]    Script Date: 08/12/2025 20:23:56 ******/
+/****** Object:  User [posseable_user]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE USER [posseable_user] FOR LOGIN [posseable_user] WITH DEFAULT_SCHEMA=[dbo]
 GO
 
@@ -95,7 +95,7 @@ ALTER ROLE [db_owner] ADD MEMBER [posseable_user]
 GO
 
 # [dbo].[activity]
-/****** Object:  Table [dbo].[activity]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[activity]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -122,7 +122,7 @@ CREATE TABLE [dbo].[activity](
 GO
 
 # [dbo].[activity_equipment]
-/****** Object:  Table [dbo].[activity_equipment]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[activity_equipment]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -141,7 +141,7 @@ CREATE TABLE [dbo].[activity_equipment](
 GO
 
 # [dbo].[activity_volunteer]
-/****** Object:  Table [dbo].[activity_volunteer]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[activity_volunteer]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -161,7 +161,7 @@ CREATE TABLE [dbo].[activity_volunteer](
 GO
 
 # [dbo].[app_page]
-/****** Object:  Table [dbo].[app_page]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[app_page]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -181,7 +181,7 @@ PRIMARY KEY CLUSTERED
 GO
 
 # [dbo].[app_role_group]
-/****** Object:  Table [dbo].[app_role_group]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[app_role_group]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -200,7 +200,7 @@ PRIMARY KEY CLUSTERED
 GO
 
 # [dbo].[app_role_group_permission]
-/****** Object:  Table [dbo].[app_role_group_permission]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[app_role_group_permission]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -220,7 +220,7 @@ CREATE TABLE [dbo].[app_role_group_permission](
 GO
 
 # [dbo].[app_user]
-/****** Object:  Table [dbo].[app_user]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[app_user]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -246,7 +246,7 @@ UNIQUE NONCLUSTERED
 GO
 
 # [dbo].[donor]
-/****** Object:  Table [dbo].[donor]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[donor]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -268,7 +268,7 @@ CREATE TABLE [dbo].[donor](
 GO
 
 # [dbo].[equipment]
-/****** Object:  Table [dbo].[equipment]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -289,7 +289,7 @@ CREATE TABLE [dbo].[equipment](
 GO
 
 # [dbo].[equipment_category]
-/****** Object:  Table [dbo].[equipment_category]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_category]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -313,7 +313,7 @@ CREATE TABLE [dbo].[equipment_category](
 GO
 
 # [dbo].[equipment_family]
-/****** Object:  Table [dbo].[equipment_family]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_family]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -336,7 +336,7 @@ CREATE TABLE [dbo].[equipment_family](
 GO
 
 # [dbo].[equipment_item]
-/****** Object:  Table [dbo].[equipment_item]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_item]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -379,7 +379,7 @@ CREATE TABLE [dbo].[equipment_item](
 GO
 
 # [dbo].[equipment_item_media]
-/****** Object:  Table [dbo].[equipment_item_media]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_item_media]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -400,7 +400,7 @@ CREATE TABLE [dbo].[equipment_item_media](
 GO
 
 # [dbo].[equipment_stock]
-/****** Object:  Table [dbo].[equipment_stock]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_stock]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -420,7 +420,7 @@ CREATE TABLE [dbo].[equipment_stock](
 GO
 
 # [dbo].[equipment_stock_ledger]
-/****** Object:  Table [dbo].[equipment_stock_ledger]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_stock_ledger]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -444,7 +444,7 @@ CREATE TABLE [dbo].[equipment_stock_ledger](
 GO
 
 # [dbo].[equipment_supplier_event]
-/****** Object:  Table [dbo].[equipment_supplier_event]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[equipment_supplier_event]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -466,7 +466,7 @@ CREATE TABLE [dbo].[equipment_supplier_event](
 GO
 
 # [dbo].[finance_transaction]
-/****** Object:  Table [dbo].[finance_transaction]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[finance_transaction]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -498,7 +498,7 @@ PRIMARY KEY CLUSTERED
 GO
 
 # [dbo].[finance_transaction_donor]
-/****** Object:  Table [dbo].[finance_transaction_donor]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[finance_transaction_donor]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -517,7 +517,7 @@ CREATE TABLE [dbo].[finance_transaction_donor](
 GO
 
 # [dbo].[finance_txn]
-/****** Object:  Table [dbo].[finance_txn]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[finance_txn]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -543,7 +543,7 @@ CREATE TABLE [dbo].[finance_txn](
 GO
 
 # [dbo].[group]
-/****** Object:  Table [dbo].[group]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[group]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -563,6 +563,9 @@ CREATE TABLE [dbo].[group](
 	[created_at] [datetime2](7) NULL,
 	[updated_at] [datetime2](7) NULL,
 	[start_season_id] [int] NULL,
+	[start_date] [date] NULL,
+	[end_date] [date] NULL,
+	[created_by] [nvarchar](100) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id] ASC
@@ -571,7 +574,7 @@ PRIMARY KEY CLUSTERED
 GO
 
 # [dbo].[inventory_document]
-/****** Object:  Table [dbo].[inventory_document]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[inventory_document]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -604,7 +607,7 @@ CREATE TABLE [dbo].[inventory_document](
 GO
 
 # [dbo].[inventory_document_line]
-/****** Object:  Table [dbo].[inventory_document_line]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[inventory_document_line]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -628,7 +631,7 @@ CREATE TABLE [dbo].[inventory_document_line](
 GO
 
 # [dbo].[inventory_import_batch]
-/****** Object:  Table [dbo].[inventory_import_batch]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[inventory_import_batch]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -651,7 +654,7 @@ CREATE TABLE [dbo].[inventory_import_batch](
 GO
 
 # [dbo].[note]
-/****** Object:  Table [dbo].[note]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[note]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -677,7 +680,7 @@ CREATE TABLE [dbo].[note](
 GO
 
 # [dbo].[registration]
-/****** Object:  Table [dbo].[registration]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[registration]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -702,7 +705,7 @@ CREATE TABLE [dbo].[registration](
 GO
 
 # [dbo].[role]
-/****** Object:  Table [dbo].[role]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[role]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -723,7 +726,7 @@ CREATE TABLE [dbo].[role](
 GO
 
 # [dbo].[season_activity_series]
-/****** Object:  Table [dbo].[season_activity_series]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[season_activity_series]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -748,7 +751,7 @@ PRIMARY KEY CLUSTERED
 GO
 
 # [dbo].[season_plan]
-/****** Object:  Table [dbo].[season_plan]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[season_plan]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -768,7 +771,7 @@ CREATE TABLE [dbo].[season_plan](
 GO
 
 # [dbo].[supplier]
-/****** Object:  Table [dbo].[supplier]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[supplier]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -794,7 +797,7 @@ CREATE TABLE [dbo].[supplier](
 GO
 
 # [dbo].[supplier_activity_log]
-/****** Object:  Table [dbo].[supplier_activity_log]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[supplier_activity_log]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -818,7 +821,7 @@ CREATE TABLE [dbo].[supplier_activity_log](
 GO
 
 # [dbo].[supplier_contract]
-/****** Object:  Table [dbo].[supplier_contract]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[supplier_contract]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -842,7 +845,7 @@ CREATE TABLE [dbo].[supplier_contract](
 GO
 
 # [dbo].[surfer]
-/****** Object:  Table [dbo].[surfer]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[surfer]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -876,8 +879,52 @@ CREATE TABLE [dbo].[surfer](
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
+# [dbo].[surfer_emergency_contact]
+/****** Object:  Table [dbo].[surfer_emergency_contact]    Script Date: 10/12/2025 21:07:17 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[surfer_emergency_contact](
+	[contact_id] [uniqueidentifier] NOT NULL,
+	[surfer_id] [varchar](9) NOT NULL,
+	[full_name] [nvarchar](255) NOT NULL,
+	[relationship] [nvarchar](100) NULL,
+	[phone] [nvarchar](50) NULL,
+	[email] [nvarchar](255) NULL,
+	[priority] [tinyint] NULL,
+	[notes] [nvarchar](max) NULL,
+	[created_at] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_surfer_emergency_contact] PRIMARY KEY CLUSTERED 
+(
+	[contact_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+# [dbo].[surfer_group]
+/****** Object:  Table [dbo].[surfer_group]    Script Date: 10/12/2025 21:07:17 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[surfer_group](
+	[id] [uniqueidentifier] NOT NULL,
+	[surfer_id] [varchar](9) NOT NULL,
+	[group_id] [uniqueidentifier] NOT NULL,
+	[joined_at] [date] NULL,
+	[left_at] [date] NULL,
+	[role] [nvarchar](100) NULL,
+	[notes] [nvarchar](max) NULL,
+ CONSTRAINT [PK_surfer_group] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
 # [dbo].[volunteer]
-/****** Object:  Table [dbo].[volunteer]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[volunteer]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -912,7 +959,7 @@ CREATE TABLE [dbo].[volunteer](
 GO
 
 # [dbo].[volunteer_role]
-/****** Object:  Table [dbo].[volunteer_role]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[volunteer_role]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -930,7 +977,7 @@ CREATE TABLE [dbo].[volunteer_role](
 GO
 
 # [dbo].[warehouse]
-/****** Object:  Table [dbo].[warehouse]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[warehouse]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -967,7 +1014,7 @@ CREATE TABLE [dbo].[warehouse](
 GO
 
 # [dbo].[warehouse_document]
-/****** Object:  Table [dbo].[warehouse_document]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Table [dbo].[warehouse_document]    Script Date: 10/12/2025 21:07:17 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -987,7 +1034,7 @@ CREATE TABLE [dbo].[warehouse_document](
 GO
 
 # [IX_activity_group]
-/****** Object:  Index [IX_activity_group]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_activity_group]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_activity_group] ON [dbo].[activity]
 (
 	[group_id] ASC
@@ -995,7 +1042,7 @@ CREATE NONCLUSTERED INDEX [IX_activity_group] ON [dbo].[activity]
 GO
 
 # [IX_activity_equipment_activity]
-/****** Object:  Index [IX_activity_equipment_activity]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_activity_equipment_activity]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_activity_equipment_activity] ON [dbo].[activity_equipment]
 (
 	[activity_id] ASC
@@ -1003,7 +1050,7 @@ CREATE NONCLUSTERED INDEX [IX_activity_equipment_activity] ON [dbo].[activity_eq
 GO
 
 # [IX_activity_volunteer_role]
-/****** Object:  Index [IX_activity_volunteer_role]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_activity_volunteer_role]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_activity_volunteer_role] ON [dbo].[activity_volunteer]
 (
 	[role_id] ASC
@@ -1013,7 +1060,7 @@ GO
 # [IX_activity_volunteer_volunteer]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_activity_volunteer_volunteer]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_activity_volunteer_volunteer]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_activity_volunteer_volunteer] ON [dbo].[activity_volunteer]
 (
 	[volunteer_national_id] ASC
@@ -1023,7 +1070,7 @@ GO
 # [IX_equipment_item_manufacturer_sku]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_equipment_item_manufacturer_sku]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_equipment_item_manufacturer_sku]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [IX_equipment_item_manufacturer_sku] ON [dbo].[equipment_item]
 (
 	[manufacturer_sku] ASC
@@ -1033,7 +1080,7 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNOR
 GO
 
 # [IX_finance_transaction_activity_id]
-/****** Object:  Index [IX_finance_transaction_activity_id]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_transaction_activity_id]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_transaction_activity_id] ON [dbo].[finance_transaction]
 (
 	[activity_id] ASC
@@ -1043,7 +1090,7 @@ GO
 # [IX_finance_transaction_type_date]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_finance_transaction_type_date]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_transaction_type_date]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_transaction_type_date] ON [dbo].[finance_transaction]
 (
 	[type] ASC,
@@ -1054,7 +1101,7 @@ GO
 # [IX_finance_transaction_donor_donor]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_finance_transaction_donor_donor]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_transaction_donor_donor]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_transaction_donor_donor] ON [dbo].[finance_transaction_donor]
 (
 	[donor_id] ASC
@@ -1062,7 +1109,7 @@ CREATE NONCLUSTERED INDEX [IX_finance_transaction_donor_donor] ON [dbo].[finance
 GO
 
 # [IX_finance_transaction_donor_transaction]
-/****** Object:  Index [IX_finance_transaction_donor_transaction]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_transaction_donor_transaction]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_transaction_donor_transaction] ON [dbo].[finance_transaction_donor]
 (
 	[finance_transaction_id] ASC
@@ -1070,7 +1117,7 @@ CREATE NONCLUSTERED INDEX [IX_finance_transaction_donor_transaction] ON [dbo].[f
 GO
 
 # [IX_finance_txn_activity]
-/****** Object:  Index [IX_finance_txn_activity]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_txn_activity]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_txn_activity] ON [dbo].[finance_txn]
 (
 	[activity_id] ASC
@@ -1078,7 +1125,7 @@ CREATE NONCLUSTERED INDEX [IX_finance_txn_activity] ON [dbo].[finance_txn]
 GO
 
 # [IX_finance_txn_date]
-/****** Object:  Index [IX_finance_txn_date]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_txn_date]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_txn_date] ON [dbo].[finance_txn]
 (
 	[txn_date] ASC
@@ -1088,7 +1135,7 @@ GO
 # [IX_finance_txn_donor]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_finance_txn_donor]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_txn_donor]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_txn_donor] ON [dbo].[finance_txn]
 (
 	[donor_national_id] ASC
@@ -1098,7 +1145,7 @@ GO
 # [IX_finance_txn_supplier]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_finance_txn_supplier]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_finance_txn_supplier]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_finance_txn_supplier] ON [dbo].[finance_txn]
 (
 	[supplier_identifier] ASC
@@ -1106,7 +1153,7 @@ CREATE NONCLUSTERED INDEX [IX_finance_txn_supplier] ON [dbo].[finance_txn]
 GO
 
 # [IX_group_season]
-/****** Object:  Index [IX_group_season]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_group_season]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_group_season] ON [dbo].[group]
 (
 	[season_id] ASC
@@ -1116,7 +1163,7 @@ GO
 # [IX_group_status]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_group_status]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_group_status]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_group_status] ON [dbo].[group]
 (
 	[status] ASC
@@ -1128,7 +1175,7 @@ GO
 # [IX_inventory_document_action_date]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_inventory_document_action_date]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_inventory_document_action_date]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_inventory_document_action_date] ON [dbo].[inventory_document]
 (
 	[action_type] ASC,
@@ -1137,7 +1184,7 @@ CREATE NONCLUSTERED INDEX [IX_inventory_document_action_date] ON [dbo].[inventor
 GO
 
 # [IX_inventory_document_line_document]
-/****** Object:  Index [IX_inventory_document_line_document]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_inventory_document_line_document]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_inventory_document_line_document] ON [dbo].[inventory_document_line]
 (
 	[document_id] ASC
@@ -1145,7 +1192,7 @@ CREATE NONCLUSTERED INDEX [IX_inventory_document_line_document] ON [dbo].[invent
 GO
 
 # [IX_inventory_document_line_item]
-/****** Object:  Index [IX_inventory_document_line_item]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_inventory_document_line_item]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_inventory_document_line_item] ON [dbo].[inventory_document_line]
 (
 	[item_id] ASC
@@ -1155,7 +1202,7 @@ GO
 # [IX_note_entity]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_note_entity]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_note_entity]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_note_entity] ON [dbo].[note]
 (
 	[entity_type] ASC,
@@ -1164,7 +1211,7 @@ CREATE NONCLUSTERED INDEX [IX_note_entity] ON [dbo].[note]
 GO
 
 # [IX_registration_activity]
-/****** Object:  Index [IX_registration_activity]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_registration_activity]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_registration_activity] ON [dbo].[registration]
 (
 	[activity_id] ASC
@@ -1174,7 +1221,7 @@ GO
 # [IX_registration_surfer]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_registration_surfer]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_registration_surfer]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_registration_surfer] ON [dbo].[registration]
 (
 	[surfer_id] ASC
@@ -1182,7 +1229,7 @@ CREATE NONCLUSTERED INDEX [IX_registration_surfer] ON [dbo].[registration]
 GO
 
 # [IX_season_activity_series_season]
-/****** Object:  Index [IX_season_activity_series_season]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_season_activity_series_season]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_season_activity_series_season] ON [dbo].[season_activity_series]
 (
 	[season_id] ASC
@@ -1190,7 +1237,7 @@ CREATE NONCLUSTERED INDEX [IX_season_activity_series_season] ON [dbo].[season_ac
 GO
 
 # [UX_season_activity_series_default_per_season]
-/****** Object:  Index [UX_season_activity_series_default_per_season]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [UX_season_activity_series_default_per_season]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UX_season_activity_series_default_per_season] ON [dbo].[season_activity_series]
 (
 	[season_id] ASC
@@ -1202,7 +1249,7 @@ GO
 # [UX_season_activity_series_season_name]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UX_season_activity_series_season_name]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [UX_season_activity_series_season_name]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UX_season_activity_series_season_name] ON [dbo].[season_activity_series]
 (
 	[season_id] ASC,
@@ -1213,7 +1260,7 @@ GO
 # [IX_supplier_activity_log_supplier]
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [IX_supplier_activity_log_supplier]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_supplier_activity_log_supplier]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_supplier_activity_log_supplier] ON [dbo].[supplier_activity_log]
 (
 	[supplier_identifier] ASC,
@@ -1222,11 +1269,40 @@ CREATE NONCLUSTERED INDEX [IX_supplier_activity_log_supplier] ON [dbo].[supplier
 GO
 
 # [IX_surfer_group]
-/****** Object:  Index [IX_surfer_group]    Script Date: 08/12/2025 20:23:57 ******/
+/****** Object:  Index [IX_surfer_group]    Script Date: 10/12/2025 21:07:17 ******/
 CREATE NONCLUSTERED INDEX [IX_surfer_group] ON [dbo].[surfer]
 (
 	[group_id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+
+# [IX_surfer_emergency_contact_surfer]
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_surfer_emergency_contact_surfer]    Script Date: 10/12/2025 21:07:17 ******/
+CREATE NONCLUSTERED INDEX [IX_surfer_emergency_contact_surfer] ON [dbo].[surfer_emergency_contact]
+(
+	[surfer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+
+# [IX_surfer_group_group]
+/****** Object:  Index [IX_surfer_group_group]    Script Date: 10/12/2025 21:07:17 ******/
+CREATE NONCLUSTERED INDEX [IX_surfer_group_group] ON [dbo].[surfer_group]
+(
+	[group_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+
+# [UQ_surfer_group_surfer_group]
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [UQ_surfer_group_surfer_group]    Script Date: 10/12/2025 21:07:17 ******/
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_surfer_group_surfer_group] ON [dbo].[surfer_group]
+(
+	[surfer_id] ASC,
+	[group_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
 
 # [DF__activity__status__5441852A]
@@ -1535,6 +1611,10 @@ GO
 
 # [DF__surfer__created___3C69FB99]
 ALTER TABLE [dbo].[surfer] ADD  DEFAULT (sysdatetime()) FOR [created_at]
+GO
+
+# [DF_surfer_emergency_contact_created_at]
+ALTER TABLE [dbo].[surfer_emergency_contact] ADD  CONSTRAINT [DF_surfer_emergency_contact_created_at]  DEFAULT (sysdatetime()) FOR [created_at]
 GO
 
 # [DF__volunteer__activ__37A5467C]
@@ -1910,6 +1990,30 @@ ALTER TABLE [dbo].[surfer]  WITH CHECK ADD  CONSTRAINT [FK_surfer_group] FOREIGN
 REFERENCES [dbo].[group] ([id])
 GO
 ALTER TABLE [dbo].[surfer] CHECK CONSTRAINT [FK_surfer_group]
+GO
+
+# [FK_surfer_emergency_contact_surfer]
+ALTER TABLE [dbo].[surfer_emergency_contact]  WITH CHECK ADD  CONSTRAINT [FK_surfer_emergency_contact_surfer] FOREIGN KEY([surfer_id])
+REFERENCES [dbo].[surfer] ([national_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[surfer_emergency_contact] CHECK CONSTRAINT [FK_surfer_emergency_contact_surfer]
+GO
+
+# [FK_surfer_group_group]
+ALTER TABLE [dbo].[surfer_group]  WITH CHECK ADD  CONSTRAINT [FK_surfer_group_group] FOREIGN KEY([group_id])
+REFERENCES [dbo].[group] ([id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[surfer_group] CHECK CONSTRAINT [FK_surfer_group_group]
+GO
+
+# [FK_surfer_group_surfer]
+ALTER TABLE [dbo].[surfer_group]  WITH CHECK ADD  CONSTRAINT [FK_surfer_group_surfer] FOREIGN KEY([surfer_id])
+REFERENCES [dbo].[surfer] ([national_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[surfer_group] CHECK CONSTRAINT [FK_surfer_group_surfer]
 GO
 
 # [FK_volunteer_role_role]

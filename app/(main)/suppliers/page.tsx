@@ -9,7 +9,15 @@ import type {
   SupplierActivityLog,
 } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { FilterToolbar, StatCardGrid } from "@/app/components/shared";
+import {
+  FilterToolbar,
+  FormGrid,
+  Section,
+  SmallActionButton,
+  StatCardGrid,
+  StatusPill,
+  sectionCardStyle,
+} from "@/app/components/shared";
 import { DraftList } from "@/app/components/shared/DraftList";
 import {
   filterControlStyle,
@@ -22,33 +30,12 @@ import {
 import { colors, radii, spacing } from "@/app/styles/foundations";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import { useDraftManager, type DraftEntry } from "@/app/hooks/useDraftManager";
-
-const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
 
 const sectionBoxStyle = {
+  ...sectionCardStyle,
   marginBottom: spacing.lg,
-  padding: spacing.lg,
-  background: colors.surfaceAlt,
-  borderRadius: radii.card,
 };
-
-const smallButtonStyle = {
-  fontSize: 12,
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
-};
-
-const pillStyle = (isActive: boolean) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
-  borderRadius: radii.button,
-  fontSize: 12,
-  fontWeight: 600,
-  background: isActive ? colors.successSoft : colors.dangerSoft,
-  color: isActive ? colors.success : colors.danger,
-});
 
 const identifierTypeOptions = [
   { value: "HP", label: "ח.פ" },
@@ -477,7 +464,7 @@ export default function SuppliersPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || "שגיאה במחיקת ספק");
       }
-      fetchSuppliers();
+        fetchSuppliers();
       fetchSummary();
     } catch (err: any) {
       console.error("Error deleting supplier:", err);
@@ -588,8 +575,8 @@ export default function SuppliersPage() {
         </div>
       </Modal>
     </>
-  );
-}
+    );
+  }
 
 type SupplierHomeTabProps = {
   suppliers: Supplier[];
@@ -767,13 +754,13 @@ function SupplierHomeTab({
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: spacing.sm }}>
                       <div style={{ fontWeight: 600 }}>{task.title || "ללא כותרת"}</div>
-                      <Button
+                      <SmallActionButton
                         variant="secondary"
-                        style={{ ...smallButtonStyle, fontSize: 10 }}
+                        style={{ fontSize: 10 }}
                         onClick={() => onToggleTaskStatus(task, done ? "open" : "done")}
                       >
                         {done ? "פתח" : "סמן הושלם"}
-                      </Button>
+                      </SmallActionButton>
                     </div>
                     <div style={{ fontSize: 13, color: muted }}>{supplierName}</div>
                     <div style={{ fontSize: 13 }}>{task.body}</div>
@@ -815,8 +802,8 @@ function SupplierHomeTab({
               marginTop: spacing.md,
               maxHeight: 360,
               overflowY: "auto",
-            }}
-          >
+              }}
+            >
             {(summary?.recentActivity || []).map((activity) => {
               const supplierName =
                 suppliers.find(
@@ -925,8 +912,8 @@ function SupplierListTab({
           marginBottom: spacing.md,
           flexWrap: "wrap",
           gap: spacing.sm,
-        }}
-      >
+                      }}
+                    >
         <div>
           <h3 style={{ margin: 0 }}>ניהול ספקים</h3>
           {error ? (
@@ -1053,41 +1040,39 @@ function SupplierListTab({
                   <td style={tableCellStyle}>{formatPhoneNumber(supplier.phone)}</td>
                   <td style={tableCellStyle}>{supplier.email || "—"}</td>
                   <td style={tableCellStyle}>
-                    <span style={pillStyle(Boolean(supplier.has_active_contract))}>
+                    <StatusPill tone={supplier.has_active_contract ? "active" : "inactive"}>
                       {supplier.has_active_contract ? "פעיל" : "אין"}
-                    </span>
-                    </td>
+                    </StatusPill>
+                  </td>
                   <td style={tableCellStyle}>
-                      <span style={pillStyle(supplier.is_active)}>
-                        {supplier.is_active ? "פעיל" : "לא פעיל"}
-                      </span>
-                    </td>
+                    <StatusPill tone={supplier.is_active ? "active" : "inactive"}>
+                      {supplier.is_active ? "פעיל" : "לא פעיל"}
+                    </StatusPill>
+                  </td>
                   <td style={tableCellStyle}>
                     <div style={{ display: "flex", justifyContent: "center", gap: spacing.xs }}>
-                      <Button
+                      <SmallActionButton
                         variant="secondary"
-                        style={smallButtonStyle}
                         onClick={() => onView(supplier)}
                         title="צפייה"
                       >
                         👁️
-                      </Button>
-                      <Button
+                      </SmallActionButton>
+                      <SmallActionButton
                         variant="secondary"
-                        style={smallButtonStyle}
                         onClick={() => onEdit(supplier)}
                         title="עריכה"
                       >
                         ✏️
-                      </Button>
-                      <Button
+                      </SmallActionButton>
+                      <SmallActionButton
                         variant="secondary"
-                        style={{ ...smallButtonStyle, color: colors.danger }}
+                        style={{ color: colors.danger }}
                         onClick={() => onDelete(supplier.supplier_identifier)}
                         title="ביטול"
                       >
                         🗑️
-                      </Button>
+                      </SmallActionButton>
                     </div>
                     </td>
                   </tr>
@@ -1124,7 +1109,7 @@ function SupplierModal({
       open={open}
       onClose={onClose}
       width="min(700px, 95vw)"
-      style={{ padding: spacing.xxl }}
+        style={{ padding: spacing.xxl }}
       escEnabled={escEnabled}
       >
       <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
@@ -1142,32 +1127,32 @@ function SupplierModal({
               <label style={labelStyle}>
                 מספר ספק <span style={{ color: colors.danger }}>*</span>
               </label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={formData.supplier_identifier}
-              onChange={(event) =>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.supplier_identifier}
+                onChange={(event) =>
                 onChange((prev) => ({
                   ...prev,
-                  supplier_identifier: event.target.value.toUpperCase(),
+                    supplier_identifier: event.target.value.toUpperCase(),
                 }))
-              }
+                }
               disabled={editing}
-              maxLength={20}
-            />
+                maxLength={20}
+              />
             </div>
             <div>
             <label style={labelStyle}>סוג מזהה</label>
-            <select
-              style={inputStyle}
-              value={formData.identifier_type}
-              onChange={(event) =>
+              <select
+                style={inputStyle}
+                value={formData.identifier_type}
+                onChange={(event) =>
                 onChange((prev) => ({
                   ...prev,
-                  identifier_type: event.target.value as IdentifierType,
+                    identifier_type: event.target.value as IdentifierType,
                 }))
-              }
-            >
+                }
+              >
               {identifierTypeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -1196,89 +1181,99 @@ function SupplierModal({
             </div>
           </div>
 
-          <div style={sectionBoxStyle}>
-            <label style={labelStyle}>
-              שם הספק <span style={{ color: colors.danger }}>*</span>
-            </label>
-          <input
-            type="text"
-            style={inputStyle}
-            value={formData.name}
-            onChange={(event) =>
-              onChange((prev) => ({ ...prev, name: event.target.value }))
-            }
-          />
-          </div>
-
-          <div style={sectionBoxStyle}>
-          <label style={labelStyle}>שירותים / תחומי התמחות</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 80 }}
-            value={formData.services_offered}
-            onChange={(event) =>
-              onChange((prev) => ({
-                ...prev,
-                services_offered: event.target.value,
-              }))
-            }
-          />
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: spacing.md,
-            }}
+          <Section
+            title="פרטי ספק"
+            subtitle="שם וסיווג ראשוני"
+            style={{ marginBottom: spacing.lg }}
+            bodyStyle={{ gap: spacing.sm }}
           >
-          <div>
-            <label style={labelStyle}>איש קשר</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={formData.contact_name}
-              onChange={(event) =>
-                onChange((prev) => ({
-                  ...prev,
-                  contact_name: event.target.value,
-                }))
-              }
-            />
-          </div>
             <div>
-              <label style={labelStyle}>טלפון</label>
-            <input
-              type="tel"
-              style={inputStyle}
-              value={formData.phone}
-              onChange={(event) =>
-                onChange((prev) => ({ ...prev, phone: event.target.value }))
-              }
-            />
+              <label style={labelStyle}>
+                שם הספק <span style={{ color: colors.danger }}>*</span>
+              </label>
+              <input
+                type="text"
+                style={inputStyle}
+                value={formData.name}
+                onChange={(event) =>
+                  onChange((prev) => ({ ...prev, name: event.target.value }))
+                }
+              />
             </div>
             <div>
-              <label style={labelStyle}>אימייל</label>
-            <input
-              type="email"
-              style={inputStyle}
-              value={formData.email}
-              onChange={(event) =>
-                onChange((prev) => ({ ...prev, email: event.target.value }))
-              }
-            />
+              <label style={labelStyle}>שירותים / תחומי התמחות</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 80 }}
+                value={formData.services_offered}
+                onChange={(event) =>
+                  onChange((prev) => ({
+                    ...prev,
+                    services_offered: event.target.value,
+                  }))
+                }
+              />
             </div>
-          </div>
+          </Section>
 
-          <div style={sectionBoxStyle}>
-            <label style={labelStyle}>הערות</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 80 }}
-            value={formData.notes}
-            onChange={(event) =>
-              onChange((prev) => ({ ...prev, notes: event.target.value }))
-            }
-          />
-          </div>
+          <Section
+            title="פרטי קשר"
+            subtitle="איש קשר וערוצים"
+            style={{ marginBottom: spacing.lg }}
+            bodyStyle={{ gap: spacing.md }}
+          >
+            <FormGrid columns="repeat(auto-fit, minmax(220px, 1fr))" gap={spacing.md}>
+              <div>
+                <label style={labelStyle}>איש קשר</label>
+                <input
+                  type="text"
+                  style={inputStyle}
+                  value={formData.contact_name}
+                  onChange={(event) =>
+                    onChange((prev) => ({
+                      ...prev,
+                      contact_name: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>טלפון</label>
+                <input
+                  type="tel"
+                  style={inputStyle}
+                  value={formData.phone}
+                  onChange={(event) =>
+                    onChange((prev) => ({ ...prev, phone: event.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>אימייל</label>
+                <input
+                  type="email"
+                  style={inputStyle}
+                  value={formData.email}
+                  onChange={(event) =>
+                    onChange((prev) => ({ ...prev, email: event.target.value }))
+                  }
+                />
+              </div>
+            </FormGrid>
+          </Section>
+
+          <Section
+            title="הערות"
+            subtitle="רקע נוסף"
+            style={{ marginBottom: spacing.lg }}
+          >
+            <textarea
+              style={{ ...inputStyle, minHeight: 80 }}
+              value={formData.notes}
+              onChange={(event) =>
+                onChange((prev) => ({ ...prev, notes: event.target.value }))
+              }
+            />
+          </Section>
 
           <div
             style={{
@@ -1320,8 +1315,8 @@ function SupplierModal({
               display: "flex",
               justifyContent: "flex-end",
             gap: spacing.sm,
-          }}
-        >
+            }}
+          >
           <Button variant="secondary" onClick={onClose}>
               ביטול
             </Button>

@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { query } from "@/db/connection";
 import { ensurePermissionResponse } from "@/lib/server/accessControl";
+
+type EmergencyContactInput = {
+  full_name: string;
+  relationship?: string;
+  phone?: string;
+  email?: string;
+  priority?: number | null;
+  notes?: string;
+};
 
 export async function POST(req: Request) {
   try {
@@ -20,6 +30,7 @@ export async function POST(req: Request) {
       status,
       program,
       group_id,
+      group_ids,
       medical_approval,
       medical_condition,
       needs_wheelchair,
@@ -27,6 +38,7 @@ export async function POST(req: Request) {
       special_requirements,
       emergency_contact_name,
       emergency_contact_phone,
+      emergency_contacts,
       active,
       notes,
     } = body;
@@ -46,6 +58,15 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    const normalizedGroupIds: string[] = Array.isArray(group_ids)
+      ? group_ids.filter(Boolean)
+      : [];
+    const effectiveGroupId = group_id || normalizedGroupIds[0] || null;
+
+    const contacts: EmergencyContactInput[] = Array.isArray(emergency_contacts)
+      ? emergency_contacts
+      : [];
 
     // Insert surfer
     await query(
@@ -74,7 +95,7 @@ export async function POST(req: Request) {
         gender: gender || null,
         status: status || "בהמתנה",
         program: program || null,
-        group_id: group_id || null,
+        group_id: effectiveGroupId,
         medical_approval:
           medical_approval !== undefined ? medical_approval : null,
         medical_condition: medical_condition || null,
@@ -82,12 +103,45 @@ export async function POST(req: Request) {
           needs_wheelchair !== undefined ? needs_wheelchair : null,
         volunteers_needed: volunteers_needed || null,
         special_requirements: special_requirements || null,
-        emergency_contact_name: emergency_contact_name || null,
-        emergency_contact_phone: emergency_contact_phone || null,
+        emergency_contact_name:
+          emergency_contact_name || contacts[0]?.full_name || null,
+        emergency_contact_phone:
+          emergency_contact_phone || contacts[0]?.phone || null,
         active: active !== undefined ? active : true,
         notes: notes || null,
       }
     );
+
+    // Persist group memberships history (optional)
+    for (const gid of normalizedGroupIds) {
+      await query(
+        `INSERT INTO surfer_group (id, surfer_id, group_id, joined_at)
+         VALUES (@id, @surfer_id, @group_id, SYSUTCDATETIME())`,
+        { id: randomUUID(), surfer_id: national_id, group_id: gid }
+      );
+    }
+
+    // Persist emergency contacts list
+    for (const contact of contacts) {
+      await query(
+        `INSERT INTO surfer_emergency_contact (
+          contact_id, surfer_id, full_name, relationship, phone, email, priority, notes, created_at
+        ) VALUES (
+          @contact_id, @surfer_id, @full_name, @relationship, @phone, @email, @priority, @notes, SYSUTCDATETIME()
+        )`,
+        {
+          contact_id: randomUUID(),
+          surfer_id: national_id,
+          full_name: contact.full_name,
+          relationship: contact.relationship || null,
+          phone: contact.phone || null,
+          email: contact.email || null,
+          priority:
+            contact.priority !== undefined ? Number(contact.priority) : null,
+          notes: contact.notes || null,
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,

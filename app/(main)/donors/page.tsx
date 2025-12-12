@@ -20,6 +20,13 @@ import {
 import { colors, spacing, radii } from "@/app/styles/foundations";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import { useDraftManager, type DraftEntry } from "@/app/hooks/useDraftManager";
+import {
+  FormGrid,
+  Section,
+  StatusPill,
+  SmallActionButton,
+  sectionCardStyle,
+} from "@/app/components/shared";
 
 type DonorFormState = {
   national_id: string;
@@ -93,22 +100,10 @@ type DonorListTabProps = {
 };
 
 const muted = colors.textMuted;
-const px = (value: number) => `${value}px`;
 const sectionBoxStyle = {
+  ...sectionCardStyle,
   marginBottom: spacing.lg,
-  padding: spacing.lg,
-  background: colors.surfaceAlt,
-  borderRadius: radii.card,
 };
-
-const pillStyle = (active: boolean) => ({
-  padding: "4px 8px",
-  borderRadius: radii.button,
-  fontSize: 12,
-  fontWeight: 600,
-  background: active ? colors.successSoft : colors.dangerSoft,
-  color: active ? colors.success : colors.danger,
-});
 
 const createEmptyDonorForm = (): DonorFormState => ({
   national_id: "",
@@ -344,10 +339,6 @@ function DonorListTab({
   onFilterChange,
   onClearFilters,
 }: DonorListTabProps) {
-  const smallButtonStyle = {
-    fontSize: 12,
-    padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
-  };
   const filterControlStyle = baseFilterControlStyle;
 
   return (
@@ -470,9 +461,9 @@ function DonorListTab({
                       {formatDate(donor.last_donation_date)}
                     </td>
                     <td style={tableCellStyle}>
-                      <span style={pillStyle(donor.is_active)}>
+                      <StatusPill tone={donor.is_active ? "active" : "inactive"}>
                         {donor.is_active ? "פעיל" : "לא פעיל"}
-                      </span>
+                      </StatusPill>
                     </td>
                     <td style={tableCellStyle}>
                       <div
@@ -482,27 +473,25 @@ function DonorListTab({
                           gap: spacing.xs,
                         }}
                       >
-                        <Button
+                        <SmallActionButton
                           variant="secondary"
-                          style={smallButtonStyle}
                           onClick={() => onView(donor)}
                         >
                           👁️
-                        </Button>
-                        <Button
+                        </SmallActionButton>
+                        <SmallActionButton
                           variant="secondary"
-                          style={smallButtonStyle}
                           onClick={() => onEdit(donor)}
                         >
                           ✏️
-                        </Button>
-                        <Button
+                        </SmallActionButton>
+                        <SmallActionButton
                           variant="secondary"
-                          style={{ ...smallButtonStyle, color: colors.danger }}
+                          style={{ color: colors.danger }}
                           onClick={() => onDelete(donor.national_id)}
                         >
                           🗑️
-                        </Button>
+                        </SmallActionButton>
                       </div>
                     </td>
                   </tr>
@@ -851,17 +840,13 @@ export default function DonorsPage() {
         <h3 style={{ margin: "0 0 16px", fontSize: 20 }}>
           {editingDonor ? "עריכת תורם" : "תורם חדש"}
         </h3>
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px", fontSize: 14, color: muted }}>
-            📋 פרטים אישיים
-          </h4>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: spacing.md,
-            }}
-          >
+        <Section
+          title="📋 פרטים אישיים"
+          subtitle="מידע בסיסי על התורם"
+          style={{ marginBottom: spacing.lg }}
+          bodyStyle={{ gap: spacing.md }}
+        >
+          <FormGrid columns="repeat(auto-fit, minmax(240px, 1fr))" gap={spacing.md}>
             <div>
               <label style={labelStyle}>
                 תעודת זהות <span style={{ color: colors.danger }}>*</span>
@@ -888,14 +873,16 @@ export default function DonorsPage() {
                 onChange={(e) => handleInputChange("full_name", e.target.value)}
               />
             </div>
-          </div>
-        </div>
+          </FormGrid>
+        </Section>
 
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px", fontSize: 14, color: muted }}>
-            🏢 פרטי התקשרות
-          </h4>
-          <div style={{ marginBottom: spacing.md }}>
+        <Section
+          title="🏢 פרטי התקשרות"
+          subtitle="איך ניתן להשיג את התורם"
+          style={{ marginBottom: spacing.lg }}
+          bodyStyle={{ gap: spacing.md }}
+        >
+          <div>
             <label style={labelStyle}>ארגון / חברה</label>
             <input
               type="text"
@@ -906,13 +893,7 @@ export default function DonorsPage() {
               }
             />
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: spacing.md,
-            }}
-          >
+          <FormGrid columns="repeat(auto-fit, minmax(240px, 1fr))" gap={spacing.md}>
             <div>
               <label style={labelStyle}>טלפון</label>
               <input
@@ -931,13 +912,15 @@ export default function DonorsPage() {
                 onChange={(e) => handleInputChange("email", e.target.value)}
               />
             </div>
-          </div>
-        </div>
+          </FormGrid>
+        </Section>
 
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px", fontSize: 14, color: muted }}>
-            📝 הערות והעדפות
-          </h4>
+        <Section
+          title="📝 הערות והעדפות"
+          subtitle="תיעוד קצר ומשמעותי"
+          style={{ marginBottom: spacing.lg }}
+          bodyStyle={{ gap: spacing.sm }}
+        >
           <textarea
             style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
             value={formState.notes}
@@ -961,7 +944,7 @@ export default function DonorsPage() {
               תורם פעיל
             </label>
           </div>
-        </div>
+        </Section>
 
         <div
           style={{
@@ -1021,9 +1004,9 @@ export default function DonorsPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
-                  <span style={pillStyle(viewingDonor.is_active)}>
+                  <StatusPill tone={viewingDonor.is_active ? "active" : "inactive"}>
                     {viewingDonor.is_active ? "פעיל" : "לא פעיל"}
-                  </span>
+                  </StatusPill>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>טלפון</div>

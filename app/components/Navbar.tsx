@@ -130,18 +130,33 @@ export default function Navbar() {
       href: "/surfers",
       icon: <UserCircle size={22} />,
       label: "גולשים",
+      children: [
+        { href: "/surfers", label: "דף הבית", pageKey: "surfers" },
+        {
+          href: "/surfers",
+          label: "רשימת גולשים",
+          pageKey: "surfers-list",
+          query: { view: "list" },
+        },
+        {
+          href: "/surfers",
+          label: "קבוצות",
+          pageKey: "surfers-groups",
+          query: { view: "groups" },
+        },
+        {
+          href: "/surfers",
+          label: "הגדרות",
+          pageKey: "surfers-settings",
+          query: { view: "settings" },
+        },
+      ],
     },
     {
       pageKey: "volunteers",
       href: "/volunteers",
       icon: <Users size={22} />,
       label: "מתנדבים",
-    },
-    {
-      pageKey: "groups",
-      href: "/groups",
-      icon: <UsersRound size={22} />,
-      label: "קבוצות",
     },
     {
       pageKey: "seasons",

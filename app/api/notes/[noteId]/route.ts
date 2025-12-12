@@ -8,6 +8,7 @@ const ENTITY_PAGE_MAP: Record<string, string> = {
   supplier: "suppliers",
   donor: "donors",
   equipment: "equipment",
+  surfer: "surfers",
 };
 
 function getPageKey(entityType: string | null | undefined) {

@@ -6,7 +6,9 @@ export type DraftType =
   | "equipmentItem"
   | "inventoryDocument"
   | "donor"
-  | "supplier";
+  | "supplier"
+  | "surfer"
+  | "group";
 
 export type DraftEntry<T> = {
   id: string;
