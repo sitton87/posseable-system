@@ -11,7 +11,7 @@ export function PagePermissionGate({ children }: { children: ReactNode }) {
   const pageKey = getPageKeyFromPath(pathname);
 
   if (!pageKey) {
-    return <>{children}</>;
+    return <div className="h-full">{children}</div>;
   }
 
   const { permission, loading } = usePagePermission(pageKey);
@@ -33,6 +33,6 @@ export function PagePermissionGate({ children }: { children: ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return <div className="h-full">{children}</div>;
 }
 

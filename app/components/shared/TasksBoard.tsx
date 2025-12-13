@@ -1,28 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  SmallActionButton,
-  StatusPill,
-} from "@/app/components/shared";
+import { SmallActionButton, StatusPill } from "@/app/components/shared";
 import { Card, Modal, Button } from "@/app/components/ui";
-import {
-  inputStyle,
-  labelStyle,
-} from "@/app/styles/components";
+import { inputStyle, labelStyle } from "@/app/styles/components";
 import { colors, spacing, radii } from "@/app/styles/foundations";
 import { NoteStatus } from "@/type";
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  History, 
-  Trash2, 
-  Edit2, 
-  RotateCcw, 
-  CheckCircle2, 
+import {
+  Calendar,
+  Clock,
+  User,
+  History,
+  Trash2,
+  Edit2,
+  RotateCcw,
+  CheckCircle2,
   AlertCircle,
-  MoreHorizontal
+  MoreHorizontal,
 } from "lucide-react";
 
 // --- Types ---
@@ -102,8 +96,8 @@ const formatDateTime = (isoString?: string | null) => {
   });
 };
 
-const getStatusLabel = (val: string) => 
-  TASK_STATUSES.find(s => s.value === val)?.label || val;
+const getStatusLabel = (val: string) =>
+  TASK_STATUSES.find((s) => s.value === val)?.label || val;
 
 // --- Component ---
 
@@ -146,12 +140,14 @@ export function TasksBoard({
       if (fixedEntityId) {
         params.append("entityId", fixedEntityId);
       }
-      
-      const res = await fetch(`/api/notes?${params.toString()}`, { credentials: "include" });
+
+      const res = await fetch(`/api/notes?${params.toString()}`, {
+        credentials: "include",
+      });
       const data = await res.json();
-      
+
       if (!data.success) throw new Error(data.error || "Failed to load tasks");
-      
+
       const normalizedTasks = (data.notes || []).map((t: any) => ({
         ...t,
         status: normalizeStatus(t.status),
@@ -181,7 +177,8 @@ export function TasksBoard({
 
     try {
       setSubmitting(true);
-      const endpoint = isEditing && editingId ? `/api/notes/${editingId}` : "/api/notes";
+      const endpoint =
+        isEditing && editingId ? `/api/notes/${editingId}` : "/api/notes";
       const method = isEditing ? "PATCH" : "POST";
 
       const payload = {
@@ -204,7 +201,7 @@ export function TasksBoard({
       if (isEditing) {
         setIsEditing(false);
         setEditingId(null);
-      } 
+      }
       resetForm();
       fetchTasks();
     } catch (err: any) {
@@ -215,7 +212,8 @@ export function TasksBoard({
   };
 
   const handleDelete = async (noteId: string) => {
-    if (!confirm("האם אתה בטוח שברצונך למחוק משימה זו? הפעולה אינה הפיכה.")) return;
+    if (!confirm("האם אתה בטוח שברצונך למחוק משימה זו? הפעולה אינה הפיכה."))
+      return;
     try {
       const res = await fetch(`/api/notes/${noteId}`, {
         method: "DELETE",
@@ -257,9 +255,11 @@ export function TasksBoard({
     setHistoryModalOpen(true);
     setHistoryLoading(true);
     setHistoryData([]);
-    
+
     try {
-      const res = await fetch(`/api/notes/${task.note_id}/history`, { credentials: "include" });
+      const res = await fetch(`/api/notes/${task.note_id}/history`, {
+        credentials: "include",
+      });
       const data = await res.json();
       if (data.success) {
         setHistoryData(data.history);
@@ -297,13 +297,13 @@ export function TasksBoard({
 
   const clearFormContent = () => {
     if (confirm("לנקות את כל השדות בטופס?")) {
-        setFormData({
-            entity_id: fixedEntityId || "", // Reset to default or empty if not fixed
-            title: "",
-            body: "",
-            due_date: "",
-            status: "not_started"
-        });
+      setFormData({
+        entity_id: fixedEntityId || "", // Reset to default or empty if not fixed
+        title: "",
+        body: "",
+        due_date: "",
+        status: "not_started",
+      });
     }
   };
 
@@ -313,7 +313,7 @@ export function TasksBoard({
     <Card style={{ padding: spacing.lg }}>
       <div style={{ marginBottom: spacing.lg }}>
         <h4 style={{ margin: "0 0 16px 0" }}>{title}</h4>
-        
+
         {/* Creation Form */}
         {!isEditing && (
           <div
@@ -324,15 +324,29 @@ export function TasksBoard({
               border: `1px solid ${colors.border}`,
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.md }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: spacing.md,
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: spacing.md,
+                }}
+              >
                 {!fixedEntityId && (
                   <div>
                     <label style={labelStyle}>שיוך</label>
                     <select
                       style={inputStyle}
                       value={formData.entity_id}
-                      onChange={(e) => setFormData({ ...formData, entity_id: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, entity_id: e.target.value })
+                      }
                     >
                       <option value="">בחר...</option>
                       {entities.map((e) => (
@@ -343,25 +357,35 @@ export function TasksBoard({
                     </select>
                   </div>
                 )}
-                
+
                 <div>
                   <label style={labelStyle}>תאריך יעד</label>
                   <input
                     type="date"
                     style={inputStyle}
                     value={formData.due_date}
-                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, due_date: e.target.value })
+                    }
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: spacing.md }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 2fr",
+                  gap: spacing.md,
+                }}
+              >
                 <div>
                   <label style={labelStyle}>כותרת</label>
                   <input
                     style={inputStyle}
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="נושא המשימה"
                   />
                 </div>
@@ -370,19 +394,27 @@ export function TasksBoard({
                   <input
                     style={inputStyle}
                     value={formData.body}
-                    onChange={(e) => setFormData({ ...formData, body: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, body: e.target.value })
+                    }
                     placeholder="פירוט..."
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: spacing.sm }}>
-                <SmallActionButton 
-                    variant="secondary" 
-                    onClick={clearFormContent}
-                    title="נקה טופס"
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: spacing.sm,
+                }}
+              >
+                <SmallActionButton
+                  variant="secondary"
+                  onClick={clearFormContent}
+                  title="נקה טופס"
                 >
-                    <RotateCcw size={14} /> נקה תוכן
+                  <RotateCcw size={14} /> נקה תוכן
                 </SmallActionButton>
                 <SmallActionButton onClick={handleSubmit} disabled={submitting}>
                   {submitting ? "שומר..." : "צור משימה"}
@@ -394,19 +426,38 @@ export function TasksBoard({
       </div>
 
       {/* List Area */}
-      <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
-        {loading && <div style={{ color: colors.textMuted, textAlign: "center" }}>טוען...</div>}
-        
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
+      >
+        <h4 style={{ margin: "16px 0 0 0" }}>משימות קיימות</h4>
+        {loading && (
+          <div style={{ color: colors.textMuted, textAlign: "center" }}>
+            טוען...
+          </div>
+        )}
+
         {!loading && tasks.length === 0 && (
-          <div style={{ color: colors.textMuted, textAlign: "center", padding: spacing.lg }}>
+          <div
+            style={{
+              color: colors.textMuted,
+              textAlign: "center",
+              padding: spacing.lg,
+            }}
+          >
             אין משימות להצגה.
           </div>
         )}
 
         {tasks.map((task) => {
-          const entityName = entities.find(e => e.id === task.entity_id)?.name;
-          const statusObj = TASK_STATUSES.find(s => s.value === task.status);
-          const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done' && task.status !== 'cancelled';
+          const entityName = entities.find(
+            (e) => e.id === task.entity_id
+          )?.name;
+          const statusObj = TASK_STATUSES.find((s) => s.value === task.status);
+          const isOverdue =
+            task.due_date &&
+            new Date(task.due_date) < new Date() &&
+            task.status !== "done" &&
+            task.status !== "cancelled";
 
           return (
             <div
@@ -416,185 +467,292 @@ export function TasksBoard({
                 borderRadius: radii.md,
                 border: `1px solid ${colors.borderMuted}`,
                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                overflow: "hidden"
+                overflow: "hidden",
               }}
             >
-                {/* Header */}
-                <div style={{ 
-                    padding: `${spacing.sm} ${spacing.md}`, 
-                    borderBottom: `1px solid ${colors.border}`,
-                    background: "rgba(249, 250, 251, 0.5)",
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    alignItems: "center"
-                }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
-                        {task.title}
-                    </div>
-                    
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {task.due_date && (
-                            <div style={{ 
-                                display: "flex", 
-                                alignItems: "center", 
-                                gap: 6, 
-                                fontSize: 12,
-                                padding: "2px 8px",
-                                background: isOverdue ? "rgba(239, 68, 68, 0.1)" : "rgba(0,0,0,0.04)",
-                                borderRadius: radii.full,
-                                color: isOverdue ? colors.danger : colors.textMuted
-                            }}>
-                                <Calendar size={13} />
-                                <span>{new Date(task.due_date).toLocaleDateString("he-IL")}</span>
-                                {isOverdue && <AlertCircle size={13} />}
-                            </div>
-                        )}
-
-                        <select 
-                            style={{ 
-                                fontSize: 12, 
-                                padding: '4px 8px', 
-                                borderRadius: radii.full, 
-                                border: 'none', // Remove border for cleaner pill look
-                                background: TONE_COLORS[statusObj?.tone || 'neutral'].bg,
-                                color: TONE_COLORS[statusObj?.tone || 'neutral'].text,
-                                cursor: 'pointer',
-                                outline: 'none',
-                                fontWeight: 600
-                            }}
-                            value={task.status}
-                            onChange={(e) => handleStatusChange(task, e.target.value as NoteStatus)}
-                        >
-                            {TASK_STATUSES.map(s => (
-                                <option key={s.value} value={s.value} style={{ backgroundColor: '#fff', color: '#000' }}>{s.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Body */}
-                <div style={{ padding: spacing.md }}>
-                    <p style={{ margin: "0 0 16px 0", color: colors.text, whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5 }}>
-                        {task.body}
-                    </p>
-
-                    {/* Metadata Grid */}
-                    <div style={{ 
-                        display: "grid", 
-                        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", 
-                        gap: 12,
-                        fontSize: 12,
-                        color: colors.textMuted
-                    }}>
-                        {!fixedEntityId && entityName && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                <User size={14} />
-                                <span>עבור: <strong>{entityName}</strong></span>
-                            </div>
-                        )}
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <User size={14} />
-                            <span>נוצר ע"י: <strong>{task.created_by_name || task.created_by || "?"}</strong></span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <Clock size={14} />
-                            <span>נוצר: {formatDateTime(task.created_at)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div style={{ 
-                    padding: `${spacing.xs} ${spacing.md}`, 
-                    borderTop: `1px solid ${colors.border}`,
+              {/* Header */}
+              <div
+                style={{
+                  padding: `${spacing.sm} ${spacing.md}`,
+                  borderBottom: `1px solid ${colors.border}`,
+                  background: "rgba(249, 250, 251, 0.5)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 15,
                     display: "flex",
-                    justifyContent: "flex-end",
-                    gap: spacing.sm,
-                    background: "#fff"
-                }}>
-                    <button 
-                        onClick={() => handleShowHistory(task)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: colors.primary }}
-                    >
-                        <History size={14} /> היסטוריה
-                    </button>
-                    <button 
-                        onClick={() => startEdit(task)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: colors.textMuted }}
-                    >
-                        <Edit2 size={14} /> ערוך
-                    </button>
-                    <button 
-                        onClick={() => handleDelete(task.note_id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: colors.danger }}
-                    >
-                        <Trash2 size={14} /> מחק
-                    </button>
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {task.title}
                 </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {task.due_date && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 12,
+                        padding: "2px 8px",
+                        background: isOverdue
+                          ? "rgba(239, 68, 68, 0.1)"
+                          : "rgba(0,0,0,0.04)",
+                        borderRadius: radii.full,
+                        color: isOverdue ? colors.danger : colors.textMuted,
+                      }}
+                    >
+                      <Calendar size={13} />
+                      <span>
+                        {new Date(task.due_date).toLocaleDateString("he-IL")}
+                      </span>
+                      {isOverdue && <AlertCircle size={13} />}
+                    </div>
+                  )}
+
+                  <select
+                    style={{
+                      fontSize: 12,
+                      padding: "4px 8px",
+                      borderRadius: radii.full,
+                      border: "none", // Remove border for cleaner pill look
+                      background: TONE_COLORS[statusObj?.tone || "neutral"].bg,
+                      color: TONE_COLORS[statusObj?.tone || "neutral"].text,
+                      cursor: "pointer",
+                      outline: "none",
+                      fontWeight: 600,
+                    }}
+                    value={task.status}
+                    onChange={(e) =>
+                      handleStatusChange(task, e.target.value as NoteStatus)
+                    }
+                  >
+                    {TASK_STATUSES.map((s) => (
+                      <option
+                        key={s.value}
+                        value={s.value}
+                        style={{ backgroundColor: "#fff", color: "#000" }}
+                      >
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: spacing.md }}>
+                <p
+                  style={{
+                    margin: "0 0 16px 0",
+                    color: colors.text,
+                    whiteSpace: "pre-wrap",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {task.body}
+                </p>
+
+                {/* Metadata Grid */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: 12,
+                    fontSize: 12,
+                    color: colors.textMuted,
+                  }}
+                >
+                  {!fixedEntityId && entityName && (
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <User size={14} />
+                      <span>
+                        עבור: <strong>{entityName}</strong>
+                      </span>
+                    </div>
+                  )}
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    <User size={14} />
+                    <span>
+                      נוצר ע"י:{" "}
+                      <strong>
+                        {task.created_by_name || task.created_by || "?"}
+                      </strong>
+                    </span>
+                  </div>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    <Clock size={14} />
+                    <span>נוצר: {formatDateTime(task.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div
+                style={{
+                  padding: `${spacing.xs} ${spacing.xl}`, // הגדלנו את הריווח האופקי ל-xl
+                  borderTop: `1px solid ${colors.border}`,
+                  display: "flex",
+                  justifyContent: "flex-end", // החזרנו ליישור לשמאל (ב-RTL)
+                  gap: spacing.md,
+                  background: "#fff",
+                }}
+              >
+                <button
+                  onClick={() => handleShowHistory(task)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    color: colors.primary,
+                  }}
+                >
+                  <History size={14} /> היסטוריה
+                </button>
+                <button
+                  onClick={() => startEdit(task)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    color: colors.textMuted,
+                  }}
+                >
+                  <Edit2 size={14} /> ערוך
+                </button>
+                <button
+                  onClick={() => handleDelete(task.note_id)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 12,
+                    color: colors.danger,
+                  }}
+                >
+                  <Trash2 size={14} /> מחק
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* Edit Modal */}
-      <Modal 
-        open={isEditing} 
+      <Modal
+        open={isEditing}
         onClose={resetForm}
         width="min(500px, 90vw)"
         style={{ padding: spacing.xl }}
       >
         <h3 style={{ marginTop: 0 }}>עריכת משימה</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: spacing.md, marginTop: spacing.lg }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: spacing.md,
+            marginTop: spacing.lg,
+          }}
+        >
+          <div>
+            <label style={labelStyle}>כותרת</label>
+            <input
+              style={inputStyle}
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>תוכן</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
+              value={formData.body}
+              onChange={(e) =>
+                setFormData({ ...formData, body: e.target.value })
+              }
+            />
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: spacing.md,
+            }}
+          >
             <div>
-                <label style={labelStyle}>כותרת</label>
-                <input
-                    style={inputStyle}
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                />
+              <label style={labelStyle}>סטטוס</label>
+              <select
+                style={inputStyle}
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as NoteStatus,
+                  })
+                }
+              >
+                {TASK_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-                <label style={labelStyle}>תוכן</label>
-                <textarea
-                    style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
-                    value={formData.body}
-                    onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-                />
+              <label style={labelStyle}>תאריך יעד</label>
+              <input
+                type="date"
+                style={inputStyle}
+                value={formData.due_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, due_date: e.target.value })
+                }
+              />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.md }}>
-                <div>
-                    <label style={labelStyle}>סטטוס</label>
-                    <select
-                        style={inputStyle}
-                        value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value as NoteStatus })}
-                    >
-                        {TASK_STATUSES.map((s) => (
-                            <option key={s.value} value={s.value}>
-                                {s.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label style={labelStyle}>תאריך יעד</label>
-                    <input
-                        type="date"
-                        style={inputStyle}
-                        value={formData.due_date}
-                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                    />
-                </div>
-            </div>
-            
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: spacing.sm, marginTop: spacing.md }}>
-                <Button variant="secondary" onClick={resetForm}>
-                    ביטול
-                </Button>
-                <Button onClick={handleSubmit} disabled={submitting}>
-                    {submitting ? "שומר..." : "עדכן"}
-                </Button>
-            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: spacing.sm,
+              marginTop: spacing.md,
+            }}
+          >
+            <Button variant="secondary" onClick={resetForm}>
+              ביטול
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? "שומר..." : "עדכן"}
+            </Button>
+          </div>
         </div>
       </Modal>
 
@@ -605,43 +763,87 @@ export function TasksBoard({
         width="min(500px, 90vw)"
         style={{ padding: spacing.xl }}
       >
-        <h3 style={{ marginTop: 0, marginBottom: spacing.md }}>היסטוריית שינויים</h3>
-        <p style={{ margin: "0 0 16px 0", color: colors.textMuted, fontSize: 13 }}>
-            עבור: {currentHistoryTitle}
+        <h3 style={{ marginTop: 0, marginBottom: spacing.md }}>
+          היסטוריית שינויים
+        </h3>
+        <p
+          style={{
+            margin: "0 0 16px 0",
+            color: colors.textMuted,
+            fontSize: 13,
+          }}
+        >
+          עבור: {currentHistoryTitle}
         </p>
-        
+
         {historyLoading ? (
-            <div style={{ textAlign: "center", color: colors.textMuted }}>טוען נתונים...</div>
+          <div style={{ textAlign: "center", color: colors.textMuted }}>
+            טוען נתונים...
+          </div>
         ) : historyData.length === 0 ? (
-            <div style={{ textAlign: "center", color: colors.textMuted }}>אין היסטוריית שינויים.</div>
+          <div style={{ textAlign: "center", color: colors.textMuted }}>
+            אין היסטוריית שינויים.
+          </div>
         ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "60vh", overflowY: "auto" }}>
-                {historyData.map((entry) => (
-                    <div key={entry.id} style={{ 
-                        padding: 12, 
-                        background: colors.background, 
-                        borderRadius: radii.sm,
-                        border: `1px solid ${colors.border}`,
-                        fontSize: 13
-                    }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                            <strong>{entry.changed_by_name || entry.changed_by}</strong>
-                            <span style={{ color: colors.textMuted }}>{formatDateTime(entry.changed_at)}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <StatusPill tone="neutral" size="sm">{getStatusLabel(entry.old_status || "—")}</StatusPill>
-                            <span style={{ color: colors.textMuted }}>←</span>
-                            <StatusPill tone={TASK_STATUSES.find(s => s.value === entry.new_status)?.tone as any || "neutral"} size="sm">
-                                {getStatusLabel(entry.new_status)}
-                            </StatusPill>
-                        </div>
-                    </div>
-                ))}
-            </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              maxHeight: "60vh",
+              overflowY: "auto",
+            }}
+          >
+            {historyData.map((entry) => (
+              <div
+                key={entry.id}
+                style={{
+                  padding: 12,
+                  background: colors.background,
+                  borderRadius: radii.sm,
+                  border: `1px solid ${colors.border}`,
+                  fontSize: 13,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
+                  <strong>{entry.changed_by_name || entry.changed_by}</strong>
+                  <span style={{ color: colors.textMuted }}>
+                    {formatDateTime(entry.changed_at)}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <StatusPill tone="neutral" size="sm">
+                    {getStatusLabel(entry.old_status || "—")}
+                  </StatusPill>
+                  <span style={{ color: colors.textMuted }}>←</span>
+                  <StatusPill
+                    tone={
+                      (TASK_STATUSES.find((s) => s.value === entry.new_status)
+                        ?.tone as any) || "neutral"
+                    }
+                    size="sm"
+                  >
+                    {getStatusLabel(entry.new_status)}
+                  </StatusPill>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-        
+
         <div style={{ marginTop: spacing.lg, textAlign: "right" }}>
-            <Button variant="secondary" onClick={() => setHistoryModalOpen(false)}>סגור</Button>
+          <Button
+            variant="secondary"
+            onClick={() => setHistoryModalOpen(false)}
+          >
+            סגור
+          </Button>
         </div>
       </Modal>
     </Card>

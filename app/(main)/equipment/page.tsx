@@ -26,6 +26,8 @@ import { CatalogTab } from "./tabs/CatalogTab";
 import { HomeTab } from "./tabs/HomeTab";
 import { InventoryTab } from "./tabs/InventoryTab";
 import { StructureTab } from "./tabs/StructureTab";
+import DocumentDraftPrompt from "./modals/DocumentDraftPrompt";
+import EquipmentDraftPrompt from "./modals/EquipmentDraftPrompt";
 import { EquipmentFormModal } from "./modals/EquipmentFormModal";
 import { InventoryDocumentModal } from "./modals/InventoryDocumentModal";
 import { InventoryDocumentDetailModal } from "./modals/InventoryDocumentDetailModal";
@@ -1538,75 +1540,19 @@ export default function EquipmentPage() {
         canEdit={canEditInventory}
       />
 
-      <Modal
+      <EquipmentDraftPrompt
         open={equipmentDraftPromptOpen}
         onClose={handleDismissEquipmentPrompt}
-        width="min(420px, 90vw)"
-      >
-        <div style={{ ...sectionCardStyle, boxShadow: "none" }}>
-          <h3 style={{ marginTop: 0 }}>לשמור את הפריט כטיוטה?</h3>
-          <p style={{ color: muted }}>
-            ניתן לשמור את הפריט כטיוטה אישית (מוצגת רק לך) ולהמשיך לעבוד עליו
-            מאוחר יותר או לבטל את הפעולה כעת.
-          </p>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: spacing.sm,
-              marginTop: spacing.lg,
-            }}
-          >
-            <SmallActionButton variant="ghost" onClick={handleDismissEquipmentPrompt}>
-              חזרה לעריכה
-            </SmallActionButton>
-            <SmallActionButton
-              variant="secondary"
-              onClick={handleDiscardEquipmentDraft}
-            >
-              בטל וסגור
-            </SmallActionButton>
-            <SmallActionButton onClick={handleSaveEquipmentDraft}>
-              שמור כטיוטה
-            </SmallActionButton>
-          </div>
-        </div>
-      </Modal>
+        onSaveDraft={handleSaveEquipmentDraft}
+        onDiscard={handleDiscardEquipmentDraft}
+      />
 
-      <Modal
+      <DocumentDraftPrompt
         open={documentDraftPromptOpen}
         onClose={handleDismissDocumentPrompt}
-        width="min(420px, 90vw)"
-      >
-        <div style={{ ...sectionCardStyle, boxShadow: "none" }}>
-          <h3 style={{ marginTop: 0 }}>לשמור את התעודה כטיוטה?</h3>
-          <p style={{ color: muted }}>
-            השמירה תשמור את מצב התעודה רק עבורך. ניתן גם לסגור ללא שמירה או לחזור
-            לעריכה.
-          </p>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: spacing.sm,
-              marginTop: spacing.lg,
-            }}
-          >
-            <SmallActionButton variant="ghost" onClick={handleDismissDocumentPrompt}>
-              חזרה לעריכה
-            </SmallActionButton>
-            <SmallActionButton
-              variant="secondary"
-              onClick={handleDiscardDocumentDraft}
-            >
-              בטל וסגור
-            </SmallActionButton>
-            <SmallActionButton onClick={handleSaveDocumentDraft}>
-              שמור כטיוטה
-            </SmallActionButton>
-          </div>
-        </div>
-      </Modal>
+        onSaveDraft={handleSaveDocumentDraft}
+        onDiscard={handleDiscardDocumentDraft}
+      />
     </div>
   );
 }
