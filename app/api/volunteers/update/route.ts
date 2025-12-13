@@ -28,6 +28,7 @@ export async function PUT(req: Request) {
       availability,
       personal_website,
       documents,
+      classification,
     } = body;
 
     // Validation
@@ -58,7 +59,8 @@ export async function PUT(req: Request) {
            media_specialization = @media_specialization,
            availability = @availability,
            personal_website = @personal_website,
-           documents = @documents
+           documents = @documents,
+           classification = @classification
        WHERE national_id = @national_id`,
       {
         national_id,
@@ -80,6 +82,7 @@ export async function PUT(req: Request) {
         availability: availability || null,
         personal_website: personal_website || null,
         documents: documents || null,
+        classification: classification || "volunteer",
       }
     );
 

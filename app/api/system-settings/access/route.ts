@@ -140,16 +140,7 @@ export async function GET(req: Request) {
 
     const roleGroups = roleGroupsResult.recordset;
 
-    const mergedPages = new Map<string, AppPageRow>();
-    for (const page of pagesResult.recordset) {
-      mergedPages.set(page.page_key, page);
-    }
-    for (const fallback of DEFAULT_PAGE_DEFINITIONS) {
-      if (!mergedPages.has(fallback.page_key)) {
-        mergedPages.set(fallback.page_key, fallback);
-      }
-    }
-    const pages = Array.from(mergedPages.values()).sort((a, b) => {
+    const pages = (pagesResult.recordset as AppPageRow[]).sort((a, b) => {
       const categoryCompare =
         (a.category || "").localeCompare(b.category || "", "he");
       if (categoryCompare !== 0) {

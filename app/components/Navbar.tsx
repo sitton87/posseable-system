@@ -15,15 +15,14 @@ import {
   Wallet,
   ArrowRightCircle,
   CalendarRange,
-  UsersRound,
   Settings,
   ChevronDown,
 } from "lucide-react";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
 import { usePermissions } from "@/app/hooks/usePagePermission";
 
-const NAV_EXPANDED_WIDTH = 224; // Tailwind w-56
-const NAV_COLLAPSED_WIDTH = 64; // Tailwind w-16
+const NAV_EXPANDED_WIDTH = 240; // מעט רחב יותר כדי להכיל כותרות בנוחות
+const NAV_COLLAPSED_WIDTH = 64;
 const ORG_NAME = "עמותת PosSEAble";
 
 export default function Navbar() {
@@ -103,6 +102,8 @@ export default function Navbar() {
     ? hasSystemAdminAccess(userInfo.role, userInfo.role_group_code)
     : false;
 
+  // --- Types ---
+
   type MenuChild = {
     pageKey?: string;
     href: string;
@@ -118,151 +119,182 @@ export default function Navbar() {
     children?: MenuChild[];
   };
 
-  const baseMenuItems: MenuItem[] = [
+  type MenuSection = {
+    id: string;
+    title?: string;
+    items: MenuItem[];
+  };
+
+  // --- Menu Definitions ---
+
+  const menuSections: MenuSection[] = [
     {
-      pageKey: "dashboard",
-      href: "/dashboard",
-      icon: <Home size={22} />,
-      label: "דף הבית",
-    },
-    {
-      pageKey: "surfers",
-      href: "/surfers",
-      icon: <UserCircle size={22} />,
-      label: "גולשים",
-      children: [
-        { href: "/surfers", label: "דף הבית", pageKey: "surfers" },
+      id: "main",
+      items: [
         {
-          href: "/surfers",
-          label: "רשימת גולשים",
-          pageKey: "surfers-list",
-          query: { view: "list" },
-        },
-        {
-          href: "/surfers",
-          label: "קבוצות",
-          pageKey: "surfers-groups",
-          query: { view: "groups" },
-        },
-        {
-          href: "/surfers",
-          label: "הגדרות",
-          pageKey: "surfers-settings",
-          query: { view: "settings" },
+          pageKey: "dashboard",
+          href: "/dashboard",
+          icon: <Home size={22} />,
+          label: "דף הבית",
         },
       ],
     },
     {
-      pageKey: "volunteers",
-      href: "/volunteers",
-      icon: <Users size={22} />,
-      label: "מתנדבים",
-      children: [
-        { href: "/volunteers", label: "דף הבית", pageKey: "volunteers" },
+      id: "people",
+      title: "אנשים ושותפים",
+      items: [
         {
-          href: "/volunteers",
-          label: "רשימת מתנדבים",
-          pageKey: "volunteers-list",
-          query: { view: "list" },
+          pageKey: "surfers",
+          href: "/surfers",
+          icon: <UserCircle size={22} />,
+          label: "גולשים",
+          children: [
+            { href: "/surfers", label: "דף הבית", pageKey: "surfers" },
+            {
+              href: "/surfers",
+              label: "רשימת גולשים",
+              pageKey: "surfers-list",
+              query: { view: "list" },
+            },
+            {
+              href: "/surfers",
+              label: "קבוצות",
+              pageKey: "surfers-groups",
+              query: { view: "groups" },
+            },
+            {
+              href: "/surfers",
+              label: "הגדרות",
+              pageKey: "surfers-settings",
+              query: { view: "settings" },
+            },
+          ],
         },
         {
+          pageKey: "volunteers",
           href: "/volunteers",
-          label: "הגדרות",
-          pageKey: "volunteers-settings",
-          query: { view: "settings" },
+          icon: <Users size={22} />,
+          label: "צוות ומתנדבים",
+          children: [
+            { href: "/volunteers", label: "דף הבית", pageKey: "volunteers" },
+            {
+              href: "/volunteers",
+              label: "רשימת צוות ומתנדבים",
+              pageKey: "volunteers-list",
+              query: { view: "list" },
+            },
+            {
+              href: "/volunteers",
+              label: "הגדרות",
+              pageKey: "volunteers-settings",
+              query: { view: "settings" },
+            },
+          ],
         },
-      ],
-    },
-    {
-      pageKey: "seasons",
-      href: "/seasons",
-      icon: <CalendarRange size={22} />,
-      label: "עונות",
-    },
-    {
-      pageKey: "activities",
-      href: "/activities",
-      icon: <Calendar size={22} />,
-      label: "פעילויות",
-    },
-    {
-      pageKey: "donors",
-      href: "/donors",
-      icon: <Heart size={22} />,
-      label: "תורמים",
-      children: [
-        { href: "/donors", label: "דף הבית", pageKey: "donors" },
         {
+          pageKey: "donors",
           href: "/donors",
-          label: "רשימת תורמים",
-          pageKey: "donors-list",
-          query: { view: "list" },
+          icon: <Heart size={22} />,
+          label: "תורמים",
+          children: [
+            { href: "/donors", label: "דף הבית", pageKey: "donors" },
+            {
+              href: "/donors",
+              label: "רשימת תורמים",
+              pageKey: "donors-list",
+              query: { view: "list" },
+            },
+          ],
         },
-      ],
-    },
-    {
-      pageKey: "finance",
-      href: "/finance",
-      icon: <Wallet size={22} />,
-      label: "כספים",
-    },
-    {
-      pageKey: "suppliers",
-      href: "/suppliers",
-      icon: <Handshake size={22} />,
-      label: "ספקים",
-      children: [
-        { href: "/suppliers", label: "דף הבית", pageKey: "suppliers" },
         {
+          pageKey: "suppliers",
           href: "/suppliers",
-          label: "רשימת ספקים",
-          pageKey: "suppliers-list",
-          query: { view: "list" },
+          icon: <Handshake size={22} />,
+          label: "ספקים",
+          children: [
+            { href: "/suppliers", label: "דף הבית", pageKey: "suppliers" },
+            {
+              href: "/suppliers",
+              label: "רשימת ספקים",
+              pageKey: "suppliers-list",
+              query: { view: "list" },
+            },
+          ],
         },
       ],
     },
     {
-      pageKey: "equipment",
-      href: "/equipment",
-      icon: <Wrench size={22} />,
-      label: "ציוד",
-      children: [
-        { href: "/equipment", label: "דף הבית", pageKey: "equipment" },
+      id: "activity",
+      title: "ניהול פעילות",
+      items: [
         {
-          href: "/equipment",
-          label: "קטלוג ציוד",
-          pageKey: "equipment-catalog",
-          query: { view: "catalog" },
+          pageKey: "activities",
+          href: "/activities",
+          icon: <Calendar size={22} />,
+          label: "פעילויות",
         },
         {
-          href: "/equipment",
-          label: "מלאי ומחסנים",
-          pageKey: "equipment-inventory",
-          query: { view: "inventory" },
-        },
-        {
-          href: "/equipment",
-          label: "מבנה והגדרות",
-          pageKey: "equipment-settings",
-          query: { view: "structure" },
+          pageKey: "seasons",
+          href: "/seasons",
+          icon: <CalendarRange size={22} />,
+          label: "עונות",
         },
       ],
     },
-  ];
-
-  const { permissions, loading: permissionsLoading } = usePermissions();
-
-  const expandedMenuItems: MenuItem[] = isAdmin
-    ? [
-        ...baseMenuItems,
+    {
+      id: "logistics",
+      title: "לוגיסטיקה ומשאבים",
+      items: [
+        {
+          pageKey: "equipment",
+          href: "/equipment",
+          icon: <Wrench size={22} />,
+          label: "ציוד",
+          children: [
+            { href: "/equipment", label: "דף הבית", pageKey: "equipment" },
+            {
+              href: "/equipment",
+              label: "קטלוג ציוד",
+              pageKey: "equipment-catalog",
+              query: { view: "catalog" },
+            },
+            {
+              href: "/equipment",
+              label: "מלאי ומחסנים",
+              pageKey: "equipment-inventory",
+              query: { view: "inventory" },
+            },
+            {
+              href: "/equipment",
+              label: "מבנה והגדרות",
+              pageKey: "equipment-settings",
+              query: { view: "structure" },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "admin",
+      title: "מנהלה",
+      items: [
+        {
+          pageKey: "finance",
+          href: "/finance",
+          icon: <Wallet size={22} />,
+          label: "כספים",
+        },
         {
           pageKey: "system-settings",
           href: "/system-settings",
           icon: <Settings size={22} />,
           label: "הגדרות מערכת",
         },
-      ]
-    : baseMenuItems;
+      ],
+    },
+  ];
+
+  const { permissions, loading: permissionsLoading } = usePermissions();
 
   const hasAccess = (key?: string, fallback?: string) => {
     if (permissionsLoading) return true;
@@ -281,70 +313,90 @@ export default function Navbar() {
     return false;
   };
 
-  const filteredMenuItems = useMemo(
-    () =>
-      expandedMenuItems
-        .map((item) => {
-          if (!item.children?.length) return item;
-          const visibleChildren = item.children.filter((child) =>
-            hasAccess(child.pageKey, item.pageKey)
-          );
-          return { ...item, children: visibleChildren };
-        })
-        .filter((item) => {
-          if (item.children?.length) {
-            return item.children.length > 0;
-          }
-          if (item.pageKey === "system-settings") {
-            return isAdmin;
-          }
-          return hasAccess(item.pageKey);
-        }),
-    [expandedMenuItems, isAdmin, permissions, permissionsLoading]
-  );
+  // סינון הפריטים והסקשנים לפי הרשאות
+  const filteredSections = useMemo(() => {
+    return menuSections
+      .map((section) => {
+        const visibleItems = section.items
+          .map((item) => {
+            // 1. סינון ילדים
+            if (item.children?.length) {
+              const visibleChildren = item.children.filter((child) =>
+                hasAccess(child.pageKey, item.pageKey)
+              );
+              if (visibleChildren.length === 0) return null; // אם אין ילדים רלוונטיים
+              return { ...item, children: visibleChildren };
+            }
+
+            // 2. סינון פריטים רגילים
+            if (item.pageKey === "system-settings") {
+              return isAdmin ? item : null;
+            }
+            if (hasAccess(item.pageKey)) {
+              return item;
+            }
+            return null;
+          })
+          .filter(Boolean) as MenuItem[];
+
+        return { ...section, items: visibleItems };
+      })
+      .filter((section) => section.items.length > 0); // הסתרת סקשנים ריקים
+  }, [menuSections, isAdmin, permissions, permissionsLoading]);
+
+  // --- Logic for Open/Close Menus ---
 
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-  const currentTopLevel = filteredMenuItems.find((item) => {
-    if (!pathname) return false;
-    if (item.href === "/") return pathname === "/";
-    return pathname.startsWith(item.href || "");
-  })?.pageKey;
+
+  // מציאת ה-Top Level הנוכחי (איטרציה כפולה כי זה מקונן בתוך סקשנים)
+  const currentTopLevel = useMemo(() => {
+    if (!pathname) return undefined;
+    for (const section of filteredSections) {
+      for (const item of section.items) {
+        if (item.href === "/" && pathname === "/") return item.pageKey;
+        if (item.href && item.href !== "/" && pathname.startsWith(item.href)) {
+          return item.pageKey;
+        }
+      }
+    }
+    return undefined;
+  }, [pathname, filteredSections]);
+
   const previousTopLevelRef = useRef<string | undefined>(currentTopLevel);
 
+  // פתיחה אוטומטית בטעינה ראשונית
   useEffect(() => {
     setOpenMenus((prev) => {
       let changed = false;
       const next = { ...prev };
-
-      filteredMenuItems.forEach((item) => {
-        if (!item.children?.length) return;
-        if (item.pageKey === currentTopLevel) {
-          if (next[item.pageKey] !== true) {
-            next[item.pageKey] = true;
-            changed = true;
+      filteredSections.forEach((section) => {
+        section.items.forEach((item) => {
+          if (!item.children?.length) return;
+          if (item.pageKey === currentTopLevel) {
+            if (next[item.pageKey] !== true) {
+              next[item.pageKey] = true;
+              changed = true;
+            }
           }
-          return;
-        }
+        });
       });
-
       return changed ? next : prev;
     });
-  }, [currentTopLevel, filteredMenuItems]);
+  }, [currentTopLevel, filteredSections]);
 
+  // סגירה של תפריט קודם כשעוברים למודול אחר
   useEffect(() => {
     const prevTopLevel = previousTopLevelRef.current;
     if (prevTopLevel && prevTopLevel !== currentTopLevel) {
       setOpenMenus((prev) => {
-        if (!prev[prevTopLevel]) {
-          return prev;
-        }
+        if (!prev[prevTopLevel]) return prev;
         return { ...prev, [prevTopLevel]: false };
       });
     }
     previousTopLevelRef.current = currentTopLevel;
   }, [currentTopLevel]);
 
-  // סגירה אוטומטית של תתי-תפריטים רק כאשר הנתיב משתנה
+  // לוגיקה לטיפול בשינוי נתיב (למשל סגירת תפריטים לא רלוונטיים)
   const previousPathnameRef = useRef<string | null>(pathname);
   useEffect(() => {
     const prevPath = previousPathnameRef.current;
@@ -355,23 +407,24 @@ export default function Navbar() {
       let changed = false;
       const next: Record<string, boolean> = {};
 
-      filteredMenuItems.forEach((item) => {
-        if (!item.children?.length) return;
-        const shouldBeOpen = item.pageKey === currentTopLevel;
-        next[item.pageKey] = shouldBeOpen;
-        if (prev[item.pageKey] !== shouldBeOpen) {
-          changed = true;
-        }
+      filteredSections.forEach((section) => {
+        section.items.forEach((item) => {
+          if (!item.children?.length) return;
+          const shouldBeOpen = item.pageKey === currentTopLevel;
+          next[item.pageKey] = shouldBeOpen;
+          if (prev[item.pageKey] !== shouldBeOpen) {
+            changed = true;
+          }
+        });
       });
-
       return changed ? next : prev;
     });
-  }, [pathname, currentTopLevel, filteredMenuItems]);
+  }, [pathname, currentTopLevel, filteredSections]);
 
   const toggleMenu = (pageKey: string) => {
     setOpenMenus((prev) => {
       const isOpen = !!prev[pageKey];
-      // אם נפתח חדש – סגור את כולם פרט אליו. אם נסגר – השאר הכל סגור.
+      // לוגיקת אקורדיון: אם פותחים אחד, סוגרים את האחרים
       if (!isOpen) {
         return { [pageKey]: true };
       }
@@ -386,230 +439,255 @@ export default function Navbar() {
     toggleMenu(pageKey);
   };
 
+  // --- JSX Rendering Helpers ---
+
+  const renderMenuItem = (item: MenuItem) => {
+    const hasChildren = Boolean(item.children?.length);
+    const childIsActive = (child: MenuChild) => {
+      if (!pathname) return false;
+      const pathMatch =
+        child.href === "/" ? pathname === "/" : pathname.startsWith(child.href);
+      if (!pathMatch) return false;
+      if (!child.query) return true;
+      if (!searchParams) return false;
+      return Object.entries(child.query).every(
+        ([key, value]) => searchParams.get(key) === value
+      );
+    };
+    const isActive = hasChildren
+      ? item.children!.some(childIsActive)
+      : item.href === "/"
+      ? pathname === "/"
+      : item.href
+      ? pathname?.startsWith(item.href)
+      : false;
+
+    const isOpen = openMenus[item.pageKey] ?? isActive;
+
+    if (!hasChildren) {
+      return (
+        <Link
+          key={item.href}
+          href={item.href || "#"}
+          className={clsx(
+            "flex items-center rounded-lg px-3 py-2 text-sm font-semibold transition group",
+            expanded ? "gap-3" : "justify-center",
+            isActive
+              ? "bg-sky-100 text-sky-700 shadow-sm"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          )}
+          title={!expanded ? item.label : undefined}
+        >
+          {item.icon}
+          {expanded && <span>{item.label}</span>}
+        </Link>
+      );
+    }
+
+    return (
+      <div
+        key={item.pageKey}
+        className={clsx(
+          "rounded-lg transition-colors",
+          isActive && !expanded && "bg-sky-50", // הדגשה עדינה כשהתפריט סגור
+          isActive && expanded && "bg-sky-50/50" // רקע עדין כשהתפריט פתוח והאבא פעיל
+        )}
+      >
+        <div
+          className={clsx(
+            "flex items-center px-3 py-2 text-sm font-semibold transition cursor-pointer select-none",
+            expanded ? "gap-3" : "justify-center",
+            isActive ? "text-sky-700" : "text-gray-600 hover:text-gray-900",
+            !isActive && "hover:bg-gray-100 rounded-lg" // Hover רק כשלא פעיל
+          )}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleParentTrigger(item.pageKey)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleParentTrigger(item.pageKey);
+            }
+          }}
+          title={!expanded ? item.label : undefined}
+        >
+          <div
+            className={clsx(
+              "flex flex-1 items-center",
+              expanded ? "gap-3" : "justify-center"
+            )}
+          >
+            {item.icon}
+            {expanded && <span>{item.label}</span>}
+          </div>
+          {expanded && (
+            <ChevronDown
+              size={16}
+              className={clsx(
+                "text-gray-400 transition-transform duration-200",
+                isOpen ? "rotate-180" : "rotate-0"
+              )}
+            />
+          )}
+        </div>
+
+        {/* Children Container */}
+        {expanded && (
+          <div
+            className={clsx(
+              "flex flex-col gap-1 overflow-hidden transition-all duration-300 ease-in-out",
+              isOpen ? "max-h-96 opacity-100 mt-1 pb-2" : "max-h-0 opacity-0"
+            )}
+          >
+            {item.children!.map((child) => {
+              const childActive = childIsActive(child);
+              const childHref =
+                child.query && Object.keys(child.query).length
+                  ? `${child.href}?${new URLSearchParams(
+                      child.query
+                    ).toString()}`
+                  : child.href;
+              return (
+                <Link
+                  key={`${child.href}-${child.label}`}
+                  href={childHref}
+                  className={clsx(
+                    "mr-9 rounded-md px-3 py-1.5 text-xs font-medium transition", // הזחה (Indentation)
+                    childActive
+                      ? "bg-sky-100 text-sky-700"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                  )}
+                >
+                  {child.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
-      className={`fixed right-0 top-0 h-full bg-white shadow-lg border-l transition-all duration-300`}
+      className={`fixed right-0 top-0 h-full bg-white shadow-xl border-l border-gray-100 transition-all duration-300 z-50`}
       onMouseEnter={() => !pinned && setExpanded(true)}
       onMouseLeave={() => !pinned && setExpanded(false)}
       style={{ width }}
     >
       <div className="flex h-full flex-col">
-        {/* Logo */}
-        <div
-          className="relative border-b px-4 py-3 bg-contain bg-no-repeat bg-center"
-          style={{
-            backgroundImage: "url('/logo.png')",
-            filter: "saturate(2.5) contrast(1.0)",
-          }}
-        >
-          {/* שכבת שקיפות לקריאות */}
-          <div className="absolute inset-0 bg-white/80" />
+        {/* Logo Area */}
+        <div className="relative h-16 border-b border-gray-100 px-4 flex items-center justify-center overflow-hidden">
+          {/* ניתן להחזיר את תמונת הלוגו אם קיימת, כאן עיצוב נקי */}
+          <div
+            className="absolute inset-0 bg-center bg-no-repeat bg-contain opacity-10"
+            style={{ backgroundImage: "url('/logo.png')" }}
+          />
 
-          {/* טקסט ממורכז באמת */}
-          {expanded && (
-            <div className="relative flex flex-col items-center justify-center text-center">
-              <div className="text-sm font-semibold text-gray-900">
+          {expanded ? (
+            <div className="relative z-10 flex flex-col items-center">
+              <span className="text-lg font-bold text-gray-800 tracking-tight">
                 {ORG_NAME}
-              </div>
-              <div className="text-xs text-gray-500">מערכת הניהול</div>
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                System Manager
+              </span>
+            </div>
+          ) : (
+            <div className="relative z-10 font-bold text-gray-800 text-xl">
+              P
             </div>
           )}
         </div>
 
-        {/* Menu */}
-        <div className="flex-1 overflow-y-auto px-2 py-3">
-          <nav className="flex flex-col gap-1">
-            {filteredMenuItems.map((item) => {
-              const hasChildren = Boolean(item.children?.length);
-              const childIsActive = (child: MenuChild) => {
-                if (!pathname) return false;
-                const pathMatch =
-                  child.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(child.href);
-                if (!pathMatch) return false;
-                if (!child.query) return true;
-                if (!searchParams) return false;
-                return Object.entries(child.query).every(
-                  ([key, value]) => searchParams.get(key) === value
-                );
-              };
-              const isActive = hasChildren
-                ? item.children!.some(childIsActive)
-                : item.href === "/"
-                ? pathname === "/"
-                : item.href
-                ? pathname?.startsWith(item.href)
-                : false;
-              const isOpen = openMenus[item.pageKey] ?? isActive;
-
-              if (!hasChildren) {
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href || "#"}
-                    className={clsx(
-                      "flex items-center rounded-lg px-3 py-2 text-sm font-semibold transition",
-                      expanded ? "gap-3" : "justify-center",
-                      isActive
-                        ? "bg-sky-100 text-sky-700 shadow-inner"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    {item.icon}
-                    {expanded && <span>{item.label}</span>}
-                  </Link>
-                );
-              }
-
-              return (
-                <div
-                  key={item.pageKey}
-                  className={clsx(
-                    "rounded-lg",
-                    isActive && "bg-sky-50 text-sky-700 shadow-inner"
-                  )}
-                >
-                  <div
-                    className={clsx(
-                      "flex items-center px-3 py-2 text-sm font-semibold transition",
-                      expanded ? "gap-3" : "justify-center",
-                      isActive ? "text-sky-700" : "text-gray-600"
-                    )}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleParentTrigger(item.pageKey)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleParentTrigger(item.pageKey);
-                      }
-                    }}
-                  >
-                    <div
-                      className={clsx(
-                        "flex flex-1 items-center",
-                        expanded ? "gap-3" : "justify-center"
-                      )}
-                    >
-                      {item.icon}
-                      {expanded && <span>{item.label}</span>}
-                    </div>
-                    {expanded && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleMenu(item.pageKey);
-                        }}
-                        className="text-gray-500 transition hover:text-gray-700"
-                        aria-label={
-                          isOpen
-                            ? `סגירת תפריט ${item.label}`
-                            : `פתיחת תפריט ${item.label}`
-                        }
-                      >
-                        <ChevronDown
-                          size={18}
-                          className={clsx(
-                            "transition-transform",
-                            isOpen ? "rotate-180" : "rotate-0"
-                          )}
-                        />
-                      </button>
-                    )}
+        {/* Scrollable Menu Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <nav className="flex flex-col gap-6 px-3 py-4">
+            {filteredSections.map((section, index) => (
+              <div key={section.id} className="flex flex-col gap-1">
+                {/* Section Title */}
+                {expanded && section.title && (
+                  <div className="px-3 mb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    {section.title}
                   </div>
-                  {expanded && (
-                    <div
-                      className={clsx(
-                        "flex flex-col gap-1 overflow-hidden px-4 text-sm transition-all",
-                        isOpen
-                          ? "max-h-96 pb-2"
-                          : "max-h-0 pb-0 opacity-0 pointer-events-none"
-                      )}
-                    >
-                      {item.children!.map((child) => {
-                        const childActive = childIsActive(child);
-                        const childHref =
-                          child.query && Object.keys(child.query).length
-                            ? `${child.href}?${new URLSearchParams(
-                                child.query
-                              ).toString()}`
-                            : child.href;
-                        return (
-                          <Link
-                            key={`${child.href}-${child.label}`}
-                            href={childHref}
-                            className={clsx(
-                              "rounded-md px-3 py-1 text-xs font-semibold transition",
-                              childActive
-                                ? "bg-sky-100 text-sky-700"
-                                : "text-gray-600 hover:bg-gray-100"
-                            )}
-                          >
-                            {child.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
+                )}
+                {/* Separator for collapsed mode if not first item */}
+                {!expanded && index > 0 && (
+                  <div className="my-2 mx-2 border-t border-gray-100" />
+                )}
+
+                {/* Section Items */}
+                <div className="flex flex-col gap-1">
+                  {section.items.map(renderMenuItem)}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </nav>
         </div>
 
-        {/* User Panel */}
-        <div className="border-t px-4 py-3 text-right">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
-              {(userInfo?.full_name || "א")[0]}
-            </div>
-            {expanded && (
-              <div className="flex flex-col text-sm">
-                <span className="font-semibold text-gray-900">
-                  {userInfo?.full_name || "משתמש"}
-                </span>
-                <span className="text-gray-500">
-                  {userInfo?.role || "חבר צוות"}
-                </span>
+        {/* Footer / User Panel */}
+        <div className="border-t border-gray-100 bg-gray-50/50">
+          {/* User Info */}
+          <div className="px-4 py-3">
+            <div
+              className={clsx(
+                "flex items-center",
+                expanded ? "gap-3" : "justify-center"
+              )}
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-700 text-sm font-bold border-2 border-white shadow-sm">
+                {(userInfo?.full_name || "U")[0]}
               </div>
-            )}
+              {expanded && (
+                <div className="flex flex-col overflow-hidden">
+                  <span className="truncate text-sm font-semibold text-gray-700">
+                    {userInfo?.full_name || "אורח"}
+                  </span>
+                  <span className="truncate text-xs text-gray-500">
+                    {userInfo?.role || "משתמש"}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          <div
-            className={`mt-3 flex ${
-              expanded ? "flex-row gap-2" : "flex-col gap-2"
-            }`}
-          >
-            <button
-              onClick={handleResetPassword}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
-              title="החלפת סיסמה"
-            >
-              {expanded ? "החלפת סיסמה" : "🔒"}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex-1 rounded-md bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
-              title="התנתקות"
-            >
-              {expanded ? "התנתקות" : "⏻"}
-            </button>
-          </div>
-        </div>
 
-        {/* Pin button */}
-        <div className="border-t px-4 py-3">
+          {/* Actions */}
+          {expanded && (
+            <div className="px-4 pb-3 flex gap-2">
+              <button
+                onClick={handleResetPassword}
+                className="flex-1 rounded-md border border-gray-200 bg-white py-1.5 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-50 hover:text-gray-900 transition"
+              >
+                סיסמה
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 rounded-md border border-red-100 bg-red-50 py-1.5 text-xs font-medium text-red-600 shadow-sm hover:bg-red-100 hover:text-red-700 transition"
+              >
+                יציאה
+              </button>
+            </div>
+          )}
+
+          {/* Pin Button */}
           <button
             onClick={togglePin}
-            className="flex w-full items-center justify-center rounded-md border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+            className="flex w-full items-center justify-center border-t border-gray-100 py-3 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+            title={pinned ? "בטל נעיצה" : "נעץ תפריט"}
           >
-            <ArrowRightCircle
-              size={20}
-              className={pinned ? "rotate-180 transition" : "transition"}
-            />
-            {expanded && (
-              <span className="mr-2">{pinned ? "בטל נעיצה" : "נעץ תפריט"}</span>
+            {expanded ? (
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <ArrowRightCircle
+                  size={16}
+                  className={clsx(
+                    "transition-transform",
+                    pinned && "rotate-180"
+                  )}
+                />
+                <span>{pinned ? "מצב נעוץ" : "נעיצת תפריט"}</span>
+              </div>
+            ) : (
+              <ArrowRightCircle size={18} />
             )}
           </button>
         </div>

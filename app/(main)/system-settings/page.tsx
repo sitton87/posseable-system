@@ -12,13 +12,11 @@ export default async function SystemSettingsPage() {
     redirect("/dashboard");
   }
 
-  let session:
-    | {
-        national_id?: string;
-        role?: string;
-        role_group_code?: string | null;
-      }
-    | null = null;
+  let session: {
+    national_id?: string;
+    role?: string;
+    role_group_code?: string | null;
+  } | null = null;
   try {
     session = JSON.parse(sessionCookie.value);
   } catch {
@@ -44,15 +42,7 @@ export default async function SystemSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">ניהול מערכת</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          יצירת משתמשים חדשים, הגדרת הרשאות ונהלי שדות למערכת Posseable.
-        </p>
-      </div>
-
       <SystemSettingsClient currentRole={user.role} />
     </div>
   );
 }
-

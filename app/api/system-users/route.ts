@@ -6,6 +6,7 @@ import {
   findExistingAppUser,
   insertAppUser,
   updateAppUser,
+  deleteAppUser,
 } from "@/lib/services/systemUserService";
 import { sendWelcomeEmail } from "@/lib/services/emailService";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
@@ -173,6 +174,7 @@ export async function PATCH(req: Request) {
       must_reset,
       reset_password,
       role_group_code,
+      is_active,
     } = body;
 
     if (!national_id) {
@@ -189,6 +191,7 @@ export async function PATCH(req: Request) {
       role_group_code?: string;
       must_reset?: boolean;
       password_hash?: string;
+      is_active?: boolean;
     } = {};
 
     if (typeof full_name === "string") updates.full_name = full_name;
@@ -199,6 +202,7 @@ export async function PATCH(req: Request) {
     }
 
     if (typeof must_reset === "boolean") updates.must_reset = must_reset;
+    if (typeof is_active === "boolean") updates.is_active = is_active;
 
     if (typeof reset_password === "string" && reset_password.trim()) {
       updates.password_hash = await bcrypt.hash(reset_password.trim(), 10);
@@ -219,6 +223,43 @@ export async function PATCH(req: Request) {
     console.error("Failed to update user", error);
     return NextResponse.json(
       { error: "Failed to update user", details: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  const context = await getAdminContext();
+  if (!context) {
+    return forbiddenResponse();
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const national_id = searchParams.get("national_id");
+
+    if (!national_id) {
+      return NextResponse.json(
+        { error: "national_id is required" },
+        { status: 400 }
+      );
+    }
+
+    if (national_id === context.session.national_id) {
+      return NextResponse.json(
+        { error: "Cannot delete yourself" },
+        { status: 400 }
+      );
+    }
+
+    await deleteAppUser(national_id);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to delete user", error);
+    return NextResponse.json(
+      { error: "Failed to delete user", details: message },
       { status: 500 }
     );
   }

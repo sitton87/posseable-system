@@ -5,7 +5,7 @@ type SqlParams = Record<string, string | number | boolean | null>;
 export async function fetchAppUsers() {
   return query(
     `
-    SELECT national_id, full_name, email, role, role_group_code, must_reset, created_at
+    SELECT national_id, full_name, email, role, role_group_code, must_reset, created_at, is_active
     FROM app_user
     ORDER BY created_at DESC
   `
@@ -98,6 +98,7 @@ export async function updateAppUser(
     role_group_code: string | null;
     must_reset: boolean;
     password_hash: string;
+    is_active: boolean;
   }>
 ) {
   const fields: string[] = [];
@@ -128,6 +129,11 @@ export async function updateAppUser(
     parameters.must_reset = updates.must_reset ? 1 : 0;
   }
 
+  if (typeof updates.is_active === "boolean") {
+    fields.push("is_active = @is_active");
+    parameters.is_active = updates.is_active ? 1 : 0;
+  }
+
   if (typeof updates.password_hash === "string") {
     fields.push("password_hash = @password_hash");
     parameters.password_hash = updates.password_hash;
@@ -144,6 +150,12 @@ export async function updateAppUser(
     `UPDATE app_user SET ${fields.join(", ")} WHERE national_id = @national_id`,
     parameters
   );
+}
+
+export async function deleteAppUser(national_id: string) {
+  return query("DELETE FROM app_user WHERE national_id = @national_id", {
+    national_id,
+  });
 }
 
 export async function fetchRoleGroups() {
@@ -205,4 +217,61 @@ export async function upsertRoleGroupPermissions(
       }
     );
   }
+}
+
+export async function syncAppPages(
+  pages: Array<{
+    page_key: string;
+    display_name: string;
+    route_path: string;
+    category?: string;
+  }>
+) {
+  let count = 0;
+  const activeKeys: string[] = [];
+
+  for (const page of pages) {
+    activeKeys.push(page.page_key);
+    await query(
+      `
+      MERGE app_page AS target
+      USING (SELECT @page_key AS page_key) AS source
+      ON target.page_key = source.page_key
+      WHEN MATCHED THEN
+        UPDATE SET display_name = @display_name,
+                   route_path = @route_path,
+                   category = @category,
+                   is_active = 1
+      WHEN NOT MATCHED THEN
+        INSERT (page_key, display_name, route_path, category, is_active, created_at)
+        VALUES (@page_key, @display_name, @route_path, @category, 1, SYSUTCDATETIME());
+    `,
+      {
+        page_key: page.page_key,
+        display_name: page.display_name,
+        route_path: page.route_path,
+        category: page.category ?? null,
+      }
+    );
+    count++;
+  }
+
+  // Deactivate pages not in the list
+  if (activeKeys.length > 0) {
+    const params: SqlParams = {};
+    const placeholders = activeKeys.map((key, index) => {
+      const paramName = `k${index}`;
+      params[paramName] = key;
+      return `@${paramName}`;
+    });
+
+    await query(
+      `UPDATE app_page SET is_active = 0 WHERE page_key NOT IN (${placeholders.join(", ")})`,
+      params
+    );
+  } else {
+    await query(`UPDATE app_page SET is_active = 0`);
+  }
+
+  return count;
 }

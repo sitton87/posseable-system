@@ -33,6 +33,7 @@ import {
 import { colors, spacing, radii } from "@/app/styles/foundations";
 import { useDraftManager, type DraftEntry } from "@/app/hooks/useDraftManager";
 import { formatPhoneNumber } from "@/lib/utils/format";
+import { StaffSettings } from "./components/StaffSettings";
 
 type Volunteer = {
   national_id: string;
@@ -46,12 +47,14 @@ type Volunteer = {
   status?: string | null;
   active: boolean;
   notes?: string | null;
+  classification: "volunteer" | "staff" | "management";
 };
 
 type VolunteerFilters = {
   search: string;
   status: "all" | "active" | "inactive" | "approved" | "pending";
   program: string;
+  classification: "all" | "volunteer" | "staff" | "management";
 };
 
 type VolunteerStats = {
@@ -118,6 +121,7 @@ type VolunteerFormState = {
   status: string;
   active: boolean;
   notes: string;
+  classification: string;
 };
 
 type TaskFormState = {
@@ -219,6 +223,7 @@ const createEmptyForm = (): VolunteerFormState => ({
   status: "בהמתנה",
   active: true,
   notes: "",
+  classification: "volunteer",
 });
 
 const createEmptyTaskForm = (): TaskFormState => ({
@@ -243,6 +248,7 @@ export default function VolunteersPage() {
     search: "",
     status: "all",
     program: "",
+    classification: "all",
   });
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [summary, setSummary] = useState<VolunteerSummaryData>({
@@ -283,6 +289,9 @@ export default function VolunteersPage() {
       const params = new URLSearchParams();
       if (filters.search) params.append("search", filters.search);
       if (filters.program) params.append("program", filters.program);
+      if (filters.classification && filters.classification !== "all") {
+        params.append("classification", filters.classification);
+      }
       if (filters.status === "active") params.append("active", "true");
       if (filters.status === "inactive") params.append("active", "false");
       if (filters.status === "approved") params.append("status", "מאושר");
@@ -354,7 +363,12 @@ export default function VolunteersPage() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ search: "", status: "all", program: "" });
+    setFilters({
+      search: "",
+      status: "all",
+      program: "",
+      classification: "all",
+    });
   };
 
   const handleFormChange = <K extends keyof VolunteerFormState>(
@@ -389,6 +403,7 @@ export default function VolunteersPage() {
       status: volunteer.status || "בהמתנה",
       active: volunteer.active,
       notes: volunteer.notes || "",
+      classification: volunteer.classification || "volunteer",
     });
     setCurrentDraftId(volunteer.national_id);
     setFormDirty(false);
@@ -427,6 +442,7 @@ export default function VolunteersPage() {
       status: formState.status || null,
       active: formState.active,
       notes: formState.notes || null,
+      classification: formState.classification || "volunteer",
     };
 
     try {
@@ -705,6 +721,20 @@ export default function VolunteersPage() {
                     {s}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>סוג</label>
+              <select
+                style={inputStyle}
+                value={formState.classification}
+                onChange={(e) =>
+                  handleFormChange("classification", e.target.value)
+                }
+              >
+                <option value="volunteer">מתנדב</option>
+                <option value="staff">איש צוות</option>
+                <option value="management">הנהלה</option>
               </select>
             </div>
             <div>
@@ -1124,9 +1154,9 @@ function VolunteersListTab({
         }}
       >
         <div>
-          <h2 style={{ margin: 0 }}>רשימת מתנדבים</h2>
+          <h2 style={{ margin: 0 }}>רשימת צוות ומתנדבים</h2>
           <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            ניהול ועריכת כל המתנדבים במערכת.
+            ניהול ועריכת כל המתנדבים ואנשי הצוות במערכת.
           </p>
           {error && (
             <p style={{ marginTop: 4, color: colors.danger, fontSize: 12 }}>
@@ -1177,6 +1207,21 @@ function VolunteersListTab({
         />
         <select
           style={filterControlStyle}
+          value={filters.classification}
+          onChange={(e) =>
+            onFilterChange(
+              "classification",
+              e.target.value as VolunteerFilters["classification"]
+            )
+          }
+        >
+          <option value="all">כל הסוגים</option>
+          <option value="volunteer">מתנדבים</option>
+          <option value="staff">צוות</option>
+          <option value="management">הנהלה</option>
+        </select>
+        <select
+          style={filterControlStyle}
           value={filters.status}
           onChange={(e) =>
             onFilterChange(
@@ -1214,6 +1259,7 @@ function VolunteersListTab({
               <tr>
                 <th style={tableHeaderStyle}>ת.ז.</th>
                 <th style={tableHeaderStyle}>שם מלא</th>
+                <th style={tableHeaderStyle}>סוג</th>
                 <th style={tableHeaderStyle}>תוכנית</th>
                 <th style={tableHeaderStyle}>קבוצה</th>
                 <th style={tableHeaderStyle}>סטטוס</th>
@@ -1228,6 +1274,13 @@ function VolunteersListTab({
                   <td style={tableCellStyle}>{v.national_id}</td>
                   <td style={{ ...tableCellStyle, fontWeight: 700 }}>
                     {v.full_name}
+                  </td>
+                  <td style={tableCellStyle}>
+                    {v.classification === "staff"
+                      ? "איש צוות"
+                      : v.classification === "management"
+                      ? "הנהלה"
+                      : "מתנדב"}
                   </td>
                   <td style={tableCellStyle}>{v.program || "—"}</td>
                   <td style={tableCellStyle}>{v.group_name || "לא שויכה"}</td>
@@ -1282,11 +1335,5 @@ function VolunteersListTab({
 }
 
 function SettingsTab() {
-  return (
-    <Card>
-      <Section title="הגדרות מתנדבים" subtitle="בקרוב">
-        <div style={{ color: muted }}>תוכן ההגדרות יתווסף בהמשך.</div>
-      </Section>
-    </Card>
-  );
+  return <StaffSettings />;
 }

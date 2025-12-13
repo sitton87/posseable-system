@@ -9,6 +9,8 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import GroupsPage from "./groups/page";
+import { usePagePermission } from "@/app/hooks/usePagePermission";
+import { AccessDenied } from "@/app/components/AccessDenied";
 import {
   Surfer,
   SurferStats,
@@ -236,6 +238,13 @@ export default function SurfersPage() {
     createEmptyTaskForm()
   );
   const [taskSubmitting, setTaskSubmitting] = useState(false);
+
+  const { permission: listPermission, loading: listPermLoading } =
+    usePagePermission("surfers-list");
+  const { permission: groupsPermission, loading: groupsPermLoading } =
+    usePagePermission("surfers-groups");
+  const { permission: settingsPermission, loading: settingsPermLoading } =
+    usePagePermission("surfers-settings");
 
   const fetchSurfers = useCallback(async () => {
     try {
@@ -532,6 +541,38 @@ export default function SurfersPage() {
       setTaskSubmitting(false);
     }
   };
+
+  if (activeTab === "list" && !listPermLoading && listPermission === "none") {
+    return (
+      <div style={{ padding: spacing.lg }}>
+        <AccessDenied title="אין לך הרשאה לצפות ברשימת הגולשים" />
+      </div>
+    );
+  }
+
+  if (
+    activeTab === "groups" &&
+    !groupsPermLoading &&
+    groupsPermission === "none"
+  ) {
+    return (
+      <div style={{ padding: spacing.lg }}>
+        <AccessDenied title="אין לך הרשאה לצפות בקבוצות" />
+      </div>
+    );
+  }
+
+  if (
+    activeTab === "settings" &&
+    !settingsPermLoading &&
+    settingsPermission === "none"
+  ) {
+    return (
+      <div style={{ padding: spacing.lg }}>
+        <AccessDenied title="אין לך הרשאה לצפות בהגדרות" />
+      </div>
+    );
+  }
 
   return (
     <div

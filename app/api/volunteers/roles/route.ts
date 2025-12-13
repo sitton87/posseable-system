@@ -4,37 +4,15 @@ import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const volunteerId = searchParams.get("volunteerId");
-
-    if (!volunteerId) {
-      return NextResponse.json(
-        { error: "volunteerId is required" },
-        { status: 400 }
-      );
-    }
-
-    // Get volunteer's roles with role details
-    const result = await query(
-      `SELECT
-        vr.volunteer_national_id,
-        vr.role_id,
-        vr.assigned_at,
-        r.name as role_name,
-        r.description as role_description
-      FROM volunteer_role vr
-      INNER JOIN role r ON vr.role_id = r.id
-      WHERE vr.volunteer_national_id = @volunteerId
-      ORDER BY vr.assigned_at DESC`,
-      { volunteerId }
-    );
-
-    return NextResponse.json({
-      success: true,
-      roles: result.recordset,
-    });
+    const sql = `
+      SELECT id, name, description, requires_certification, requires_renewal, requires_training, color_hex
+      FROM role
+      ORDER BY name
+    `;
+    const result = await query(sql);
+    return NextResponse.json({ success: true, roles: result.recordset });
   } catch (err: any) {
-    console.error("Error fetching volunteer roles:", err);
+    console.error("Error fetching roles:", err);
     return NextResponse.json(
       { error: "Server error", details: err.message },
       { status: 500 }
@@ -48,28 +26,88 @@ export async function POST(req: Request) {
     if (!permission.allowed) return permission.response;
 
     const body = await req.json();
-    const { volunteer_national_id, role_id } = body;
+    const {
+      name,
+      description,
+      requires_certification,
+      requires_renewal,
+      requires_training,
+      color_hex,
+    } = body;
 
-    if (!volunteer_national_id || !role_id) {
+    if (!name) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+
+    await query(
+      `INSERT INTO role (name, description, requires_certification, requires_renewal, requires_training, color_hex)
+       VALUES (@name, @description, @requires_certification, @requires_renewal, @requires_training, @color_hex)`,
+      {
+        name,
+        description: description || null,
+        requires_certification: requires_certification ? 1 : 0,
+        requires_renewal: requires_renewal ? 1 : 0,
+        requires_training: requires_training ? 1 : 0,
+        color_hex: color_hex || "#3b82f6",
+      }
+    );
+
+    return NextResponse.json({ success: true, message: "Role created" });
+  } catch (err: any) {
+    console.error("Error creating role:", err);
+    return NextResponse.json(
+      { error: "Server error", details: err.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const permission = await ensurePermissionResponse("volunteers", "write");
+    if (!permission.allowed) return permission.response;
+
+    const body = await req.json();
+    const {
+      id,
+      name,
+      description,
+      requires_certification,
+      requires_renewal,
+      requires_training,
+      color_hex,
+    } = body;
+
+    if (!id || !name) {
       return NextResponse.json(
-        { error: "volunteer_national_id and role_id are required" },
+        { error: "ID and Name are required" },
         { status: 400 }
       );
     }
 
-    // Assign role to volunteer
     await query(
-      `INSERT INTO volunteer_role (volunteer_national_id, role_id, assigned_at)
-       VALUES (@volunteer_national_id, @role_id, GETDATE())`,
-      { volunteer_national_id, role_id }
+      `UPDATE role
+       SET name = @name,
+           description = @description,
+           requires_certification = @requires_certification,
+           requires_renewal = @requires_renewal,
+           requires_training = @requires_training,
+           color_hex = @color_hex
+       WHERE id = @id`,
+      {
+        id,
+        name,
+        description: description || null,
+        requires_certification: requires_certification ? 1 : 0,
+        requires_renewal: requires_renewal ? 1 : 0,
+        requires_training: requires_training ? 1 : 0,
+        color_hex: color_hex || "#3b82f6",
+      }
     );
 
-    return NextResponse.json({
-      success: true,
-      message: "Role assigned successfully",
-    });
+    return NextResponse.json({ success: true, message: "Role updated" });
   } catch (err: any) {
-    console.error("Error assigning role:", err);
+    console.error("Error updating role:", err);
     return NextResponse.json(
       { error: "Server error", details: err.message },
       { status: 500 }
@@ -83,29 +121,29 @@ export async function DELETE(req: Request) {
     if (!permission.allowed) return permission.response;
 
     const { searchParams } = new URL(req.url);
-    const volunteer_national_id = searchParams.get("volunteerId");
-    const role_id = searchParams.get("roleId");
+    const id = searchParams.get("id");
 
-    if (!volunteer_national_id || !role_id) {
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    // Check usage
+    const usageCheck = await query(
+      `SELECT COUNT(*) as count FROM volunteer_role WHERE role_id = @id`,
+      { id }
+    );
+    if (usageCheck.recordset[0].count > 0) {
       return NextResponse.json(
-        { error: "volunteerId and roleId are required" },
+        { error: "Cannot delete role in use" },
         { status: 400 }
       );
     }
 
-    // Remove role from volunteer
-    await query(
-      `DELETE FROM volunteer_role
-       WHERE volunteer_national_id = @volunteer_national_id AND role_id = @role_id`,
-      { volunteer_national_id, role_id }
-    );
+    await query(`DELETE FROM role WHERE id = @id`, { id });
 
-    return NextResponse.json({
-      success: true,
-      message: "Role removed successfully",
-    });
+    return NextResponse.json({ success: true, message: "Role deleted" });
   } catch (err: any) {
-    console.error("Error removing role:", err);
+    console.error("Error deleting role:", err);
     return NextResponse.json(
       { error: "Server error", details: err.message },
       { status: 500 }

@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       availability,
       personal_website,
       documents,
+      classification,
     } = body;
 
     // Validation
@@ -53,14 +54,14 @@ export async function POST(req: Request) {
         street, house_number, city, join_date, training_date,
         total_activities, profession, sea_connection_level,
         active, notes, volunteer_type, media_specialization,
-        availability, personal_website, documents
+        availability, personal_website, documents, classification
       )
       VALUES (
         @national_id, @full_name, @phone, @email, @kind,
         @street, @house_number, @city, @join_date, @training_date,
         0, @profession, @sea_connection_level,
         @active, @notes, @volunteer_type, @media_specialization,
-        @availability, @personal_website, @documents
+        @availability, @personal_website, @documents, @classification
       )`,
       {
         national_id,
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
         availability: availability || null,
         personal_website: personal_website || null,
         documents: documents || null,
+        classification: classification || "volunteer",
       }
     );
 

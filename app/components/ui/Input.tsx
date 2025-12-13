@@ -10,6 +10,7 @@ type InputProps = {
   type?: string;
   className?: string;
   centered?: boolean;
+  placeholder?: string;
 };
 
 export default function Input({
@@ -19,6 +20,7 @@ export default function Input({
   type = "text",
   className,
   centered = false,
+  placeholder,
 }: InputProps) {
   return (
     <div className="flex flex-col gap-1">
@@ -28,6 +30,7 @@ export default function Input({
         type={type}
         value={value}
         onChange={onChange}
+        placeholder={placeholder}
         className={clsx(
           "border p-2 rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-400",
           centered && "text-center",
