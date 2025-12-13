@@ -3,556 +3,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Donor } from "@/type";
-import { Button, Card, Modal } from "@/app/components/ui";
+import { useDraftManager } from "@/app/hooks/useDraftManager";
+import { spacing } from "@/app/styles/foundations";
 import {
-  DraftList,
-  FilterToolbar,
-  StatCardGrid,
-  TasksBoard,
-  TaskEntityOption,
-} from "@/app/components/shared";
+  DonorFormState,
+  DonorStats,
+  DonorTask,
+  DonationRecord,
+  DonorTabId,
+  DonorFilters,
+} from "./types";
 import {
-  inputStyle,
-  labelStyle,
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-  filterControlStyle as baseFilterControlStyle,
-} from "@/app/styles/components";
-import { colors, spacing, radii } from "@/app/styles/foundations";
-import { formatPhoneNumber } from "@/lib/utils/format";
-import { useDraftManager, type DraftEntry } from "@/app/hooks/useDraftManager";
-import {
-  FormGrid,
-  Section,
-  StatusPill,
-  SmallActionButton,
-  sectionCardStyle,
-} from "@/app/components/shared";
-
-type DonorFormState = {
-  national_id: string;
-  full_name: string;
-  organization: string;
-  phone: string;
-  email: string;
-  notes: string;
-  is_active: boolean;
-};
-
-type DonorStats = {
-  total_donors: number;
-  active_donors: number;
-  total_donation_events: number;
-  total_donations: number;
-  highest_donation: number;
-  average_donation: number;
-};
-
-type DonorTask = {
-  id: string;
-  donorName: string;
-  summary: string;
-  dueDate?: string | null;
-  status: string;
-  emphasis: "call" | "meet" | "thank-you";
-};
-
-type DonationRecord = {
-  id: string;
-  transaction_date: string;
-  amount: number;
-  currency?: string | null;
-  description?: string | null;
-};
-
-type DonorTabId = "home" | "list";
-
-type DonorFilters = {
-  search: string;
-  status: "all" | "active" | "inactive";
-};
-
-type HomeTabProps = {
-  stats: DonorStats;
-  donors: Donor[];
-  onRefresh: () => void;
-  loading: boolean;
-};
-
-type DonorListTabProps = {
-  donors: Donor[];
-  loading: boolean;
-  error: string | null;
-  onAdd: () => void;
-  onEdit: (donor: Donor) => void;
-  onDelete: (id: string) => void;
-  onView: (donor: Donor) => void;
-  onRefresh: () => void;
-  drafts: DraftEntry<DonorFormState>[];
-  onResumeDraft: (id: string) => void;
-  onDeleteDraft: (id: string) => void;
-  filters: DonorFilters;
-  onFilterChange: <K extends keyof DonorFilters>(
-    key: K,
-    value: DonorFilters[K]
-  ) => void;
-  onClearFilters: () => void;
-};
-
-const muted = colors.textMuted;
-const sectionBoxStyle = {
-  ...sectionCardStyle,
-  marginBottom: spacing.lg,
-};
-
-const createEmptyDonorForm = (): DonorFormState => ({
-  national_id: "",
-  full_name: "",
-  organization: "",
-  phone: "",
-  email: "",
-  notes: "",
-  is_active: true,
-});
-
-const defaultStats: DonorStats = {
-  total_donors: 0,
-  active_donors: 0,
-  total_donation_events: 0,
-  total_donations: 0,
-  highest_donation: 0,
-  average_donation: 0,
-};
-
-const TASK_STATUSES = [
-  { value: "not-started", label: "לא התחיל", tone: "warning" as const },
-  { value: "in-progress", label: "בתהליך", tone: "info" as const },
-  { value: "done", label: "הסתיים", tone: "success" as const },
-  { value: "cancelled", label: "בוטל", tone: "danger" as const },
-] as const;
-
-const normalizeStatus = (value?: string | null) => {
-  if (!value) return "not-started";
-  if (value === "pending" || value === "open") return "not-started";
-  return TASK_STATUSES.some((s) => s.value === value) ? value : "not-started";
-};
-
-const nextStatus = (current: string) => {
-  const norm = normalizeStatus(current);
-  const idx = TASK_STATUSES.findIndex((s) => s.value === norm);
-  return TASK_STATUSES[(idx + 1) % TASK_STATUSES.length].value;
-};
-
-const formatCurrency = (value?: number | null) => {
-  const num = typeof value === "number" ? value : 0;
-  return `₪${num.toLocaleString("he-IL", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-};
-
-const formatDate = (value?: string | Date | null) => {
-  if (!value) return "—";
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("he-IL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-const generateDraftId = () =>
-  typeof window !== "undefined" && window.crypto?.randomUUID
-    ? window.crypto.randomUUID()
-    : `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-const buildTasks = (donors: Donor[]): DonorTask[] => {
-  const tasks: DonorTask[] = [];
-
-  donors
-    .filter((donor) => (donor.total_donations || 0) === 0)
-    .slice(0, 3)
-    .forEach((donor) =>
-      tasks.push({
-        id: `new-${donor.national_id}`,
-        donorName: donor.full_name,
-        summary: "שיחת הכרות עם תורם חדש",
-        dueDate: null,
-        status: "pending",
-        emphasis: "call",
-      })
-    );
-
-  const staleDonors = donors.filter((donor) => {
-    if (!donor.last_donation_date) return false;
-    const last = new Date(donor.last_donation_date);
-    if (Number.isNaN(last.getTime())) return false;
-    const diffDays = (Date.now() - last.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays > 180;
-  });
-
-  staleDonors.slice(0, 3).forEach((donor) => {
-    let dueDate: string | null = null;
-    const lastVal = donor.last_donation_date;
-    if (lastVal) {
-      const parsed =
-        lastVal instanceof Date ? lastVal : new Date(lastVal as string);
-      if (!Number.isNaN(parsed.getTime())) {
-        dueDate = parsed.toISOString();
-      }
-    }
-
-    tasks.push({
-      id: `follow-${donor.national_id}`,
-      donorName: donor.full_name,
-      summary: "תיאום שיחת עדכון על פעילות הארגון",
-      dueDate,
-      status: "pending",
-      emphasis: "meet",
-    });
-  });
-
-  donors
-    .filter((donor) => (donor.total_donations || 0) > 20000)
-    .slice(0, 2)
-    .forEach((donor) =>
-      tasks.push({
-        id: `thanks-${donor.national_id}`,
-        donorName: donor.full_name,
-        summary: "שליחת מכתב תודה אישי",
-        dueDate: null,
-        status: "pending",
-        emphasis: "thank-you",
-      })
-    );
-
-  return tasks;
-};
-
-function DonorsHomeTab({ stats, donors, onRefresh, loading }: HomeTabProps) {
-  const statCards = [
-    { label: 'סה"כ תורמים', value: stats.total_donors },
-    {
-      label: 'סה"כ תרומות',
-      value: formatCurrency(stats.total_donations),
-    },
-    {
-      label: "התרומה הגבוהה ביותר",
-      value: formatCurrency(stats.highest_donation),
-    },
-    {
-      label: "ממוצע תרומה",
-      value: formatCurrency(stats.average_donation),
-    },
-  ];
-
-  const donorEntities: TaskEntityOption[] = donors.map((d) => ({
-    id: d.national_id,
-    name: d.full_name,
-    subtitle: d.organization || undefined,
-  }));
-
-  // נגזור את הפעילות האחרונה (תורמים שתרמו לאחרונה)
-  const recentActivity = useMemo(() => {
-    return [...donors]
-      .filter((d) => d.last_donation_date)
-      .sort((a, b) => {
-        const dateA = new Date(a.last_donation_date!).getTime();
-        const dateB = new Date(b.last_donation_date!).getTime();
-        return dateB - dateA;
-      })
-      .slice(0, 5);
-  }, [donors]);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
-      <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: spacing.sm,
-            marginBottom: spacing.md,
-          }}
-        >
-          <div>
-            <h3 style={{ margin: 0 }}>דף הבית · תורמים</h3>
-            <p style={{ margin: "4px 0 0", color: muted, fontSize: 13 }}>
-              מבט על בריאות מערך התורמים ומעקב משימות.
-            </p>
-          </div>
-          <Button variant="secondary" onClick={onRefresh} disabled={loading}>
-            רענן נתונים
-          </Button>
-        </div>
-        <StatCardGrid stats={statCards} />
-      </Card>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: spacing.lg,
-        }}
-      >
-        <TasksBoard
-          entityType="donor"
-          entities={donorEntities}
-          title="משימות ופתקים (תורמים)"
-        />
-
-        <Card style={{ padding: spacing.lg }}>
-          <h4 style={{ margin: "0 0 16px 0" }}>תרומות אחרונות</h4>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            {recentActivity.length === 0 ? (
-              <div
-                style={{
-                  color: muted,
-                  textAlign: "center",
-                  padding: spacing.md,
-                }}
-              >
-                אין פעילות תרומות רשומה.
-              </div>
-            ) : (
-              recentActivity.map((donor) => (
-                <div
-                  key={donor.national_id}
-                  style={{
-                    padding: spacing.sm,
-                    border: `1px solid ${colors.borderMuted}`,
-                    borderRadius: radii.card,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>
-                      {donor.full_name}
-                    </div>
-                    <div style={{ fontSize: 12, color: muted }}>
-                      {donor.organization || "פרטי"}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>
-                      {formatDate(donor.last_donation_date)}
-                    </div>
-                    <div style={{ fontSize: 11, color: muted }}>
-                      תאריך תרומה
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function DonorListTab({
-  donors,
-  loading,
-  error,
-  onAdd,
-  onEdit,
-  onDelete,
-  onView,
-  onRefresh,
-  drafts,
-  onResumeDraft,
-  onDeleteDraft,
-  filters,
-  onFilterChange,
-  onClearFilters,
-}: DonorListTabProps) {
-  const filterControlStyle = baseFilterControlStyle;
-
-  return (
-    <Card>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: spacing.sm,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>רשימת תורמים</h2>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            ניהול ועריכת כל התורמים במערכת.
-          </p>
-          {error && (
-            <p style={{ marginTop: 4, color: colors.danger, fontSize: 12 }}>
-              {error}
-            </p>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: spacing.sm }}>
-          <Button variant="secondary" onClick={onRefresh} disabled={loading}>
-            רענון רשימה
-          </Button>
-          <Button onClick={onAdd}>+ תורם חדש</Button>
-        </div>
-      </div>
-      {drafts.length > 0 && (
-        <div style={{ marginTop: spacing.md }}>
-          <DraftList
-            drafts={drafts}
-            title={`טיוטות אישיות (${drafts.length})`}
-            description="טיוטות זמינות עבורך בלבד עד לשמירה סופית."
-            onResume={onResumeDraft}
-            onDelete={onDeleteDraft}
-            getTitle={(draft) => draft.payload.full_name || "תורם ללא שם"}
-            getSubtitle={(draft) =>
-              `עודכן ${new Date(draft.updatedAt).toLocaleString("he-IL")}`
-            }
-          />
-        </div>
-      )}
-      <FilterToolbar
-        columns="repeat(auto-fit, minmax(220px, 1fr))"
-        style={{ marginTop: spacing.md }}
-      >
-        <input
-          type="text"
-          style={filterControlStyle}
-          placeholder="חיפוש לפי שם, ת.ז, ארגון או אימייל"
-          value={filters.search}
-          onChange={(e) => onFilterChange("search", e.target.value)}
-        />
-        <select
-          style={filterControlStyle}
-          value={filters.status}
-          onChange={(e) =>
-            onFilterChange("status", e.target.value as DonorFilters["status"])
-          }
-        >
-          <option value="all">כל התורמים</option>
-          <option value="active">תורמים פעילים</option>
-          <option value="inactive">תורמים לא פעילים</option>
-        </select>
-      </FilterToolbar>
-      <div
-        style={{
-          marginTop: spacing.sm,
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <Button variant="ghost" onClick={onClearFilters}>
-          ניקוי פילטרים
-        </Button>
-      </div>
-      <div style={{ marginTop: spacing.lg }}>
-        {loading ? (
-          <div
-            style={{ padding: spacing.lg, textAlign: "center", color: muted }}
-          >
-            טוען נתונים...
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ ...tableStyle, width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>ת.ז</th>
-                  <th style={tableHeaderStyle}>שם</th>
-                  <th style={tableHeaderStyle}>ארגון</th>
-                  <th style={tableHeaderStyle}>טלפון</th>
-                  <th style={tableHeaderStyle}>סה\"כ תרומות</th>
-                  <th style={tableHeaderStyle}>כמות תרומות</th>
-                  <th style={tableHeaderStyle}>תרומה אחרונה</th>
-                  <th style={tableHeaderStyle}>סטטוס</th>
-                  <th style={tableHeaderStyle}>פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {donors.map((donor) => (
-                  <tr key={donor.national_id}>
-                    <td style={tableCellStyle}>{donor.national_id}</td>
-                    <td style={{ ...tableCellStyle, fontWeight: 600 }}>
-                      {donor.full_name}
-                    </td>
-                    <td style={tableCellStyle}>{donor.organization || "—"}</td>
-                    <td style={tableCellStyle}>
-                      {formatPhoneNumber(donor.phone)}
-                    </td>
-                    <td style={tableCellStyle}>
-                      {formatCurrency(donor.total_donations)}
-                    </td>
-                    <td style={tableCellStyle}>{donor.donation_count || 0}</td>
-                    <td style={tableCellStyle}>
-                      {formatDate(donor.last_donation_date)}
-                    </td>
-                    <td style={tableCellStyle}>
-                      <StatusPill
-                        tone={donor.is_active ? "active" : "inactive"}
-                      >
-                        {donor.is_active ? "פעיל" : "לא פעיל"}
-                      </StatusPill>
-                    </td>
-                    <td style={tableCellStyle}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "center",
-                          gap: spacing.xs,
-                        }}
-                      >
-                        <SmallActionButton
-                          variant="secondary"
-                          onClick={() => onView(donor)}
-                        >
-                          👁️
-                        </SmallActionButton>
-                        <SmallActionButton
-                          variant="secondary"
-                          onClick={() => onEdit(donor)}
-                        >
-                          ✏️
-                        </SmallActionButton>
-                        <SmallActionButton
-                          variant="secondary"
-                          style={{ color: colors.danger }}
-                          onClick={() => onDelete(donor.national_id)}
-                        >
-                          🗑️
-                        </SmallActionButton>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {donors.length === 0 && (
-                  <tr>
-                    <td colSpan={9} style={tableCellStyle}>
-                      אין תורמים להצגה. לחץ על "תורם חדש" כדי להתחיל.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
+  createEmptyDonorForm,
+  defaultStats,
+  buildTasks,
+} from "./utils";
+import DonorsHomeTab from "./tabs/DonorsHomeTab";
+import DonorListTab from "./tabs/DonorListTab";
+import DonorFormModal from "./modals/DonorFormModal";
+import DonorViewModal from "./modals/DonorViewModal";
+import DraftPromptModal from "./modals/DraftPromptModal";
 
 export default function DonorsPage() {
   const searchParams = useSearchParams();
@@ -606,7 +76,7 @@ export default function DonorsPage() {
     } finally {
       setLoading(false);
     }
-  }, [setDonors]);
+  }, []);
 
   useEffect(() => {
     fetchDonors();
@@ -697,7 +167,11 @@ export default function DonorsPage() {
   };
 
   const handleSaveDonorDraft = () => {
-    const draftId = currentDraftId || generateDraftId();
+    const draftId =
+      currentDraftId ||
+      (typeof window !== "undefined" && window.crypto?.randomUUID
+        ? window.crypto.randomUUID()
+        : `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`);
     saveDonorDraft(draftId, formState);
     setCurrentDraftId(draftId);
     setFormDirty(false);
@@ -824,15 +298,21 @@ export default function DonorsPage() {
     setShowModal(true);
   };
 
-  const handleToggleTask = (taskId: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? { ...task, status: task.status === "done" ? "pending" : "done" }
-          : task
-      )
-    );
-  };
+  // Note: tasks state is set but not directly used for toggling in the refactored main page.
+  // The TasksBoard component handles its own state internally via API.
+  // We keep it here if we want to pass initial tasks or refresh them.
+  // However, TasksBoard fetches its own data now.
+  // But wait, in the original code, TasksBoard was passed `entities` and a `title`, but handled tasks internally.
+  // The `tasks` state in `DonorsPage` was calculated using `buildTasks` but seemingly not passed to `TasksBoard`.
+  // Wait, let me check the original code for `TasksBoard` usage.
+  // <TasksBoard entityType="donor" entities={donorEntities} title="משימות ופתקים (תורמים)" />
+  // It seems `tasks` state in `DonorsPage` was actually UNUSED in the JSX!
+  // It was set in `fetchDonors` but not passed anywhere.
+  // `TasksBoard` fetches its own data.
+  // The `buildTasks` function returns "suggested" tasks based on logic, but `TasksBoard` displays notes from DB.
+  // It seems `buildTasks` was logic for "smart tasks" that maybe should be created in the DB?
+  // Or maybe it was a leftover.
+  // I will keep `buildTasks` and the state just to be safe and match original logic, but it seems unused for rendering.
 
   return (
     <div
@@ -871,275 +351,30 @@ export default function DonorsPage() {
         />
       )}
 
-      <Modal
+      <DonorFormModal
         open={showModal}
         onClose={requestCloseModal}
-        width="min(640px, 95vw)"
-        style={{ padding: spacing.xxl }}
-        escEnabled={!draftPromptOpen}
-      >
-        <h3 style={{ margin: "0 0 16px", fontSize: 20 }}>
-          {editingDonor ? "עריכת תורם" : "תורם חדש"}
-        </h3>
-        <Section
-          title="📋 פרטים אישיים"
-          subtitle="מידע בסיסי על התורם"
-          style={{ marginBottom: spacing.lg }}
-          bodyStyle={{ gap: spacing.md }}
-        >
-          <FormGrid
-            columns="repeat(auto-fit, minmax(240px, 1fr))"
-            gap={spacing.md}
-          >
-            <div>
-              <label style={labelStyle}>
-                תעודת זהות <span style={{ color: colors.danger }}>*</span>
-              </label>
-              <input
-                type="text"
-                maxLength={9}
-                style={inputStyle}
-                value={formState.national_id}
-                onChange={(e) =>
-                  handleInputChange("national_id", e.target.value)
-                }
-                disabled={!!editingDonor}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>
-                שם התורם <span style={{ color: colors.danger }}>*</span>
-              </label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formState.full_name}
-                onChange={(e) => handleInputChange("full_name", e.target.value)}
-              />
-            </div>
-          </FormGrid>
-        </Section>
+        onSubmit={handleSubmit}
+        formState={formState}
+        onInputChange={handleInputChange}
+        editing={!!editingDonor}
+        draftPromptOpen={draftPromptOpen}
+      />
 
-        <Section
-          title="🏢 פרטי התקשרות"
-          subtitle="איך ניתן להשיג את התורם"
-          style={{ marginBottom: spacing.lg }}
-          bodyStyle={{ gap: spacing.md }}
-        >
-          <div>
-            <label style={labelStyle}>ארגון / חברה</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={formState.organization}
-              onChange={(e) =>
-                handleInputChange("organization", e.target.value)
-              }
-            />
-          </div>
-          <FormGrid
-            columns="repeat(auto-fit, minmax(240px, 1fr))"
-            gap={spacing.md}
-          >
-            <div>
-              <label style={labelStyle}>טלפון</label>
-              <input
-                type="tel"
-                style={inputStyle}
-                value={formState.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>אימייל</label>
-              <input
-                type="email"
-                style={inputStyle}
-                value={formState.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-              />
-            </div>
-          </FormGrid>
-        </Section>
-
-        <Section
-          title="📝 הערות והעדפות"
-          subtitle="תיעוד קצר ומשמעותי"
-          style={{ marginBottom: spacing.lg }}
-          bodyStyle={{ gap: spacing.sm }}
-        >
-          <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-            value={formState.notes}
-            onChange={(e) => handleInputChange("notes", e.target.value)}
-          />
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: spacing.sm,
-              marginTop: spacing.sm,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={formState.is_active}
-              onChange={(e) => handleInputChange("is_active", e.target.checked)}
-              id="donor-active"
-            />
-            <label htmlFor="donor-active" style={{ fontWeight: 600 }}>
-              תורם פעיל
-            </label>
-          </div>
-        </Section>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-          }}
-        >
-          <Button variant="secondary" onClick={requestCloseModal}>
-            ביטול
-          </Button>
-          <Button onClick={handleSubmit}>
-            {editingDonor ? "עדכון תורם" : "שמור תורם"}
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        open={Boolean(viewingDonor)}
+      <DonorViewModal
+        donor={viewingDonor}
         onClose={closeViewModal}
-        width="min(680px, 96vw)"
-        style={{ padding: spacing.xxl }}
-      >
-        {viewingDonor && (
-          <>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: spacing.lg,
-              }}
-            >
-              <div>
-                <h3 style={{ margin: 0 }}>{viewingDonor.full_name}</h3>
-                <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-                  תעודת זהות: {viewingDonor.national_id}
-                </p>
-              </div>
-              <Button variant="secondary" onClick={closeViewModal}>
-                ✕ סגור
-              </Button>
-            </div>
+        donationHistory={donationHistory}
+        historyLoading={historyLoading}
+      />
 
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>פרטים כלליים</h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: spacing.md,
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>ארגון</div>
-                  <div>{viewingDonor.organization || "—"}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
-                  <StatusPill
-                    tone={viewingDonor.is_active ? "active" : "inactive"}
-                  >
-                    {viewingDonor.is_active ? "פעיל" : "לא פעיל"}
-                  </StatusPill>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>טלפון</div>
-                  <div>{formatPhoneNumber(viewingDonor.phone)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>אימייל</div>
-                  <div>{viewingDonor.email || "—"}</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>הערות</h4>
-              <div style={{ whiteSpace: "pre-wrap", minHeight: 40 }}>
-                {viewingDonor.notes || "—"}
-              </div>
-            </div>
-
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>
-                היסטוריית תרומות
-              </h4>
-              {historyLoading ? (
-                <div style={{ textAlign: "center", color: muted }}>
-                  טוען היסטוריה...
-                </div>
-              ) : donationHistory.length === 0 ? (
-                <div style={{ textAlign: "center", color: muted }}>
-                  לא נמצאו תרומות קודמות.
-                </div>
-              ) : (
-                <div style={{ maxHeight: 320, overflowY: "auto" }}>
-                  <table style={{ width: "100%", fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ textAlign: "right", color: muted }}>
-                        <th>תאריך</th>
-                        <th>תיאור</th>
-                        <th>סכום</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {donationHistory.map((record) => (
-                        <tr key={record.id}>
-                          <td>{formatDate(record.transaction_date)}</td>
-                          <td>{record.description || "—"}</td>
-                          <td>{formatCurrency(record.amount)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </Modal>
-
-      <Modal
+      <DraftPromptModal
         open={draftPromptOpen}
         onClose={() => setDraftPromptOpen(false)}
-        width="min(420px, 90vw)"
-      >
-        <h3 style={{ marginTop: 0 }}>לשמור את התורם כטיוטה?</h3>
-        <p style={{ color: muted }}>
-          הטיוטה תישמר עבורך בלבד ותאפשר לך לחזור בהמשך מבלי לאבד נתונים.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-            marginTop: spacing.lg,
-          }}
-        >
-          <Button variant="ghost" onClick={() => setDraftPromptOpen(false)}>
-            המשך לערוך
-          </Button>
-          <Button variant="secondary" onClick={handleDiscardDraft}>
-            בטל
-          </Button>
-          <Button onClick={handleSaveDonorDraft}>שמור כטיוטה</Button>
-        </div>
-      </Modal>
+        onContinue={() => setDraftPromptOpen(false)}
+        onDiscard={handleDiscardDraft}
+        onSave={handleSaveDonorDraft}
+      />
     </div>
   );
 }

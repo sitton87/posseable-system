@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { SmallActionButton, StatusPill } from "@/app/components/shared";
+import {
+  SmallActionButton,
+  StatusPill,
+  StatusTone,
+} from "@/app/components/shared";
 import { Card, Modal, Button } from "@/app/components/ui";
 import { inputStyle, labelStyle } from "@/app/styles/components";
 import { colors, spacing, radii } from "@/app/styles/foundations";
@@ -14,9 +18,7 @@ import {
   Trash2,
   Edit2,
   RotateCcw,
-  CheckCircle2,
   AlertCircle,
-  MoreHorizontal,
 } from "lucide-react";
 
 // --- Types ---
@@ -71,14 +73,15 @@ const TONE_COLORS: Record<string, { bg: string; text: string }> = {
   danger: { bg: "#fee2e2", text: "#991b1b" },
 };
 
-const TASK_STATUSES: { value: NoteStatus; label: string; tone: string }[] = [
-  { value: "not_started", label: "טרם התחיל", tone: "neutral" },
-  { value: "open", label: "פתוח", tone: "warning" },
-  { value: "in_progress", label: "בתהליך", tone: "info" },
-  { value: "postponed", label: "נדחה", tone: "purple" },
-  { value: "done", label: "הסתיים", tone: "success" },
-  { value: "cancelled", label: "בוטל", tone: "danger" },
-];
+const TASK_STATUSES: { value: NoteStatus; label: string; tone: StatusTone }[] =
+  [
+    { value: "not_started", label: "טרם התחיל", tone: "neutral" },
+    { value: "open", label: "פתוח", tone: "warning" },
+    { value: "in_progress", label: "בתהליך", tone: "info" },
+    { value: "postponed", label: "נדחה", tone: "muted" }, // mapped to muted as purple doesn't exist in StatusTone
+    { value: "done", label: "הסתיים", tone: "success" },
+    { value: "cancelled", label: "בוטל", tone: "danger" },
+  ];
 
 const normalizeStatus = (raw?: string | null): NoteStatus => {
   if (!raw) return "open";
@@ -320,7 +323,7 @@ export function TasksBoard({
             style={{
               background: colors.background,
               padding: spacing.md,
-              borderRadius: radii.md,
+              borderRadius: radii.card,
               border: `1px solid ${colors.border}`,
             }}
           >
@@ -464,7 +467,7 @@ export function TasksBoard({
               key={task.note_id}
               style={{
                 background: "#fff",
-                borderRadius: radii.md,
+                borderRadius: radii.card,
                 border: `1px solid ${colors.borderMuted}`,
                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                 overflow: "hidden",
@@ -505,7 +508,7 @@ export function TasksBoard({
                         background: isOverdue
                           ? "rgba(239, 68, 68, 0.1)"
                           : "rgba(0,0,0,0.04)",
-                        borderRadius: radii.full,
+                        borderRadius: radii.pill,
                         color: isOverdue ? colors.danger : colors.textMuted,
                       }}
                     >
@@ -521,7 +524,7 @@ export function TasksBoard({
                     style={{
                       fontSize: 12,
                       padding: "4px 8px",
-                      borderRadius: radii.full,
+                      borderRadius: radii.pill,
                       border: "none", // Remove border for cleaner pill look
                       background: TONE_COLORS[statusObj?.tone || "neutral"].bg,
                       color: TONE_COLORS[statusObj?.tone || "neutral"].text,
@@ -552,7 +555,7 @@ export function TasksBoard({
                 <p
                   style={{
                     margin: "0 0 16px 0",
-                    color: colors.text,
+                    color: colors.textPrimary,
                     whiteSpace: "pre-wrap",
                     fontSize: 14,
                     lineHeight: 1.5,
@@ -800,7 +803,7 @@ export function TasksBoard({
                 style={{
                   padding: 12,
                   background: colors.background,
-                  borderRadius: radii.sm,
+                  borderRadius: radii.button,
                   border: `1px solid ${colors.border}`,
                   fontSize: 13,
                 }}
@@ -818,16 +821,15 @@ export function TasksBoard({
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <StatusPill tone="neutral" size="sm">
+                  <StatusPill tone="neutral">
                     {getStatusLabel(entry.old_status || "—")}
                   </StatusPill>
                   <span style={{ color: colors.textMuted }}>←</span>
                   <StatusPill
                     tone={
                       (TASK_STATUSES.find((s) => s.value === entry.new_status)
-                        ?.tone as any) || "neutral"
+                        ?.tone as StatusTone) || "neutral"
                     }
-                    size="sm"
                   >
                     {getStatusLabel(entry.new_status)}
                   </StatusPill>

@@ -38,6 +38,7 @@ const pillMap = {
   warning: { bg: "rgba(217,119,6,0.15)", fg: colors.warning },
   info: { bg: colors.primarySoft, fg: colors.primary },
   muted: { bg: colors.surfaceAlt, fg: colors.textMuted },
+  neutral: { bg: colors.surfaceAlt, fg: colors.textPrimary },
   active: { bg: colors.successSoft, fg: colors.success },
   inactive: { bg: colors.dangerSoft, fg: colors.danger },
 } as const;

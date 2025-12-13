@@ -189,28 +189,28 @@ export default function SuppliersPage() {
 
   const filteredSuppliers = suppliers.filter((supplier) => {
     const term = filters.search.trim().toLowerCase();
-    if (filters.status === "active" && !supplier.is_active) return false;
-    if (filters.status === "inactive" && supplier.is_active) return false;
-    if (filters.type !== "all") {
-      const currentType = (supplier.supplier_type || "goods") as SupplierType;
-      if (currentType !== filters.type) return false;
-    }
-    if (term) {
-      const haystack = [
-        supplier.name,
-        supplier.supplier_identifier,
-        supplier.contact_name,
-        supplier.email,
-        supplier.phone,
-        supplier.services_offered,
-      ]
-        .filter(Boolean)
-        .map((value) => String(value).toLowerCase());
-      const matches = haystack.some((value) => value.includes(term));
-      if (!matches) return false;
-    }
-    return true;
-  });
+      if (filters.status === "active" && !supplier.is_active) return false;
+      if (filters.status === "inactive" && supplier.is_active) return false;
+      if (filters.type !== "all") {
+        const currentType = (supplier.supplier_type || "goods") as SupplierType;
+        if (currentType !== filters.type) return false;
+      }
+      if (term) {
+        const haystack = [
+          supplier.name,
+          supplier.supplier_identifier,
+          supplier.contact_name,
+          supplier.email,
+          supplier.phone,
+          supplier.services_offered,
+        ]
+          .filter(Boolean)
+          .map((value) => String(value).toLowerCase());
+        const matches = haystack.some((value) => value.includes(term));
+        if (!matches) return false;
+      }
+      return true;
+    });
 
   const handleFilterChange = <K extends keyof SupplierFilters>(
     key: K,

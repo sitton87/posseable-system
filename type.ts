@@ -339,7 +339,7 @@ export type SupplierActivityLog = {
 };
 
 // Notes (shared)
-export type NoteStatus = "open" | "in_progress" | "done" | "cancelled";
+export type NoteStatus = "open" | "in_progress" | "done" | "cancelled" | "not_started" | "postponed";
 export type NotePriority = "low" | "normal" | "high";
 
 export type Note = {
