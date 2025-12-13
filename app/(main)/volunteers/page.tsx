@@ -1,763 +1,800 @@
 "use client";
 
-import type { CSSProperties, ChangeEvent } from "react";
-import { useState, useEffect } from "react";
 import {
-  Volunteer,
-  SEA_CONNECTION_LEVEL_OPTIONS,
-  VOLUNTEER_TYPE_OPTIONS,
-  MEDIA_SPECIALIZATION_OPTIONS,
-} from "@/type";
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { PROGRAM_OPTIONS, STATUS_OPTIONS, type NoteStatus } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import {
+  DraftList,
+  FilterToolbar,
+  StatCardGrid,
+  FormGrid,
+  Section,
+  SmallActionButton,
+  StatusPill,
+  sectionCardStyle,
+} from "@/app/components/shared";
+import {
+  filterControlStyle,
   inputStyle,
   labelStyle,
-  withCenteredControl,
+  tableCellStyle,
+  tableHeaderStyle,
+  tableStyle,
 } from "@/app/styles/components";
+import { colors, spacing, radii } from "@/app/styles/foundations";
+import { useDraftManager, type DraftEntry } from "@/app/hooks/useDraftManager";
 import { formatPhoneNumber } from "@/lib/utils/format";
-import { colors, radii, spacing } from "@/app/styles/foundations";
-import { usePagePermission } from "@/app/hooks/usePagePermission";
-import { AccessDenied } from "@/app/components/AccessDenied";
+
+type Volunteer = {
+  national_id: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  residence?: string | null;
+  program?: string | null;
+  group_id?: string | null;
+  group_name?: string | null;
+  status?: string | null;
+  active: boolean;
+  notes?: string | null;
+};
+
+type VolunteerFilters = {
+  search: string;
+  status: "all" | "active" | "inactive" | "approved" | "pending";
+  program: string;
+};
+
+type VolunteerStats = {
+  total: number;
+  active: number;
+  approved: number;
+  pending: number;
+  grouped: number;
+};
+
+type VolunteerNote = {
+  note_id: string;
+  entity_id: string;
+  title: string;
+  body: string;
+  status: NoteStatus;
+  due_date?: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
+};
+
+type VolunteerSummaryData = {
+  stats: VolunteerStats;
+  tasks: VolunteerNote[];
+  recentActivity: {
+    national_id: string;
+    full_name: string;
+    status?: string | null;
+    program?: string | null;
+    group_name?: string | null;
+    created_at?: string | null;
+  }[];
+};
+
+type VolunteerActivityRow = {
+  activity_id: number;
+  activity_date?: string | null;
+  kind?: string | null;
+  volunteer_national_id: string;
+  surfer_name?: string | null;
+};
+
+type SupportedSurferRow = {
+  national_id: string;
+  full_name: string;
+  program?: string | null;
+  status?: string | null;
+  group_name?: string | null;
+};
+
+type VolunteerDetail = {
+  activities: VolunteerActivityRow[];
+  supportedSurfers: SupportedSurferRow[];
+};
+
+type VolunteerFormState = {
+  national_id: string;
+  full_name: string;
+  phone: string;
+  email: string;
+  residence: string;
+  program: string;
+  group_id: string;
+  status: string;
+  active: boolean;
+  notes: string;
+};
+
+type TaskFormState = {
+  volunteer_id: string;
+  title: string;
+  body: string;
+  due_date: string;
+};
+
+type TabId = "home" | "list" | "settings";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
-const filterControlStyle = withCenteredControl(inputStyle);
+const warningSoft = "rgba(217,119,6,0.15)";
+const volunteerDraftType = "volunteer";
 
-const sectionBoxStyle: CSSProperties = {
-  marginBottom: spacing.xl,
-  padding: spacing.lg,
-  background: colors.surfaceAlt,
-  borderRadius: radii.card,
+const defaultStats: VolunteerStats = {
+  total: 0,
+  active: 0,
+  approved: 0,
+  pending: 0,
+  grouped: 0,
 };
 
-const smallButtonStyle: CSSProperties = {
-  fontSize: 12,
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+const TASK_STATUSES: { value: NoteStatus; label: string; tone: string }[] = [
+  { value: "open", label: "פתוח", tone: "warning" },
+  { value: "in_progress", label: "בתהליך", tone: "info" },
+  { value: "done", label: "הסתיים", tone: "success" },
+  { value: "cancelled", label: "בוטל", tone: "danger" },
+];
+
+const normalizeStatus = (value?: string | null): NoteStatus => {
+  if (!value) return "open";
+  const v = value.toLowerCase();
+  if (v === "pending") return "open";
+  if (v === "closed") return "done";
+  return TASK_STATUSES.some((s) => s.value === v) ? (v as NoteStatus) : "open";
 };
 
-const secondaryLinkStyle: CSSProperties = {
-  ...smallButtonStyle,
-  borderRadius: radii.button,
-  border: `1px solid ${colors.border}`,
-  background: colors.surfaceAlt,
-  color: colors.textPrimary,
-  fontWeight: 600,
-  textDecoration: "none",
-  display: "inline-flex",
-  alignItems: "center",
+const nextStatus = (current: NoteStatus) => {
+  const idx = TASK_STATUSES.findIndex((s) => s.value === current);
+  return TASK_STATUSES[(idx + 1) % TASK_STATUSES.length].value;
 };
 
-const LEGACY_KIND_LABELS: Record<string, string> = {
-  Water: "מים",
-  water: "מים",
-  Media: "מדיה",
-  media: "מדיה",
-  Other: "אחר",
-  other: "אחר",
-};
+type SafeJsonResult =
+  | { success: false; error: string; raw: string }
+  | (Record<string, any> & { success?: boolean });
 
-const normalizeKind = (value?: string | null) => {
-  if (!value) return null;
-  return LEGACY_KIND_LABELS[value] || value;
-};
+const tryParseJson = async (res: Response): Promise<SafeJsonResult> => {
+  const contentType = res.headers.get("content-type") || "";
+  const text = await res.text();
 
-const getVolunteerKindLabel = (volunteer: Volunteer) =>
-  normalizeKind(volunteer.volunteer_type) ||
-  normalizeKind(volunteer.kind) ||
-  null;
+  if (!res.ok) {
+    return {
+      success: false,
+      error: `HTTP ${res.status} ${res.statusText}: ${text.slice(0, 200)}`,
+      raw: text,
+    };
+  }
 
-type DocumentEntry = {
-  name: string;
-  mime?: string;
-  data?: string;
-  url?: string;
-  uploadDate?: string;
-  uploadedAt?: string;
-};
+  if (!contentType.includes("application/json")) {
+    return {
+      success: false,
+      error: `Invalid JSON (content-type: ${
+        contentType || "unknown"
+      }): ${text.slice(0, 200)}`,
+      raw: text,
+    };
+  }
 
-const parseDocuments = (value?: string | null): DocumentEntry[] => {
-  if (!value) return [];
   try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return parsed.filter(
-        (item) => item && typeof item === "object" && item.name
-      );
-    }
-    return [];
-  } catch (err) {
-    console.warn("Failed to parse documents JSON", err);
-    return [];
+    return JSON.parse(text);
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `Failed to parse JSON: ${err?.message || "unknown error"}`,
+      raw: text,
+    };
   }
 };
 
-const buildDocumentDataUrl = (doc: DocumentEntry) => {
-  if (doc.data) {
-    return `data:${doc.mime || "application/octet-stream"};base64,${doc.data}`;
-  }
-  return doc.url || "";
+const deriveStatsFromVolunteers = (items: Volunteer[]): VolunteerStats => {
+  const total = items.length;
+  const active = items.filter((v) => v.active).length;
+  const approved = items.filter((v) => v.status === "מאושר").length;
+  const pending = items.filter((v) => v.status === "בהמתנה").length;
+  const grouped = items.filter((v) => v.group_id || v.group_name).length;
+  return { total, active, approved, pending, grouped };
 };
+
+const createEmptyForm = (): VolunteerFormState => ({
+  national_id: "",
+  full_name: "",
+  phone: "",
+  email: "",
+  residence: "",
+  program: "",
+  group_id: "",
+  status: "בהמתנה",
+  active: true,
+  notes: "",
+});
+
+const createEmptyTaskForm = (): TaskFormState => ({
+  volunteer_id: "",
+  title: "",
+  body: "",
+  due_date: "",
+});
 
 export default function VolunteersPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const activeTab: TabId =
+    searchParams?.get("view") === "list"
+      ? "list"
+      : searchParams?.get("view") === "settings"
+      ? "settings"
+      : "home";
+
+  const [filters, setFilters] = useState<VolunteerFilters>({
+    search: "",
+    status: "all",
+    program: "",
+  });
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
-  const [filteredVolunteers, setFilteredVolunteers] = useState<Volunteer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingVolunteer, setViewingVolunteer] = useState<Volunteer | null>(
-    null
+  const [summary, setSummary] = useState<VolunteerSummaryData>({
+    stats: defaultStats,
+    tasks: [],
+    recentActivity: [],
+  });
+  const [listLoading, setListLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formState, setFormState] = useState<VolunteerFormState>(
+    createEmptyForm()
   );
   const [editingVolunteer, setEditingVolunteer] = useState<Volunteer | null>(
     null
   );
-  const [documentEntries, setDocumentEntries] = useState<DocumentEntry[]>([]);
-  const viewingDocuments = viewingVolunteer
-    ? parseDocuments(viewingVolunteer.documents)
-    : [];
-
+  const [viewingVolunteer, setViewingVolunteer] = useState<Volunteer | null>(
+    null
+  );
+  const [viewDetail, setViewDetail] = useState<VolunteerDetail | null>(null);
+  const [viewDetailLoading, setViewDetailLoading] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
+  const [draftPromptOpen, setDraftPromptOpen] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const {
-    permission,
-    loading: permissionLoading,
-    canEdit,
-  } = usePagePermission("volunteers");
+    drafts,
+    saveDraft: saveVolunteerDraft,
+    deleteDraft: deleteVolunteerDraft,
+  } = useDraftManager<VolunteerFormState>(volunteerDraftType);
 
-  const editWarning = () =>
-    alert("אין לך הרשאת עריכה בדף מתנדבים. פנה למנהל המערכת.");
+  const [taskForm, setTaskForm] = useState<TaskFormState>(
+    createEmptyTaskForm()
+  );
+  const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
-  const assertCanEdit = () => {
-    if (!canEdit) {
-      editWarning();
-      return false;
+  const fetchVolunteers = useCallback(async () => {
+    try {
+      setListLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams();
+      if (filters.search) params.append("search", filters.search);
+      if (filters.program) params.append("program", filters.program);
+      if (filters.status === "active") params.append("active", "true");
+      if (filters.status === "inactive") params.append("active", "false");
+      if (filters.status === "approved") params.append("status", "מאושר");
+      if (filters.status === "pending") params.append("status", "בהמתנה");
+
+      const res = await fetch(`/api/volunteers?${params.toString()}`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "שגיאה בטעינת הנתונים");
+      const items = data.volunteers || [];
+      setVolunteers(items);
+      setSummary((prev) => {
+        // אם ה-API לא החזיר סטטיסטיקות, נגזור מהנתונים שהגיעו
+        const shouldDerive =
+          !prev.stats.total &&
+          !prev.stats.active &&
+          !prev.stats.approved &&
+          !prev.stats.pending &&
+          !prev.stats.grouped;
+        return {
+          ...prev,
+          stats: shouldDerive ? deriveStatsFromVolunteers(items) : prev.stats,
+        };
+      });
+    } catch (err: any) {
+      console.error("Error loading volunteers:", err);
+      setError(err.message || "שגיאה בטעינת הנתונים");
+    } finally {
+      setListLoading(false);
     }
-    return true;
-  };
+  }, [filters]);
 
-  // Filter states
-  const [filterKind, setFilterKind] = useState("");
-  const [filterActive, setFilterActive] = useState("all");
-  const [filterDateMode, setFilterDateMode] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const fetchSummary = useCallback(async () => {
+    try {
+      setSummaryLoading(true);
+      const res = await fetch("/api/volunteers/summary", {
+        credentials: "include",
+      });
+      const data = await tryParseJson(res);
+      if (!data.success) throw new Error(data.error || "שגיאה בטעינת הנתונים");
+      setSummary({
+        stats: data.stats || defaultStats,
+        tasks: data.tasks || [],
+        recentActivity: data.recentActivity || [],
+      });
+      if (!data.tasks || data.tasks.length === 0) {
+        await loadTasksFallback();
+      }
+    } catch (err) {
+      console.error("Error loading summary:", err);
+      // fallback: load tasks בלבד אם חזרה שגיאה
+      await loadTasksFallback();
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, []);
 
-  // Dynamic kind options from actual volunteers data
-  const [availableKinds, setAvailableKinds] = useState<string[]>([]);
+  const loadTasksFallback = useCallback(async () => {
+    const attempt = async (url: string) => {
+      const res = await fetch(url, { credentials: "include" });
+      const data = await tryParseJson(res);
+      if (data?.success && Array.isArray(data.notes)) {
+        return (data.notes as VolunteerNote[]).map((t) => ({
+          ...t,
+          status: normalizeStatus(t.status),
+        }));
+      }
+      return null;
+    };
 
-  const [formData, setFormData] = useState({
-    national_id: "",
-    full_name: "",
-    phone: "",
-    email: "",
-    kind: "",
-    street: "",
-    house_number: "",
-    city: "",
-    join_date: "",
-    training_date: "",
-    profession: "",
-    sea_connection_level: "",
-    active: true,
-    notes: "",
-    volunteer_type: "",
-    media_specialization: "",
-    availability: "",
-    personal_website: "",
-    documents: "",
-  });
+    try {
+      setTasksLoading(true);
+      // נסה בשני פרמטרים נפוצים
+      const primary =
+        (await attempt("/api/notes?entity_type=volunteer")) ||
+        (await attempt("/api/notes?entityType=volunteer"));
+      if (primary) {
+        setSummary((prev) => ({ ...prev, tasks: primary }));
+      }
+    } catch (err) {
+      console.error("Error loading volunteer tasks fallback:", err);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchVolunteers();
-  }, []);
+  }, [fetchVolunteers]);
 
-  if (permissionLoading) {
-    return (
-      <div style={{ padding: 20, textAlign: "center" }}>
-        <div>טוען הרשאות...</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
-  if (permission === "none") {
-    return (
-      <AccessDenied
-        title="אין לך הרשאה לדף מתנדבים"
-        description="פנה למנהל המערכת כדי לקבל הרשאה מתאימה."
-      />
-    );
-  }
+  const filteredVolunteers = useMemo(() => volunteers, [volunteers]);
 
-  const fetchVolunteers = async () => {
-    try {
-      setLoading(true);
-      // Fetch all volunteers (not just active ones)
-      const res = await fetch("/api/volunteers");
-      const data = await res.json();
-      if (data.success) {
-        setVolunteers(data.volunteers);
-      }
-    } catch (err) {
-      console.error("Error fetching volunteers:", err);
-      alert("שגיאה בטעינת מתנדבים");
-    } finally {
-      setLoading(false);
-    }
+  const handleFilterChange = <K extends keyof VolunteerFilters>(
+    key: K,
+    value: VolunteerFilters[K]
+  ) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Build dynamic list of available kinds from volunteers
-  useEffect(() => {
-    const kinds = volunteers
-      .map((v) => getVolunteerKindLabel(v))
-      .filter((k): k is string => !!k)
-      .filter((k, i, arr) => arr.indexOf(k) === i)
-      .sort();
-    setAvailableKinds(kinds);
-  }, [volunteers]);
-
-  // Apply filters whenever volunteers or filter values change
-  useEffect(() => {
-    let filtered = [...volunteers];
-
-    // Filter by kind (volunteer type)
-    if (filterKind) {
-      filtered = filtered.filter(
-        (v) => getVolunteerKindLabel(v) === filterKind
-      );
-    }
-
-    // Filter by active status
-    if (filterActive === "active") {
-      filtered = filtered.filter((v) => v.active === true);
-    } else if (filterActive === "inactive") {
-      filtered = filtered.filter((v) => v.active === false);
-    }
-
-    // Filter by join date
-    if (filterDateMode && filterDate) {
-      filtered = filtered.filter((v) => {
-        if (!v.join_date) return false;
-        const joinDate = new Date(v.join_date);
-        const compareDate = new Date(filterDate);
-
-        if (filterDateMode === "equal") {
-          return joinDate.toDateString() === compareDate.toDateString();
-        } else if (filterDateMode === "greater") {
-          return joinDate > compareDate;
-        } else if (filterDateMode === "less") {
-          return joinDate < compareDate;
-        }
-        return true;
-      });
-    }
-
-    setFilteredVolunteers(filtered);
-  }, [volunteers, filterKind, filterActive, filterDateMode, filterDate]);
-
-  const clearFilters = () => {
-    setFilterKind("");
-    setFilterActive("all");
-    setFilterDateMode("");
-    setFilterDate("");
+  const handleClearFilters = () => {
+    setFilters({ search: "", status: "all", program: "" });
   };
 
-  const handleAdd = () => {
-    if (!assertCanEdit()) return;
-    setEditingVolunteer(null);
-    setFormData({
-      national_id: "",
-      full_name: "",
-      phone: "",
-      email: "",
-      kind: "",
-      street: "",
-      house_number: "",
-      city: "",
-      join_date: "",
-      training_date: "",
-      profession: "",
-      sea_connection_level: "",
-      active: true,
-      notes: "",
-      volunteer_type: "",
-      media_specialization: "",
-      availability: "",
-      personal_website: "",
-      documents: "",
+  const handleFormChange = <K extends keyof VolunteerFormState>(
+    key: K,
+    value: VolunteerFormState[K]
+  ) => {
+    setFormState((prev) => {
+      const next = { ...prev, [key]: value };
+      if (next !== prev) setFormDirty(true);
+      return next;
     });
-    setDocumentEntries([]);
-    setShowModal(true);
   };
 
-  const handleView = (volunteer: Volunteer) => {
-    setViewingVolunteer(volunteer);
-    setShowViewModal(true);
+  const openCreateModal = () => {
+    setEditingVolunteer(null);
+    setFormState(createEmptyForm());
+    setCurrentDraftId(null);
+    setFormDirty(false);
+    setShowFormModal(true);
   };
 
   const handleEdit = (volunteer: Volunteer) => {
-    if (!assertCanEdit()) return;
     setEditingVolunteer(volunteer);
-    setFormData({
+    setFormState({
       national_id: volunteer.national_id,
       full_name: volunteer.full_name,
       phone: volunteer.phone || "",
       email: volunteer.email || "",
-      kind: volunteer.kind || "",
-      street: volunteer.street || "",
-      house_number: volunteer.house_number || "",
-      city: volunteer.city || "",
-      join_date: volunteer.join_date || "",
-      training_date: volunteer.training_date || "",
-      profession: volunteer.profession || "",
-      sea_connection_level: volunteer.sea_connection_level?.toString() || "",
+      residence: volunteer.residence || "",
+      program: volunteer.program || "",
+      group_id: volunteer.group_id || "",
+      status: volunteer.status || "בהמתנה",
       active: volunteer.active,
       notes: volunteer.notes || "",
-      volunteer_type: volunteer.volunteer_type || "",
-      media_specialization: volunteer.media_specialization || "",
-      availability: volunteer.availability || "",
-      personal_website: volunteer.personal_website || "",
-      documents: volunteer.documents || "",
     });
-    setDocumentEntries(parseDocuments(volunteer.documents));
-    setShowModal(true);
+    setCurrentDraftId(volunteer.national_id);
+    setFormDirty(false);
+    setShowFormModal(true);
   };
 
-  const handleDocumentsTextChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, documents: value }));
-    setDocumentEntries(parseDocuments(value));
-  };
-
-  const handleDocumentUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result?.toString() || "";
-      const base64 = result.includes(",") ? result.split(",")[1] : result;
-      const newEntry: DocumentEntry = {
-        name: file.name,
-        mime: file.type,
-        data: base64,
-        uploadedAt: new Date().toISOString(),
-      };
-      const updated = [...documentEntries, newEntry];
-      setDocumentEntries(updated);
-      setFormData((prev) => ({
-        ...prev,
-        documents: JSON.stringify(updated, null, 2),
-      }));
-    };
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  };
-
-  const handleDocumentRemove = (index: number) => {
-    const updated = documentEntries.filter((_, idx) => idx !== index);
-    setDocumentEntries(updated);
-    setFormData((prev) => ({
-      ...prev,
-      documents: updated.length ? JSON.stringify(updated, null, 2) : "",
-    }));
+  const handleDelete = async (id: string) => {
+    if (!confirm("למחוק מתנדב זה?")) return;
+    try {
+      const res = await fetch(`/api/volunteers/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "מחיקה נכשלה");
+      fetchVolunteers();
+    } catch (err: any) {
+      alert(err?.message || "שגיאה במחיקה");
+    }
   };
 
   const handleSubmit = async () => {
-    if (!assertCanEdit()) return;
-    if (!formData.national_id.trim()) {
-      alert("תעודת זהות היא שדה חובה");
+    if (!formState.national_id.trim() || !formState.full_name.trim()) {
+      alert("תעודת זהות ושם מלא הם שדות חובה");
       return;
     }
 
-    if (!/^\d{9}$/.test(formData.national_id)) {
-      alert("תעודת זהות חייבת להכיל בדיוק 9 ספרות");
-      return;
-    }
-
-    if (!formData.full_name.trim()) {
-      alert("שם מלא הוא שדה חובה");
-      return;
-    }
+    const payload = {
+      national_id: formState.national_id,
+      full_name: formState.full_name,
+      phone: formState.phone || null,
+      email: formState.email || null,
+      residence: formState.residence || null,
+      program: formState.program || null,
+      group_id: formState.group_id || null,
+      status: formState.status || null,
+      active: formState.active,
+      notes: formState.notes || null,
+    };
 
     try {
-      const url = editingVolunteer
+      const endpoint = editingVolunteer
         ? "/api/volunteers/update"
         : "/api/volunteers/add";
       const method = editingVolunteer ? "PUT" : "POST";
+      const body = editingVolunteer
+        ? { ...payload, id: editingVolunteer.national_id }
+        : payload;
 
-      const body: any = {
-        national_id: formData.national_id,
-        full_name: formData.full_name,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        kind: formData.kind || null,
-        street: formData.street || null,
-        house_number: formData.house_number || null,
-        city: formData.city || null,
-        join_date: formData.join_date || null,
-        training_date: formData.training_date || null,
-        profession: formData.profession || null,
-        sea_connection_level: formData.sea_connection_level
-          ? parseInt(formData.sea_connection_level)
-          : null,
-        active: formData.active,
-        notes: formData.notes || null,
-        volunteer_type: formData.volunteer_type || null,
-        media_specialization: formData.media_specialization || null,
-        availability: formData.availability || null,
-        personal_website: formData.personal_website || null,
-        documents: formData.documents || null,
-      };
-
-      const res = await fetch(url, {
+      const res = await fetch(endpoint, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
-
-      if (data.success) {
-        alert(editingVolunteer ? "מתנדב עודכן בהצלחה!" : "מתנדב נוסף בהצלחה!");
-        setShowModal(false);
-        fetchVolunteers();
-      } else {
-        alert("שגיאה: " + data.error);
+      const response = await res.json();
+      if (!response.success) {
+        throw new Error(response.error || "שמירת מתנדב נכשלה");
       }
-    } catch (err) {
-      console.error("Error saving volunteer:", err);
-      alert("שגיאה בשמירת מתנדב");
+
+      const draftId = currentDraftId;
+      if (draftId) {
+        deleteVolunteerDraft(draftId);
+        setCurrentDraftId(null);
+      }
+      closeFormModal();
+      fetchVolunteers();
+    } catch (err: any) {
+      alert(err?.message || "שגיאה בשמירת המתנדב");
     }
   };
 
-  const handleDelete = async (national_id: string) => {
-    if (!assertCanEdit()) return;
-    if (!confirm("האם אתה בטוח שברצונך לבטל את המתנדב?")) return;
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    setEditingVolunteer(null);
+    setFormState(createEmptyForm());
+    setFormDirty(false);
+    setDraftPromptOpen(false);
+  };
 
+  const requestCloseModal = () => {
+    if (formDirty) {
+      setDraftPromptOpen(true);
+      return;
+    }
+    closeFormModal();
+  };
+
+  const handleSaveDraft = () => {
+    const draftId =
+      currentDraftId || editingVolunteer?.national_id || crypto.randomUUID();
+    saveVolunteerDraft(draftId, formState);
+    setCurrentDraftId(draftId);
+    setFormDirty(false);
+    setDraftPromptOpen(false);
+    closeFormModal();
+  };
+
+  const handleDiscardDraft = () => {
+    setDraftPromptOpen(false);
+    setFormDirty(false);
+    closeFormModal();
+  };
+
+  const handleResumeDraft = (draftId: string) => {
+    const draft = drafts.find((entry) => entry.id === draftId);
+    if (!draft) return;
+    setFormState(draft.payload);
+    setEditingVolunteer(null);
+    setCurrentDraftId(draftId);
+    setFormDirty(false);
+    setDraftPromptOpen(false);
+    setShowFormModal(true);
+  };
+
+  const handleDeleteDraftEntry = (draftId: string) => {
+    deleteVolunteerDraft(draftId);
+    if (currentDraftId === draftId) {
+      setCurrentDraftId(null);
+    }
+  };
+
+  const handleView = useCallback(async (volunteer: Volunteer) => {
+    setViewingVolunteer(volunteer);
+    setViewDetail(null);
+    setViewDetailLoading(true);
     try {
-      const res = await fetch(
-        `/api/volunteers/update?national_id=${national_id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const res = await fetch(`/api/volunteer/${volunteer.national_id}`, {
+        credentials: "include",
+      });
       const data = await res.json();
-
-      if (data.success) {
-        alert("מתנדב בוטל בהצלחה!");
-        fetchVolunteers();
-      } else {
-        alert("שגיאה: " + data.error);
-      }
+      if (!data.success)
+        throw new Error(data.error || "שגיאה בטעינת נתוני מתנדב");
+      setViewDetail({
+        activities: data.activities || [],
+        supportedSurfers: data.supportedSurfers || [],
+      });
     } catch (err) {
-      console.error("Error deleting volunteer:", err);
-      alert("שגיאה במחיקת מתנדב");
+      console.error("Error loading volunteer detail:", err);
+    } finally {
+      setViewDetailLoading(false);
+    }
+  }, []);
+
+  const handleTaskFormChange = <K extends keyof TaskFormState>(
+    key: K,
+    value: TaskFormState[K]
+  ) => {
+    setTaskForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleCreateTask = async () => {
+    if (!taskForm.volunteer_id || !taskForm.body.trim()) {
+      alert("בחר מתנדב והכנס תוכן למשימה/פתק");
+      return;
+    }
+    setTaskSubmitting(true);
+    try {
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          entity_type: "volunteer",
+          entity_id: taskForm.volunteer_id,
+          title: taskForm.title || "משימה",
+          body: taskForm.body,
+          status: TASK_STATUSES[0].value,
+          due_date: taskForm.due_date || null,
+        }),
+      });
+      const data = await tryParseJson(res);
+      if (!data.success) throw new Error(data.error || "יצירת משימה נכשלה");
+      setTaskForm(createEmptyTaskForm());
+      // עדכון מקומי מיידי כדי שיופיע בלי להמתין לרענון
+      if (data.note) {
+        setSummary((prev) => ({
+          ...prev,
+          tasks: [
+            ...prev.tasks,
+            { ...data.note, status: normalizeStatus(data.note.status) },
+          ],
+        }));
+      }
+      await fetchSummary();
+      await loadTasksFallback();
+    } catch (err: any) {
+      alert(err.message || "שגיאה ביצירת משימה");
+    } finally {
+      setTaskSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: 20, textAlign: "center" }}>
-        <div>טוען מתנדבים...</div>
-      </div>
-    );
-  }
+  const handleToggleTaskStatus = async (
+    task: VolunteerNote,
+    nextStatusValue: VolunteerNote["status"]
+  ) => {
+    try {
+      const normalized = normalizeStatus(nextStatusValue);
+      const res = await fetch(`/api/notes/${task.note_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: normalized }),
+      });
+      await tryParseJson(res);
+      setSummary((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((t) =>
+          t.note_id === task.note_id ? { ...t, status: normalized } : t
+        ),
+      }));
+      await fetchSummary();
+      await loadTasksFallback();
+    } catch (err) {
+      console.error("Error updating task status:", err);
+      alert("שגיאה בעדכון סטטוס משימה");
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm("למחוק משימה זו?")) return;
+    try {
+      await fetch(`/api/notes/${taskId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      setSummary((prev) => ({
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.note_id !== taskId),
+      }));
+      await fetchSummary();
+      await loadTasksFallback();
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      alert("שגיאה במחיקת משימה");
+    }
+  };
+
+  const handleUpdateTask = async (
+    taskId: string,
+    payload: { title: string; body: string; due_date: string }
+  ) => {
+    try {
+      const res = await fetch(`/api/notes/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: payload.title || null,
+          body: payload.body || "",
+          due_date: payload.due_date || null,
+        }),
+      });
+      const data = await tryParseJson(res);
+      if (!data.success) throw new Error(data.error || "שמירת משימה נכשלה");
+      setSummary((prev) => ({
+        ...prev,
+        tasks: prev.tasks.map((t) =>
+          t.note_id === taskId
+            ? {
+                ...t,
+                title: payload.title || t.title,
+                body: payload.body ?? t.body,
+                due_date: payload.due_date || null,
+              }
+            : t
+        ),
+      }));
+      fetchSummary();
+      loadTasksFallback();
+    } catch (err: any) {
+      console.error("Error updating note:", err);
+      alert(err?.message || "שגיאה בעדכון משימה");
+    }
+  };
+
+  const statsCards = [
+    { label: "סה״כ מתנדבים", value: summary.stats.total },
+    { label: "פעילים", value: summary.stats.active },
+    { label: "מאושרים", value: summary.stats.approved },
+    { label: "ממתינים", value: summary.stats.pending },
+    { label: "משויכים לקבוצות/פעילויות", value: summary.stats.grouped },
+  ];
+
+  const tabOptions: { id: TabId; label: string }[] = [
+    { id: "home", label: "דף הבית" },
+    { id: "list", label: "רשימת מתנדבים" },
+    { id: "settings", label: "הגדרות" },
+  ];
+
+  const handleTabChange = (tab: TabId) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "home") {
+      params.delete("view");
+    } else {
+      params.set("view", tab);
+    }
+    const queryString = params.toString();
+    const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  };
 
   return (
-    <div style={{ padding: spacing.xl }}>
-      {/* Header */}
-      <Card style={{ marginBottom: spacing.lg }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: spacing.md,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
-              🤝 ניהול מתנדבים
-            </h2>
-            <div style={{ color: muted, fontSize: 13, marginTop: 4 }}>
-              מציג {filteredVolunteers.length} מתוך {volunteers.length} מתנדבים
-            </div>
-          </div>
-          <Button
-            onClick={handleAdd}
-            disabled={!canEdit}
-            title={canEdit ? undefined : "אין לך הרשאת עריכה בדף זה"}
-          >
-            + הוסף מתנדב
-          </Button>
-        </div>
-      </Card>
-
-      {!canEdit && (
-        <div
-          style={{
-            marginBottom: spacing.lg,
-            border: "1px solid #fcd34d",
-            background: "#fffbeb",
-            color: "#92400e",
-            padding: spacing.md,
-            borderRadius: radii.card,
-            fontSize: 13,
-          }}
-        >
-          מצב קריאה בלבד: ניתן לצפות במידע אך לא לערוך או למחוק מתנדבים.
-        </div>
+    <div
+      style={{
+        padding: spacing.xl,
+        display: "flex",
+        flexDirection: "column",
+        gap: spacing.lg,
+      }}
+    >
+      {activeTab === "home" && (
+        <VolunteersHomeTab
+          loading={summaryLoading}
+          summary={summary}
+          volunteers={volunteers}
+          taskForm={taskForm}
+          onTaskChange={setTaskForm}
+          onCreateTask={handleCreateTask}
+          submittingTask={taskSubmitting}
+          onRefreshSummary={fetchSummary}
+          tasksLoading={tasksLoading}
+          onToggleTaskStatus={handleToggleTaskStatus}
+          onDeleteTask={handleDeleteTask}
+          onUpdateTask={handleUpdateTask}
+        />
       )}
 
-      {/* Filters */}
-      <Card style={{ marginBottom: spacing.lg }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: spacing.md,
-            gap: spacing.md,
-            flexWrap: "wrap",
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
-            🔍 סינון מתנדבים
-          </h3>
-          <Button
-            variant="secondary"
-            style={{ fontSize: 12, padding: "6px 12px" }}
-            onClick={clearFilters}
-          >
-            נקה סינונים
-          </Button>
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          {/* Filter by kind */}
-          <div>
-            <label style={labelStyle}>סוג מתנדב</label>
-            <select
-              style={filterControlStyle}
-              value={filterKind}
-              onChange={(e) => setFilterKind(e.target.value)}
-            >
-              <option value="">הכל</option>
-              {availableKinds.map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </div>
+      {activeTab === "list" && (
+        <VolunteersListTab
+          loading={listLoading}
+          error={error}
+          volunteers={filteredVolunteers}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          onRefresh={fetchVolunteers}
+          onAdd={openCreateModal}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onView={handleView}
+          drafts={drafts}
+          onResumeDraft={handleResumeDraft}
+          onDeleteDraft={handleDeleteDraftEntry}
+        />
+      )}
 
-          {/* Filter by active status */}
-          <div>
-            <label style={labelStyle}>סטטוס</label>
-            <select
-              style={filterControlStyle}
-              value={filterActive}
-              onChange={(e) => setFilterActive(e.target.value)}
-            >
-              <option value="all">הכל</option>
-              <option value="active">פעיל</option>
-              <option value="inactive">לא פעיל</option>
-            </select>
-          </div>
+      {activeTab === "settings" && <SettingsTab />}
 
-          {/* Filter by join date - mode */}
-          <div>
-            <label style={labelStyle}>תאריך הצטרפות</label>
-            <select
-              style={filterControlStyle}
-              value={filterDateMode}
-              onChange={(e) => setFilterDateMode(e.target.value)}
-            >
-              <option value="">ללא סינון</option>
-              <option value="equal">שווה ל</option>
-              <option value="greater">גדול מ</option>
-              <option value="less">קטן מ</option>
-            </select>
-          </div>
-
-          {/* Filter by join date - date picker */}
-          <div>
-            <label style={labelStyle}>תאריך</label>
-            <input
-              type="date"
-              style={filterControlStyle}
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              disabled={!filterDateMode}
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <div style={{ overflowX: "auto" }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: "0 8px",
-            }}
-          >
-            <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
-              <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "center", padding: 8 }}>ת.ז.</th>
-                <th style={{ textAlign: "center", padding: 8 }}>שם</th>
-                <th style={{ textAlign: "center", padding: 8 }}>סוג</th>
-                <th style={{ textAlign: "center", padding: 8 }}>עיר</th>
-                <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
-                <th style={{ textAlign: "center", padding: 8 }}>
-                  תאריך הצטרפות
-                </th>
-                <th style={{ textAlign: "center", padding: 8 }}>פעילויות</th>
-                <th style={{ textAlign: "center", padding: 8 }}>קשר לים</th>
-                <th style={{ textAlign: "center", padding: 8 }}>פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredVolunteers.map((v) => (
-                <tr
-                  key={v.national_id}
-                  style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
-                >
-                  <td
-                    style={{
-                      padding: 8,
-                      fontFamily: "monospace",
-                      fontSize: 13,
-                      color: muted,
-                      textAlign: "center",
-                    }}
-                  >
-                    {v.national_id}
-                  </td>
-                  <td style={{ padding: 8, fontWeight: 600, textAlign: "center" }}>
-                    {v.full_name}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
-                    {getVolunteerKindLabel(v) || "—"}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
-                    {v.city || "—"}
-                  </td>
-                  <td
-                    style={{
-                      textAlign: "center",
-                      padding: 8,
-                      color: muted,
-                      fontSize: 13,
-                    }}
-                  >
-                    {formatPhoneNumber(v.phone)}
-                  </td>
-                  <td
-                    style={{
-                      textAlign: "center",
-                      padding: 8,
-                      color: muted,
-                      fontSize: 13,
-                    }}
-                  >
-                    {v.join_date
-                      ? new Date(v.join_date).toLocaleDateString("he-IL")
-                      : "—"}
-                  </td>
-                  <td
-                    style={{ textAlign: "center", padding: 8, fontWeight: 600 }}
-                  >
-                    {v.total_activities || 0}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8 }}>
-                    {v.sea_connection_level !== null &&
-                    v.sea_connection_level !== undefined
-                      ? SEA_CONNECTION_LEVEL_OPTIONS[v.sea_connection_level]
-                          ?.label || "—"
-                      : "—"}
-                  </td>
-                  <td style={{ textAlign: "center", padding: 8 }}>
-                    <Button
-                      variant="secondary"
-                      style={{ ...smallButtonStyle, marginLeft: 4 }}
-                      onClick={() => handleView(v)}
-                      title="צפייה"
-                    >
-                      👁️
-                    </Button>
-                    {canEdit && (
-                      <>
-                        <Button
-                          variant="secondary"
-                          style={{ ...smallButtonStyle, marginLeft: 4 }}
-                          onClick={() => handleEdit(v)}
-                          title="עריכה"
-                        >
-                          ✏️
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          style={{ ...smallButtonStyle, color: colors.danger }}
-                          onClick={() => handleDelete(v.national_id)}
-                          title="מחיקה"
-                        >
-                          🗑️
-                        </Button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filteredVolunteers.length === 0 && volunteers.length > 0 && (
-                <tr>
-                  <td
-                    colSpan={9}
-                    style={{ textAlign: "center", padding: 20, color: muted }}
-                  >
-                    לא נמצאו מתנדבים התואמים לקריטריוני החיפוש.
-                  </td>
-                </tr>
-              )}
-              {volunteers.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={9}
-                    style={{ textAlign: "center", padding: 20, color: muted }}
-                  >
-                    אין מתנדבים במערכת. לחץ על "הוסף מתנדב" להתחיל.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* Modal */}
       <Modal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        width="min(900px, 95vw)"
+        open={showFormModal}
+        onClose={requestCloseModal}
+        width="min(640px, 95vw)"
         style={{ padding: spacing.xxl }}
+        escEnabled={!draftPromptOpen}
       >
-        <h3 style={{ margin: "0 0 20px 0", fontSize: 18, fontWeight: 800 }}>
-          {editingVolunteer ? "ערוך מתנדב" : "הוסף מתנדב חדש"}
+        <h3 style={{ margin: "0 0 16px", fontSize: 20 }}>
+          {editingVolunteer ? "עריכת מתנדב" : "מתנדב חדש"}
         </h3>
-
-        {/* פרטים אישיים */}
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-            📋 פרטים אישיים
-          </h4>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: spacing.md,
-            }}
+        <Section
+          title="פרטים אישיים"
+          style={{ marginBottom: spacing.lg }}
+          bodyStyle={{ gap: spacing.md }}
+        >
+          <FormGrid
+            columns="repeat(auto-fit, minmax(240px, 1fr))"
+            gap={spacing.md}
           >
             <div>
               <label style={labelStyle}>
@@ -765,14 +802,13 @@ export default function VolunteersPage() {
               </label>
               <input
                 type="text"
+                maxLength={9}
                 style={inputStyle}
-                value={formData.national_id}
+                value={formState.national_id}
                 onChange={(e) =>
-                  setFormData({ ...formData, national_id: e.target.value })
+                  handleFormChange("national_id", e.target.value)
                 }
                 disabled={!!editingVolunteer}
-                placeholder="9 ספרות"
-                maxLength={9}
               />
             </div>
             <div>
@@ -782,21 +818,22 @@ export default function VolunteersPage() {
               <input
                 type="text"
                 style={inputStyle}
-                value={formData.full_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
-                }
+                value={formState.full_name}
+                onChange={(e) => handleFormChange("full_name", e.target.value)}
               />
             </div>
+          </FormGrid>
+          <FormGrid
+            columns="repeat(auto-fit, minmax(220px, 1fr))"
+            gap={spacing.md}
+          >
             <div>
               <label style={labelStyle}>טלפון</label>
               <input
-                type="text"
+                type="tel"
                 style={inputStyle}
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                value={formState.phone}
+                onChange={(e) => handleFormChange("phone", e.target.value)}
               />
             </div>
             <div>
@@ -804,368 +841,139 @@ export default function VolunteersPage() {
               <input
                 type="email"
                 style={inputStyle}
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                value={formState.email}
+                onChange={(e) => handleFormChange("email", e.target.value)}
               />
             </div>
-            <div>
-              <label style={labelStyle}>מקצוע</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formData.profession}
-                onChange={(e) =>
-                  setFormData({ ...formData, profession: e.target.value })
-                }
-              />
-            </div>
-          </div>
-        </div>
+          </FormGrid>
+        </Section>
 
-        {/* כתובת */}
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-            📍 כתובת
-          </h4>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr",
-              gap: spacing.md,
-            }}
+        <Section
+          title="שיוך וסטטוס"
+          style={{ marginBottom: spacing.lg }}
+          bodyStyle={{ gap: spacing.md }}
+        >
+          <FormGrid
+            columns="repeat(auto-fit, minmax(220px, 1fr))"
+            gap={spacing.md}
           >
             <div>
-              <label style={labelStyle}>רחוב</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formData.street}
-                onChange={(e) =>
-                  setFormData({ ...formData, street: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>מספר בית</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formData.house_number}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    house_number: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>עיר</label>
-              <input
-                type="text"
-                style={inputStyle}
-                value={formData.city}
-                onChange={(e) =>
-                  setFormData({ ...formData, city: e.target.value })
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* פרטי התנדבות */}
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-            🏄 פרטי התנדבות
-          </h4>
-
-          {/* סוג מתנדב */}
-          <div style={{ marginBottom: spacing.md }}>
-            <label style={labelStyle}>סוג מתנדב</label>
-            <select
-              style={inputStyle}
-              value={formData.volunteer_type}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  volunteer_type: e.target.value,
-                  kind: e.target.value,
-                });
-              }}
-            >
-              <option value="">בחר...</option>
-              {VOLUNTEER_TYPE_OPTIONS.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* תאריכים ורמת קשר */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: spacing.md,
-              marginBottom: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>תאריך הצטרפות</label>
-              <input
-                type="date"
-                style={inputStyle}
-                value={formData.join_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, join_date: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>תאריך הדרכה</label>
-              <input
-                type="date"
-                style={inputStyle}
-                value={formData.training_date}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    training_date: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>רמת קשר לים</label>
+              <label style={labelStyle}>תוכנית</label>
               <select
                 style={inputStyle}
-                value={formData.sea_connection_level}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    sea_connection_level: e.target.value,
-                  })
-                }
+                value={formState.program}
+                onChange={(e) => handleFormChange("program", e.target.value)}
               >
                 <option value="">בחר...</option>
-                {SEA_CONNECTION_LEVEL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {PROGRAM_OPTIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
                   </option>
                 ))}
               </select>
             </div>
-          </div>
-
-          {/* שדות נוספים לפי סוג מתנדב */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr",
-              gap: spacing.md,
-            }}
-          >
-            {/* שדות למתנדבי מדיה */}
-            {formData.volunteer_type === "מדיה" && (
-              <>
-                <div>
-                  <label style={labelStyle}>התמחות</label>
-                  <select
-                    style={inputStyle}
-                    value={formData.media_specialization}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        media_specialization: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">בחר...</option>
-                    {MEDIA_SPECIALIZATION_OPTIONS.map((spec) => (
-                      <option key={spec} value={spec}>
-                        {spec}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle}>זמינות</label>
-                  <textarea
-                    style={{
-                      ...inputStyle,
-                      minHeight: 60,
-                      resize: "vertical",
-                    }}
-                    value={formData.availability}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        availability: e.target.value,
-                      })
-                    }
-                    placeholder="למשל: ימי שני-רביעי, 09:00-17:00"
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>אתר אישי / פורטפוליו</label>
-                  <input
-                    type="url"
-                    style={inputStyle}
-                    value={formData.personal_website}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        personal_website: e.target.value,
-                      })
-                    }
-                    placeholder="https://..."
-                  />
-                </div>
-              </>
-            )}
-
-            {/* מסמכים - לכל סוגי המתנדבים */}
             <div>
-              <label style={labelStyle}>מסמכים מצורפים</label>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                onChange={handleDocumentUpload}
-                style={{ marginBottom: spacing.xs }}
-              />
-              <div
-                style={{ fontSize: 12, color: muted, marginBottom: spacing.xs }}
+              <label style={labelStyle}>סטטוס</label>
+              <select
+                style={inputStyle}
+                value={formState.status}
+                onChange={(e) => handleFormChange("status", e.target.value)}
               >
-                תמיכה ב-PDF ותמונות. עד 1 קובץ בכל פעם.
-              </div>
-              {documentEntries.length > 0 && (
-                <div
-                  style={{
-                    border: `1px solid ${colors.borderMuted}`,
-                    borderRadius: radii.card,
-                    padding: spacing.md,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: spacing.sm,
-                    marginBottom: spacing.sm,
-                    background: colors.surface,
-                  }}
-                >
-                  {documentEntries.map((doc, idx) => (
-                    <div
-                      key={`${doc.name}-${idx}`}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: spacing.md,
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{doc.name}</div>
-                        <div style={{ fontSize: 12, color: muted }}>
-                          {doc.mime || "קובץ"}
-                          {doc.uploadedAt
-                            ? ` · ${new Date(doc.uploadedAt).toLocaleDateString(
-                                "he-IL"
-                              )}`
-                            : ""}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: spacing.sm }}>
-                        {buildDocumentDataUrl(doc) && (
-                          <a
-                            href={buildDocumentDataUrl(doc)}
-                            download={doc.name}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={secondaryLinkStyle}
-                          >
-                            הורד
-                          </a>
-                        )}
-                        <Button
-                          variant="secondary"
-                          style={{ ...smallButtonStyle, color: colors.danger }}
-                          onClick={() => handleDocumentRemove(idx)}
-                          type="button"
-                        >
-                          מחק
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <label style={{ ...labelStyle, marginTop: spacing.sm }}>
-                מסמכים (JSON - למתקדמים)
-              </label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                value={formData.documents}
-                onChange={(e) => handleDocumentsTextChange(e.target.value)}
-                placeholder='[{"name": "אישור רפואי", "url": "...", "uploadDate": "2024-01-01"}]'
-              />
-              <div
-                style={{ fontSize: 11, color: muted, marginTop: spacing.xs }}
-              >
-                ניתן לערוך ידנית, או להשתמש בשדה העלאה כדי לעדכן את הרשימה
-                אוטומטית.
-              </div>
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
-        </div>
-
-        {/* הערות */}
-        <div style={sectionBoxStyle}>
-          <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: muted }}>
-            📝 הערות
-          </h4>
+            <div>
+              <label style={labelStyle}>קבוצה</label>
+              <input
+                style={inputStyle}
+                value={formState.group_id}
+                onChange={(e) => handleFormChange("group_id", e.target.value)}
+                placeholder="מזהה קבוצה (אם קיים)"
+              />
+            </div>
+          </FormGrid>
           <div>
-            <label style={labelStyle}>הערות כלליות</label>
+            <label style={labelStyle}>הערות</label>
             <textarea
               style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              placeholder="הערות נוספות..."
+              value={formState.notes}
+              onChange={(e) => handleFormChange("notes", e.target.value)}
             />
           </div>
-        </div>
+          <label
+            style={{ display: "flex", alignItems: "center", gap: spacing.sm }}
+          >
+            <input
+              type="checkbox"
+              checked={formState.active}
+              onChange={(e) => handleFormChange("active", e.target.checked)}
+            />
+            מתנדב פעיל
+          </label>
+        </Section>
 
-        {/* Buttons */}
         <div
           style={{
             display: "flex",
-            gap: spacing.md,
             justifyContent: "flex-end",
-            marginTop: spacing.xl,
+            gap: spacing.sm,
           }}
         >
-          <Button
-            variant="secondary"
-            onClick={() => setShowModal(false)}
-            type="button"
-          >
+          <Button variant="secondary" onClick={requestCloseModal}>
             ביטול
           </Button>
-          <Button onClick={handleSubmit} type="button">
-            {editingVolunteer ? "עדכן" : "הוסף"}
+          <Button onClick={handleSubmit}>
+            {editingVolunteer ? "עדכון מתנדב" : "שמור מתנדב"}
           </Button>
         </div>
       </Modal>
 
-      {/* מודל צפייה */}
       <Modal
-        open={showViewModal && !!viewingVolunteer}
-        onClose={() => setShowViewModal(false)}
-        width="min(900px, 95vw)"
+        open={draftPromptOpen}
+        onClose={() => setDraftPromptOpen(false)}
+        width="min(420px, 90vw)"
+      >
+        <div style={{ ...sectionCardStyle, boxShadow: "none" }}>
+          <h3 style={{ marginTop: 0 }}>לשמור את המתנדב כטיוטה?</h3>
+          <p style={{ color: muted }}>
+            ניתן לשמור את הנתונים כטיוטה אישית ולהמשיך מאוחר יותר או לסגור ללא
+            שמירה.
+          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: spacing.sm,
+              marginTop: spacing.lg,
+            }}
+          >
+            <SmallActionButton
+              variant="ghost"
+              onClick={() => setDraftPromptOpen(false)}
+            >
+              חזרה לעריכה
+            </SmallActionButton>
+            <SmallActionButton variant="secondary" onClick={handleDiscardDraft}>
+              בטל וסגור
+            </SmallActionButton>
+            <SmallActionButton onClick={handleSaveDraft}>
+              שמור כטיוטה
+            </SmallActionButton>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(viewingVolunteer)}
+        onClose={() => {
+          setViewingVolunteer(null);
+          setViewDetail(null);
+        }}
+        width="min(760px, 95vw)"
         style={{ padding: spacing.xxl }}
       >
         {viewingVolunteer && (
@@ -1176,336 +984,785 @@ export default function VolunteersPage() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: spacing.lg,
-                gap: spacing.md,
-                flexWrap: "wrap",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
-                פרטי מתנדב - {viewingVolunteer.full_name}
-              </h3>
-              <Button
+              <div>
+                <h3 style={{ margin: 0 }}>{viewingVolunteer.full_name}</h3>
+                <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+                  תעודת זהות: {viewingVolunteer.national_id}
+                </p>
+              </div>
+              <SmallActionButton
                 variant="secondary"
-                onClick={() => setShowViewModal(false)}
-                type="button"
+                onClick={() => {
+                  setViewingVolunteer(null);
+                  setViewDetail(null);
+                }}
               >
                 ✕ סגור
-              </Button>
+              </SmallActionButton>
             </div>
 
-            {/* פרטים אישיים */}
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4
-                style={{
-                  margin: "0 0 12px 0",
-                  fontSize: 14,
-                  color: muted,
-                  borderBottom: `2px solid ${colors.borderMuted}`,
-                  paddingBottom: spacing.sm,
-                }}
-              >
-                📋 פרטים אישיים
-              </h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px 24px",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>תעודת זהות</div>
-                  <div style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                    {viewingVolunteer.national_id}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>שם מלא</div>
-                  <div style={{ fontWeight: 600 }}>
-                    {viewingVolunteer.full_name}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>טלפון</div>
-                  <div>{formatPhoneNumber(viewingVolunteer.phone)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>אימייל</div>
-                  <div>{viewingVolunteer.email || "—"}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>סוג</div>
-                  <div>{viewingVolunteer.kind || "—"}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>מקצוע</div>
-                  <div>{viewingVolunteer.profession || "—"}</div>
-                </div>
+            <Section
+              title="פרטים כלליים"
+              style={{ background: colors.surface }}
+              bodyStyle={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: spacing.md,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>טלפון</div>
+                <div>{formatPhoneNumber(viewingVolunteer.phone)}</div>
               </div>
-            </div>
-
-            {/* כתובת */}
-            {(viewingVolunteer.street ||
-              viewingVolunteer.house_number ||
-              viewingVolunteer.city) && (
-              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-                <h4
-                  style={{
-                    margin: "0 0 12px 0",
-                    fontSize: 14,
-                    color: muted,
-                    borderBottom: `2px solid ${colors.borderMuted}`,
-                    paddingBottom: spacing.sm,
-                  }}
-                >
-                  📍 כתובת
-                </h4>
-                <div>
-                  {viewingVolunteer.street} {viewingVolunteer.house_number},{" "}
-                  {viewingVolunteer.city}
-                </div>
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>אימייל</div>
+                <div>{viewingVolunteer.email || "—"}</div>
               </div>
-            )}
-
-            {/* סוג מתנדב ופרטים ספציפיים */}
-            {viewingVolunteer.volunteer_type && (
-              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-                <h4
-                  style={{
-                    margin: "0 0 12px 0",
-                    fontSize: 14,
-                    color: muted,
-                    borderBottom: `2px solid ${colors.borderMuted}`,
-                    paddingBottom: spacing.sm,
-                  }}
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
+                <StatusPill
+                  tone={viewingVolunteer.active ? "active" : "inactive"}
                 >
-                  🏊 סוג מתנדב
-                </h4>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px 24px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 12, color: muted }}>סוג</div>
-                    <div style={{ fontWeight: 600 }}>
-                      {viewingVolunteer.volunteer_type}
-                    </div>
-                  </div>
-
-                  {viewingVolunteer.volunteer_type === "מדיה" && (
-                    <>
-                      {viewingVolunteer.media_specialization && (
-                        <div>
-                          <div style={{ fontSize: 12, color: muted }}>
-                            התמחות
-                          </div>
-                          <div>{viewingVolunteer.media_specialization}</div>
-                        </div>
-                      )}
-                      {viewingVolunteer.availability && (
-                        <div style={{ gridColumn: "1 / -1" }}>
-                          <div style={{ fontSize: 12, color: muted }}>
-                            זמינות
-                          </div>
-                          <div style={{ whiteSpace: "pre-wrap" }}>
-                            {viewingVolunteer.availability}
-                          </div>
-                        </div>
-                      )}
-                      {viewingVolunteer.personal_website && (
-                        <div>
-                          <div style={{ fontSize: 12, color: muted }}>
-                            אתר אישי
-                          </div>
-                          <a
-                            href={viewingVolunteer.personal_website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: colors.accent }}
-                          >
-                            {viewingVolunteer.personal_website}
-                          </a>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                  {viewingVolunteer.active ? "פעיל" : "לא פעיל"}
+                </StatusPill>
               </div>
-            )}
-
-            {/* פרטי התנדבות */}
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <h4
-                style={{
-                  margin: "0 0 12px 0",
-                  fontSize: 14,
-                  color: muted,
-                  borderBottom: `2px solid ${colors.borderMuted}`,
-                  paddingBottom: spacing.sm,
-                }}
-              >
-                🏄 פרטי התנדבות
-              </h4>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "12px 24px",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>
-                    תאריך הצטרפות
-                  </div>
-                  <div>
-                    {viewingVolunteer.join_date
-                      ? new Date(viewingVolunteer.join_date).toLocaleDateString(
-                          "he-IL"
-                        )
-                      : "—"}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>תאריך הדרכה</div>
-                  <div>
-                    {viewingVolunteer.training_date
-                      ? new Date(
-                          viewingVolunteer.training_date
-                        ).toLocaleDateString("he-IL")
-                      : "—"}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>
-                    סה"כ פעילויות
-                  </div>
-                  <div style={{ fontWeight: 600, fontSize: 18 }}>
-                    {viewingVolunteer.total_activities || 0}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>רמת קשר לים</div>
-                  <div>
-                    {viewingVolunteer.sea_connection_level !== null &&
-                    viewingVolunteer.sea_connection_level !== undefined
-                      ? SEA_CONNECTION_LEVEL_OPTIONS[
-                          viewingVolunteer.sea_connection_level
-                        ]?.label || "—"
-                      : "—"}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
-                  <div>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "4px 8px",
-                        borderRadius: radii.button,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: viewingVolunteer.active
-                          ? colors.successSoft
-                          : colors.dangerSoft,
-                        color: viewingVolunteer.active
-                          ? colors.success
-                          : colors.danger,
-                      }}
-                    >
-                      {viewingVolunteer.active ? "פעיל" : "לא פעיל"}
-                    </span>
-                  </div>
-                </div>
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>תוכנית</div>
+                <div>{viewingVolunteer.program || "—"}</div>
               </div>
-            </div>
-
-            {/* מסמכים */}
-            {viewingDocuments.length > 0 && (
-              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-                <h4
-                  style={{
-                    margin: "0 0 12px 0",
-                    fontSize: 14,
-                    color: muted,
-                    borderBottom: `2px solid ${colors.borderMuted}`,
-                    paddingBottom: spacing.sm,
-                  }}
-                >
-                  📄 מסמכים
-                </h4>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: spacing.sm,
-                  }}
-                >
-                  {viewingDocuments.map((doc, idx) => (
-                    <div
-                      key={`${doc.name}-${idx}`}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 12px",
-                        borderRadius: radii.card,
-                        border: `1px solid ${colors.borderMuted}`,
-                        background: colors.surfaceAlt,
-                        gap: spacing.md,
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{doc.name}</div>
-                        <div style={{ fontSize: 12, color: muted }}>
-                          {doc.mime || "קובץ"}
-                          {doc.uploadedAt || doc.uploadDate
-                            ? ` · ${new Date(
-                                doc.uploadedAt || doc.uploadDate!
-                              ).toLocaleDateString("he-IL")}`
-                            : ""}
-                        </div>
-                      </div>
-                      {buildDocumentDataUrl(doc) && (
-                        <a
-                          href={buildDocumentDataUrl(doc)}
-                          download={doc.name}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={secondaryLinkStyle}
-                        >
-                          הורד
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
+              <div>
+                <div style={{ fontSize: 12, color: muted }}>קבוצה</div>
+                <div>{viewingVolunteer.group_name || "—"}</div>
               </div>
-            )}
+            </Section>
 
-            {/* הערות */}
-            {viewingVolunteer.notes && (
-              <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-                <h4
-                  style={{
-                    margin: "0 0 12px 0",
-                    fontSize: 14,
-                    color: muted,
-                    borderBottom: `2px solid ${colors.borderMuted}`,
-                    paddingBottom: spacing.sm,
-                  }}
-                >
-                  📝 הערות
-                </h4>
-                <div style={{ whiteSpace: "pre-wrap" }}>
-                  {viewingVolunteer.notes}
+            <Section
+              title={`פעילויות (${viewDetail?.activities?.length || 0})`}
+              style={{ background: colors.surface }}
+            >
+              {viewDetailLoading ? (
+                <div style={{ textAlign: "center", color: muted }}>
+                  טוען פעילויות...
                 </div>
-              </div>
-            )}
+              ) : !viewDetail?.activities?.length ? (
+                <div style={{ color: muted, fontSize: 13 }}>
+                  אין פעילויות קודמות.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ ...tableStyle, minWidth: 520 }}>
+                    <thead>
+                      <tr>
+                        <th style={tableHeaderStyle}>תאריך</th>
+                        <th style={tableHeaderStyle}>סוג</th>
+                        <th style={tableHeaderStyle}>גולש</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewDetail.activities.map((a) => (
+                        <tr key={a.activity_id}>
+                          <td style={tableCellStyle}>
+                            {a.activity_date
+                              ? new Date(a.activity_date).toLocaleDateString(
+                                  "he-IL"
+                                )
+                              : "—"}
+                          </td>
+                          <td style={tableCellStyle}>{a.kind || "—"}</td>
+                          <td style={tableCellStyle}>{a.surfer_name || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
+
+            <Section
+              title={`גולשים שסייע (${
+                viewDetail?.supportedSurfers?.length || 0
+              })`}
+              style={{ background: colors.surface }}
+            >
+              {viewDetailLoading ? (
+                <div style={{ textAlign: "center", color: muted }}>
+                  טוען שיוכים...
+                </div>
+              ) : !viewDetail?.supportedSurfers?.length ? (
+                <div style={{ color: muted, fontSize: 13 }}>
+                  אין שיוכי צוות לגולשים.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ ...tableStyle, minWidth: 520 }}>
+                    <thead>
+                      <tr>
+                        <th style={tableHeaderStyle}>שם</th>
+                        <th style={tableHeaderStyle}>תוכנית</th>
+                        <th style={tableHeaderStyle}>סטטוס</th>
+                        <th style={tableHeaderStyle}>קבוצה</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewDetail.supportedSurfers.map((s) => (
+                        <tr key={s.national_id}>
+                          <td style={{ ...tableCellStyle, fontWeight: 600 }}>
+                            {s.full_name}
+                          </td>
+                          <td style={tableCellStyle}>{s.program || "—"}</td>
+                          <td style={tableCellStyle}>{s.status || "—"}</td>
+                          <td style={tableCellStyle}>{s.group_name || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
           </>
         )}
       </Modal>
     </div>
+  );
+}
+
+function VolunteersHomeTab({
+  loading,
+  summary,
+  volunteers,
+  taskForm,
+  onTaskChange,
+  onCreateTask,
+  submittingTask,
+  onRefreshSummary,
+  tasksLoading,
+  onToggleTaskStatus,
+  onDeleteTask,
+  onUpdateTask,
+}: {
+  loading: boolean;
+  summary: VolunteerSummaryData;
+  volunteers: Volunteer[];
+  taskForm: TaskFormState;
+  onTaskChange: (next: TaskFormState) => void;
+  onCreateTask: () => void;
+  submittingTask: boolean;
+  onRefreshSummary: () => void;
+  tasksLoading: boolean;
+  onToggleTaskStatus: (task: VolunteerNote, nextStatus: NoteStatus) => void;
+  onDeleteTask: (taskId: string) => void;
+  onUpdateTask: (
+    taskId: string,
+    payload: { title: string; body: string; due_date: string }
+  ) => void;
+}) {
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [taskEditDraft, setTaskEditDraft] = useState<{
+    title: string;
+    body: string;
+    due_date: string;
+  }>({ title: "", body: "", due_date: "" });
+
+  const startEdit = (task: VolunteerNote) => {
+    setEditingTaskId(task.note_id);
+    setTaskEditDraft({
+      title: task.title || "",
+      body: task.body || "",
+      due_date: task.due_date || "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingTaskId(null);
+    setTaskEditDraft({ title: "", body: "", due_date: "" });
+  };
+
+  const saveEdit = async () => {
+    if (!editingTaskId) return;
+    await onUpdateTask(editingTaskId, taskEditDraft);
+    cancelEdit();
+  };
+  const statsCards = [
+    { label: "סה״כ מתנדבים", value: summary.stats.total },
+    { label: "פעילים", value: summary.stats.active },
+    { label: "מאושרים", value: summary.stats.approved },
+    { label: "ממתינים", value: summary.stats.pending },
+    { label: "משויכים", value: summary.stats.grouped },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+      <Card>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: spacing.sm,
+            marginBottom: spacing.sm,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>מבט כללי · מתנדבים</h3>
+            <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+              סטטוסים ומדדים מרכזיים של צוות המתנדבים
+            </p>
+          </div>
+          <SmallActionButton variant="secondary" onClick={onRefreshSummary}>
+            רענן
+          </SmallActionButton>
+        </div>
+        {loading ? (
+          <div style={{ padding: spacing.lg, textAlign: "center" }}>
+            טוען נתונים...
+          </div>
+        ) : (
+          <StatCardGrid stats={statsCards} />
+        )}
+      </Card>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.2fr 1fr",
+          gap: spacing.lg,
+        }}
+      >
+        <Card style={{ padding: spacing.lg }}>
+          <h4 style={{ margin: "0 0 12px 0" }}>משימות / פתקים</h4>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.md,
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: spacing.sm,
+              }}
+            >
+              <div>
+                <label style={labelStyle}>שיוך למתנדב</label>
+                <select
+                  style={inputStyle}
+                  value={taskForm.volunteer_id}
+                  onChange={(e) =>
+                    onTaskChange({ ...taskForm, volunteer_id: e.target.value })
+                  }
+                >
+                  <option value="">בחר מתנדב</option>
+                  {volunteers.map((v) => (
+                    <option key={v.national_id} value={v.national_id}>
+                      {v.full_name} ({v.national_id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>תאריך יעד</label>
+                <input
+                  type="date"
+                  style={inputStyle}
+                  value={taskForm.due_date}
+                  onChange={(e) =>
+                    onTaskChange({ ...taskForm, due_date: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 2fr",
+                gap: spacing.sm,
+              }}
+            >
+              <div>
+                <label style={labelStyle}>כותרת</label>
+                <input
+                  style={inputStyle}
+                  value={taskForm.title}
+                  onChange={(e) =>
+                    onTaskChange({ ...taskForm, title: e.target.value })
+                  }
+                  placeholder="למשל: לתאם הדרכה"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>תוכן</label>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 70 }}
+                  value={taskForm.body}
+                  onChange={(e) =>
+                    onTaskChange({ ...taskForm, body: e.target.value })
+                  }
+                  placeholder="תיאור המשימה או הפתק"
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: spacing.sm,
+              }}
+            >
+              <SmallActionButton
+                variant="secondary"
+                onClick={() => onTaskChange(createEmptyTaskForm())}
+              >
+                ניקוי
+              </SmallActionButton>
+              <SmallActionButton
+                onClick={onCreateTask}
+                disabled={submittingTask}
+              >
+                {submittingTask ? "שומר..." : "שמור פתק"}
+              </SmallActionButton>
+            </div>
+          </div>
+          <div
+            style={{
+              marginTop: spacing.lg,
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.sm,
+            }}
+          >
+            {(tasksLoading || summary.tasks.length === 0) && (
+              <div style={{ color: muted, fontSize: 13 }}>
+                {tasksLoading ? "טוען משימות..." : "אין משימות. צור אחת חדשה."}
+              </div>
+            )}
+            {summary.tasks.map((task) => (
+              <div
+                key={task.note_id}
+                style={{
+                  padding: spacing.sm,
+                  borderRadius: radii.card,
+                  border: `1px solid ${colors.borderMuted}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                }}
+              >
+                {editingTaskId === task.note_id ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: spacing.xs,
+                    }}
+                  >
+                    <input
+                      style={inputStyle}
+                      value={taskEditDraft.title}
+                      onChange={(e) =>
+                        setTaskEditDraft((prev) => ({
+                          ...prev,
+                          title: e.target.value,
+                        }))
+                      }
+                      placeholder="כותרת"
+                    />
+                    <textarea
+                      style={{ ...inputStyle, minHeight: 70 }}
+                      value={taskEditDraft.body}
+                      onChange={(e) =>
+                        setTaskEditDraft((prev) => ({
+                          ...prev,
+                          body: e.target.value,
+                        }))
+                      }
+                      placeholder="תיאור המשימה"
+                    />
+                    <input
+                      type="date"
+                      style={inputStyle}
+                      value={taskEditDraft.due_date || ""}
+                      onChange={(e) =>
+                        setTaskEditDraft((prev) => ({
+                          ...prev,
+                          due_date: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: spacing.sm,
+                      }}
+                    >
+                      <strong>{task.title || "פתק ללא כותרת"}</strong>
+                      <StatusPill
+                        tone={
+                          task.status === "done"
+                            ? "success"
+                            : task.status === "cancelled"
+                            ? "danger"
+                            : "warning"
+                        }
+                      >
+                        {task.status === "done"
+                          ? "סגור"
+                          : task.status === "cancelled"
+                          ? "בוטל"
+                          : task.status === "in_progress"
+                          ? "בתהליך"
+                          : "פתוח"}
+                      </StatusPill>
+                    </div>
+                    <div style={{ color: muted, fontSize: 13 }}>
+                      {task.body}
+                    </div>
+                    <div style={{ fontSize: 12, color: muted }}>
+                      תאריך יעד:{" "}
+                      {task.due_date
+                        ? new Date(task.due_date).toLocaleDateString("he-IL")
+                        : "—"}
+                    </div>
+                    <div style={{ fontSize: 11, color: muted }}>
+                      נוצר ע"י {task.created_by || "—"} ·{" "}
+                      {task.created_at
+                        ? new Date(task.created_at).toLocaleString("he-IL")
+                        : "—"}
+                    </div>
+                  </>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: spacing.xs,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  {editingTaskId === task.note_id ? (
+                    <>
+                      <SmallActionButton
+                        variant="secondary"
+                        onClick={saveEdit}
+                        style={{ fontSize: 12 }}
+                      >
+                        שמור
+                      </SmallActionButton>
+                      <SmallActionButton
+                        variant="secondary"
+                        onClick={cancelEdit}
+                        style={{ fontSize: 12 }}
+                      >
+                        ביטול
+                      </SmallActionButton>
+                    </>
+                  ) : (
+                    <SmallActionButton
+                      variant="secondary"
+                      onClick={() => startEdit(task)}
+                      style={{ fontSize: 12 }}
+                    >
+                      עריכה
+                    </SmallActionButton>
+                  )}
+                  <SmallActionButton
+                    variant="secondary"
+                    onClick={() =>
+                      onToggleTaskStatus(
+                        task,
+                        task.status === "done" ? "open" : "done"
+                      )
+                    }
+                    style={{ fontSize: 12 }}
+                  >
+                    {task.status === "done" ? "פתח" : "סגור"}
+                  </SmallActionButton>
+                  <SmallActionButton
+                    variant="secondary"
+                    style={{ color: colors.danger, fontSize: 12 }}
+                    onClick={() => onDeleteTask(task.note_id)}
+                  >
+                    מחיקה
+                  </SmallActionButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card style={{ padding: spacing.lg }}>
+          <h4 style={{ margin: "0 0 12px 0" }}>פעילות אחרונה</h4>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.sm,
+            }}
+          >
+            {summary.recentActivity.length === 0 && (
+              <div style={{ color: muted, fontSize: 13 }}>
+                לא נמצאה פעילות אחרונה.
+              </div>
+            )}
+            {summary.recentActivity.map((item) => (
+              <div
+                key={item.national_id}
+                style={{
+                  border: `1px solid ${colors.borderMuted}`,
+                  borderRadius: radii.card,
+                  padding: spacing.sm,
+                }}
+              >
+                <div
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
+                  <div style={{ fontWeight: 700 }}>{item.full_name}</div>
+                  <div style={{ color: muted, fontSize: 12 }}>
+                    {item.created_at
+                      ? new Date(item.created_at).toLocaleDateString("he-IL")
+                      : "—"}
+                  </div>
+                </div>
+                <div style={{ color: muted, fontSize: 13 }}>
+                  {item.program || "ללא תוכנית"} · {item.status || "—"}
+                </div>
+                <div style={{ fontSize: 12, color: muted }}>
+                  קבוצה: {item.group_name || "לא שויכה"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function VolunteersListTab({
+  loading,
+  error,
+  volunteers,
+  filters,
+  onFilterChange,
+  onClearFilters,
+  onRefresh,
+  onAdd,
+  onEdit,
+  onDelete,
+  onView,
+  drafts,
+  onResumeDraft,
+  onDeleteDraft,
+}: {
+  loading: boolean;
+  error: string | null;
+  volunteers: Volunteer[];
+  filters: VolunteerFilters;
+  onFilterChange: <K extends keyof VolunteerFilters>(
+    key: K,
+    value: VolunteerFilters[K]
+  ) => void;
+  onClearFilters: () => void;
+  onRefresh: () => void;
+  onAdd: () => void;
+  onEdit: (volunteer: Volunteer) => void;
+  onDelete: (id: string) => void;
+  onView: (volunteer: Volunteer) => void;
+  drafts: DraftEntry<VolunteerFormState>[];
+  onResumeDraft: (draftId: string) => void;
+  onDeleteDraft: (draftId: string) => void;
+}) {
+  return (
+    <Card
+      style={{
+        padding: spacing.lg,
+        display: "flex",
+        flexDirection: "column",
+        gap: spacing.md,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: spacing.sm,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2 style={{ margin: 0 }}>רשימת מתנדבים</h2>
+          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            ניהול ועריכת כל המתנדבים במערכת.
+          </p>
+          {error && (
+            <p style={{ marginTop: 4, color: colors.danger, fontSize: 12 }}>
+              {error}
+            </p>
+          )}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: spacing.sm,
+            alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <SmallActionButton variant="secondary" onClick={onRefresh}>
+            רענן
+          </SmallActionButton>
+          <SmallActionButton variant="secondary" onClick={onClearFilters}>
+            ניקוי פילטרים
+          </SmallActionButton>
+          <Button onClick={onAdd}>+ מתנדב חדש</Button>
+        </div>
+      </div>
+
+      {drafts.length > 0 && (
+        <DraftList
+          drafts={drafts}
+          title={`טיוטות שמורות (${drafts.length})`}
+          description="טיוטות אלו זמינות עבורך בלבד עד לשמירה סופית."
+          onResume={onResumeDraft}
+          onDelete={onDeleteDraft}
+          badgeLabel="טיוטה"
+          getTitle={(draft) => draft.payload.full_name || "מתנדב ללא שם"}
+          getSubtitle={(draft) =>
+            `עודכן ${new Date(draft.updatedAt).toLocaleString("he-IL")}`
+          }
+        />
+      )}
+
+      <FilterToolbar columns="repeat(auto-fit, minmax(200px, 1fr))">
+        <input
+          style={filterControlStyle}
+          placeholder="חיפוש לפי שם, ת.ז, טלפון או אימייל"
+          value={filters.search}
+          onChange={(e) => onFilterChange("search", e.target.value)}
+        />
+        <select
+          style={filterControlStyle}
+          value={filters.status}
+          onChange={(e) =>
+            onFilterChange(
+              "status",
+              e.target.value as VolunteerFilters["status"]
+            )
+          }
+        >
+          <option value="all">כל המצבים</option>
+          <option value="active">פעילים</option>
+          <option value="inactive">לא פעילים</option>
+          <option value="approved">מאושרים</option>
+          <option value="pending">ממתינים</option>
+        </select>
+        <select
+          style={filterControlStyle}
+          value={filters.program}
+          onChange={(e) => onFilterChange("program", e.target.value)}
+        >
+          <option value="">כל התוכניות</option>
+          {PROGRAM_OPTIONS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </FilterToolbar>
+
+      {loading ? (
+        <div style={{ textAlign: "center" }}>טוען מתנדבים...</div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={tableHeaderStyle}>ת.ז.</th>
+                <th style={tableHeaderStyle}>שם מלא</th>
+                <th style={tableHeaderStyle}>תוכנית</th>
+                <th style={tableHeaderStyle}>קבוצה</th>
+                <th style={tableHeaderStyle}>סטטוס</th>
+                <th style={tableHeaderStyle}>טלפון</th>
+                <th style={tableHeaderStyle}>פעיל</th>
+                <th style={tableHeaderStyle}>פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {volunteers.map((v) => (
+                <tr key={v.national_id}>
+                  <td style={tableCellStyle}>{v.national_id}</td>
+                  <td style={{ ...tableCellStyle, fontWeight: 700 }}>
+                    {v.full_name}
+                  </td>
+                  <td style={tableCellStyle}>{v.program || "—"}</td>
+                  <td style={tableCellStyle}>{v.group_name || "לא שויכה"}</td>
+                  <td style={tableCellStyle}>{v.status || "—"}</td>
+                  <td style={tableCellStyle}>{formatPhoneNumber(v.phone)}</td>
+                  <td style={tableCellStyle}>
+                    <StatusPill tone={v.active ? "active" : "inactive"}>
+                      {v.active ? "פעיל" : "לא פעיל"}
+                    </StatusPill>
+                  </td>
+                  <td style={tableCellStyle}>
+                    <SmallActionButton
+                      variant="secondary"
+                      onClick={() => onView(v)}
+                      style={{ marginInlineEnd: spacing.xs }}
+                    >
+                      👁️
+                    </SmallActionButton>
+                    <SmallActionButton
+                      variant="secondary"
+                      onClick={() => onEdit(v)}
+                      style={{ marginInlineEnd: spacing.xs }}
+                    >
+                      ✏️
+                    </SmallActionButton>
+                    <SmallActionButton
+                      variant="secondary"
+                      style={{ color: colors.danger }}
+                      onClick={() => onDelete(v.national_id)}
+                    >
+                      🗑️
+                    </SmallActionButton>
+                  </td>
+                </tr>
+              ))}
+              {volunteers.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    style={{ ...tableCellStyle, textAlign: "center" }}
+                  >
+                    לא נמצאו מתנדבים. לחץ על "מתנדב חדש" כדי להתחיל.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function SettingsTab() {
+  return (
+    <Card>
+      <Section title="הגדרות מתנדבים" subtitle="בקרוב">
+        <div style={{ color: muted }}>תוכן ההגדרות יתווסף בהמשך.</div>
+      </Section>
+    </Card>
   );
 }

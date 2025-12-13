@@ -8,7 +8,8 @@ export type DraftType =
   | "donor"
   | "supplier"
   | "surfer"
-  | "group";
+  | "group"
+  | "volunteer";
 
 export type DraftEntry<T> = {
   id: string;

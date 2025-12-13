@@ -16,13 +16,31 @@ function getPermissionKey(entityType: string) {
   return config?.pageKey ?? "dashboard";
 }
 
+const ALLOWED_STATUSES = new Set([
+  "open",
+  "in_progress",
+  "done",
+  "cancelled",
+  "closed", // legacy
+  "pending", // legacy -> normalize to open
+]);
+
+function normalizeStatus(raw?: string | null) {
+  if (!raw) return "open";
+  const value = raw.toLowerCase();
+  if (value === "pending") return "open";
+  if (ALLOWED_STATUSES.has(value)) return value;
+  return "open";
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const entityType = searchParams.get("entityType");
+    const entityType =
+      searchParams.get("entityType") ?? searchParams.get("entity_type");
     if (!entityType) {
       return NextResponse.json(
-        { error: "entityType query parameter is required" },
+        { error: "entityType (or entity_type) query parameter is required" },
         { status: 400 }
       );
     }
@@ -32,7 +50,8 @@ export async function GET(req: Request) {
     );
     if (!permission.allowed) return permission.response;
 
-    const entityId = searchParams.get("entityId");
+    const entityId =
+      searchParams.get("entityId") ?? searchParams.get("entity_id");
     const limit = Math.min(
       Number(searchParams.get("limit") ?? 50) || 50,
       200
@@ -105,6 +124,7 @@ export async function POST(req: Request) {
     if (!permission.allowed) return permission.response;
 
     const session = permission.session!;
+    const normalizedStatus = normalizeStatus(status);
 
     const insertResult = await query(
       `
@@ -135,16 +155,38 @@ export async function POST(req: Request) {
         entity_id,
         title,
         body: noteBody,
-        status,
+        status: normalizedStatus,
         priority,
         due_date,
         created_by: session.national_id,
       }
     );
 
+    const note = insertResult.recordset[0];
+
+    // Write initial status history
+    await query(
+      `
+        INSERT INTO note_status_history (
+          note_id,
+          old_status,
+          new_status,
+          changed_by,
+          changed_at
+        )
+        VALUES (@note_id, @old_status, @new_status, @changed_by, SYSUTCDATETIME())
+      `,
+      {
+        note_id: note.note_id,
+        old_status: null,
+        new_status: normalizedStatus,
+        changed_by: session.national_id,
+      }
+    );
+
     return NextResponse.json({
       success: true,
-      note: insertResult.recordset[0],
+      note,
     });
   } catch (err: any) {
     console.error("Error creating note:", err);

@@ -52,7 +52,7 @@ type DonorTask = {
   donorName: string;
   summary: string;
   dueDate?: string | null;
-  status: "pending" | "done";
+  status: string;
   emphasis: "call" | "meet" | "thank-you";
 };
 
@@ -74,7 +74,9 @@ type DonorFilters = {
 type HomeTabProps = {
   stats: DonorStats;
   tasks: DonorTask[];
-  onToggleTask: (taskId: string) => void;
+  onUpdateTask: (taskId: string, payload: Partial<Pick<DonorTask, "summary" | "dueDate" | "status">>) => void;
+  onDeleteTask: (taskId: string) => void;
+  onCycleStatus: (taskId: string) => void;
   onRefresh: () => void;
   loading: boolean;
 };
@@ -122,6 +124,25 @@ const defaultStats: DonorStats = {
   total_donations: 0,
   highest_donation: 0,
   average_donation: 0,
+};
+
+const TASK_STATUSES = [
+  { value: "not-started", label: "לא התחיל", tone: "warning" as const },
+  { value: "in-progress", label: "בתהליך", tone: "info" as const },
+  { value: "done", label: "הסתיים", tone: "success" as const },
+  { value: "cancelled", label: "בוטל", tone: "danger" as const },
+] as const;
+
+const normalizeStatus = (value?: string | null) => {
+  if (!value) return "not-started";
+  if (value === "pending" || value === "open") return "not-started";
+  return TASK_STATUSES.some((s) => s.value === value) ? value : "not-started";
+};
+
+const nextStatus = (current: string) => {
+  const norm = normalizeStatus(current);
+  const idx = TASK_STATUSES.findIndex((s) => s.value === norm);
+  return TASK_STATUSES[(idx + 1) % TASK_STATUSES.length].value;
 };
 
 const formatCurrency = (value?: number | null) => {

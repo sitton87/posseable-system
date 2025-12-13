@@ -338,6 +338,52 @@ export type SupplierActivityLog = {
   occurred_at: string;
 };
 
+// Notes (shared)
+export type NoteStatus = "open" | "in_progress" | "done" | "cancelled";
+export type NotePriority = "low" | "normal" | "high";
+
+export type Note = {
+  note_id: string;
+  entity_type: string;
+  entity_id: string;
+  title: string | null;
+  body: string;
+  status: NoteStatus;
+  priority: NotePriority | null;
+  due_date: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_by: string | null;
+  updated_at: string | null;
+};
+
+export type NoteHistoryEntry = {
+  id: string;
+  note_id: string;
+  old_status: NoteStatus | null;
+  new_status: NoteStatus;
+  changed_by: string | null;
+  changed_at: string;
+};
+
+export type CreateNotePayload = {
+  entity_type: string;
+  entity_id: string;
+  title?: string | null;
+  body: string;
+  status?: NoteStatus;
+  priority?: NotePriority;
+  due_date?: string | null;
+};
+
+export type UpdateNotePayload = {
+  title?: string | null;
+  body?: string | null;
+  status?: NoteStatus;
+  priority?: NotePriority | null;
+  due_date?: string | null;
+};
+
 // API Response types
 export type ApiResponse<T> = {
   success: boolean;

@@ -5,8 +5,9 @@ import { useSearchParams } from "next/navigation";
 import type {
   Supplier,
   SupplierStats,
-  SupplierNote,
   SupplierActivityLog,
+  Note,
+  NoteStatus,
 } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import {
@@ -82,8 +83,18 @@ type TaskFormState = {
 
 type SupplierSummaryData = {
   stats: SupplierStats;
-  tasks: SupplierNote[];
+  tasks: Note[];
   recentActivity: SupplierActivityLog[];
+};
+
+const normalizeStatus = (value?: string | null): NoteStatus => {
+  if (!value) return "open";
+  const v = value.toLowerCase();
+  if (v === "pending") return "open";
+  if (v === "closed") return "done";
+  return ["open", "in_progress", "done", "cancelled"].includes(v)
+    ? (v as NoteStatus)
+    : "open";
 };
 
 const createEmptyFormState = (): FormState => ({
@@ -253,7 +264,10 @@ export default function SuppliersPage() {
       }
       setSummary({
         stats: data.stats,
-        tasks: data.tasks,
+        tasks: (data.tasks || []).map((t: Note) => ({
+          ...t,
+          status: normalizeStatus(t.status),
+        })),
         recentActivity: data.recentActivity,
       });
     } catch (err: any) {
@@ -315,8 +329,8 @@ export default function SuppliersPage() {
   };
 
   const handleToggleTaskStatus = async (
-    task: SupplierNote,
-    nextStatus: "open" | "done"
+    task: Note,
+    nextStatus: NoteStatus
   ) => {
     try {
       await fetch(`/api/notes/${task.note_id}`, {
@@ -738,7 +752,7 @@ function SupplierHomeTab({
                 const supplierName =
                   suppliers.find((s) => s.supplier_identifier === task.entity_id)
                     ?.name || task.entity_id;
-                const done = task.status === "done";
+              const done = task.status === "done";
                 return (
                   <div
                     key={task.note_id}
@@ -746,7 +760,12 @@ function SupplierHomeTab({
                       border: `1px solid ${colors.border}`,
                       borderRadius: radii.card,
                       padding: spacing.sm,
-                      background: done ? colors.successSoft : colors.surface,
+                    background:
+                      task.status === "done"
+                        ? colors.successSoft
+                        : task.status === "cancelled"
+                        ? colors.dangerSoft
+                        : colors.surface,
                       display: "flex",
                       flexDirection: "column",
                       gap: 4,
@@ -765,7 +784,10 @@ function SupplierHomeTab({
                     <div style={{ fontSize: 13, color: muted }}>{supplierName}</div>
                     <div style={{ fontSize: 13 }}>{task.body}</div>
                     <div style={{ fontSize: 11, color: muted }}>
-                      נוצר ב-{new Date(task.created_at).toLocaleString("he-IL")}
+                      נוצר ע"י {task.created_by || "—"} ·{" "}
+                      {task.created_at
+                        ? new Date(task.created_at).toLocaleString("he-IL")
+                        : "—"}
                       {task.due_date && ` · יעד ${new Date(task.due_date).toLocaleDateString("he-IL")}`}
                     </div>
                   </div>

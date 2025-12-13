@@ -157,6 +157,21 @@ export default function Navbar() {
       href: "/volunteers",
       icon: <Users size={22} />,
       label: "מתנדבים",
+      children: [
+        { href: "/volunteers", label: "דף הבית", pageKey: "volunteers" },
+        {
+          href: "/volunteers",
+          label: "רשימת מתנדבים",
+          pageKey: "volunteers-list",
+          query: { view: "list" },
+        },
+        {
+          href: "/volunteers",
+          label: "הגדרות",
+          pageKey: "volunteers-settings",
+          query: { view: "settings" },
+        },
+      ],
     },
     {
       pageKey: "seasons",
