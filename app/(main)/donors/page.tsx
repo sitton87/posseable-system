@@ -8,6 +8,8 @@ import {
   DraftList,
   FilterToolbar,
   StatCardGrid,
+  TasksBoard,
+  TaskEntityOption,
 } from "@/app/components/shared";
 import {
   inputStyle,
@@ -73,10 +75,7 @@ type DonorFilters = {
 
 type HomeTabProps = {
   stats: DonorStats;
-  tasks: DonorTask[];
-  onUpdateTask: (taskId: string, payload: Partial<Pick<DonorTask, "summary" | "dueDate" | "status">>) => void;
-  onDeleteTask: (taskId: string) => void;
-  onCycleStatus: (taskId: string) => void;
+  donors: Donor[];
   onRefresh: () => void;
   loading: boolean;
 };
@@ -232,13 +231,7 @@ const buildTasks = (donors: Donor[]): DonorTask[] => {
   return tasks;
 };
 
-function DonorsHomeTab({
-  stats,
-  tasks,
-  onToggleTask,
-  onRefresh,
-  loading,
-}: HomeTabProps) {
+function DonorsHomeTab({ stats, donors, onRefresh, loading }: HomeTabProps) {
   const statCards = [
     { label: 'סה"כ תורמים', value: stats.total_donors },
     {
@@ -255,92 +248,118 @@ function DonorsHomeTab({
     },
   ];
 
+  const donorEntities: TaskEntityOption[] = donors.map((d) => ({
+    id: d.national_id,
+    name: d.full_name,
+    subtitle: d.organization || undefined,
+  }));
+
+  // נגזור את הפעילות האחרונה (תורמים שתרמו לאחרונה)
+  const recentActivity = useMemo(() => {
+    return [...donors]
+      .filter((d) => d.last_donation_date)
+      .sort((a, b) => {
+        const dateA = new Date(a.last_donation_date!).getTime();
+        const dateB = new Date(b.last_donation_date!).getTime();
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+  }, [donors]);
+
   return (
-    <Card>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: spacing.sm,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>דף הבית · תורמים</h2>
-          <p style={{ margin: "4px 0 0", color: muted, fontSize: 13 }}>
-            מבט על בריאות מערך התורמים ומעקב משימות.
-          </p>
-        </div>
-        <Button variant="secondary" onClick={onRefresh} disabled={loading}>
-          רענן נתונים
-        </Button>
-      </div>
-      <div style={{ marginTop: spacing.lg }}>
-        <StatCardGrid stats={statCards} />
-      </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: spacing.md,
-          gap: spacing.sm,
-        }}
-      >
-        <div>
-          <h3 style={{ margin: 0 }}>משימות מעקב</h3>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            את מי צריך לעדכן, להודות או לחזק.
-          </p>
-        </div>
-      </div>
-      {tasks.length === 0 ? (
-        <div style={{ padding: spacing.lg, color: muted, textAlign: "center" }}>
-          אין משימות פתוחות כעת.
-        </div>
-      ) : (
+    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+      <Card>
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
             gap: spacing.sm,
+            marginBottom: spacing.md,
           }}
         >
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              style={{
-                border: `1px solid ${colors.borderMuted}`,
-                borderRadius: radii.card,
-                padding: spacing.md,
-                display: "flex",
-                alignItems: "center",
-                gap: spacing.md,
-                background:
-                  task.status === "done" ? colors.successSoft : colors.surface,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={task.status === "done"}
-                onChange={() => onToggleTask(task.id)}
-                aria-label={`סמן משימה עבור ${task.donorName}`}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{task.donorName}</div>
-                <div style={{ color: muted, fontSize: 13 }}>{task.summary}</div>
-              </div>
-              {task.dueDate && (
-                <div style={{ fontSize: 13, color: muted }}>
-                  עדכון אחרון: {formatDate(task.dueDate)}
-                </div>
-              )}
-            </div>
-          ))}
+          <div>
+            <h3 style={{ margin: 0 }}>דף הבית · תורמים</h3>
+            <p style={{ margin: "4px 0 0", color: muted, fontSize: 13 }}>
+              מבט על בריאות מערך התורמים ומעקב משימות.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={onRefresh} disabled={loading}>
+            רענן נתונים
+          </Button>
         </div>
-      )}
-    </Card>
+        <StatCardGrid stats={statCards} />
+      </Card>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.2fr 1fr",
+          gap: spacing.lg,
+        }}
+      >
+        <TasksBoard
+          entityType="donor"
+          entities={donorEntities}
+          title="משימות ופתקים (תורמים)"
+        />
+
+        <Card style={{ padding: spacing.lg }}>
+          <h4 style={{ margin: "0 0 16px 0" }}>תרומות אחרונות</h4>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: spacing.sm,
+            }}
+          >
+            {recentActivity.length === 0 ? (
+              <div
+                style={{
+                  color: muted,
+                  textAlign: "center",
+                  padding: spacing.md,
+                }}
+              >
+                אין פעילות תרומות רשומה.
+              </div>
+            ) : (
+              recentActivity.map((donor) => (
+                <div
+                  key={donor.national_id}
+                  style={{
+                    padding: spacing.sm,
+                    border: `1px solid ${colors.borderMuted}`,
+                    borderRadius: radii.card,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>
+                      {donor.full_name}
+                    </div>
+                    <div style={{ fontSize: 12, color: muted }}>
+                      {donor.organization || "פרטי"}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>
+                      {formatDate(donor.last_donation_date)}
+                    </div>
+                    <div style={{ fontSize: 11, color: muted }}>
+                      תאריך תרומה
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }
 
@@ -482,7 +501,9 @@ function DonorListTab({
                       {formatDate(donor.last_donation_date)}
                     </td>
                     <td style={tableCellStyle}>
-                      <StatusPill tone={donor.is_active ? "active" : "inactive"}>
+                      <StatusPill
+                        tone={donor.is_active ? "active" : "inactive"}
+                      >
                         {donor.is_active ? "פעיל" : "לא פעיל"}
                       </StatusPill>
                     </td>
@@ -825,8 +846,7 @@ export default function DonorsPage() {
       {activeTab === "home" && (
         <DonorsHomeTab
           stats={stats}
-          tasks={tasks}
-          onToggleTask={handleToggleTask}
+          donors={donors}
           onRefresh={fetchDonors}
           loading={loading}
         />
@@ -867,7 +887,10 @@ export default function DonorsPage() {
           style={{ marginBottom: spacing.lg }}
           bodyStyle={{ gap: spacing.md }}
         >
-          <FormGrid columns="repeat(auto-fit, minmax(240px, 1fr))" gap={spacing.md}>
+          <FormGrid
+            columns="repeat(auto-fit, minmax(240px, 1fr))"
+            gap={spacing.md}
+          >
             <div>
               <label style={labelStyle}>
                 תעודת זהות <span style={{ color: colors.danger }}>*</span>
@@ -914,7 +937,10 @@ export default function DonorsPage() {
               }
             />
           </div>
-          <FormGrid columns="repeat(auto-fit, minmax(240px, 1fr))" gap={spacing.md}>
+          <FormGrid
+            columns="repeat(auto-fit, minmax(240px, 1fr))"
+            gap={spacing.md}
+          >
             <div>
               <label style={labelStyle}>טלפון</label>
               <input
@@ -1025,7 +1051,9 @@ export default function DonorsPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
-                  <StatusPill tone={viewingDonor.is_active ? "active" : "inactive"}>
+                  <StatusPill
+                    tone={viewingDonor.is_active ? "active" : "inactive"}
+                  >
                     {viewingDonor.is_active ? "פעיל" : "לא פעיל"}
                   </StatusPill>
                 </div>

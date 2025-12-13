@@ -18,6 +18,8 @@ import {
   Section,
   SmallActionButton,
   StatusPill,
+  TasksBoard,
+  type TaskEntityOption,
   sectionCardStyle,
 } from "@/app/components/shared";
 import {
@@ -273,12 +275,6 @@ export default function VolunteersPage() {
     deleteDraft: deleteVolunteerDraft,
   } = useDraftManager<VolunteerFormState>(volunteerDraftType);
 
-  const [taskForm, setTaskForm] = useState<TaskFormState>(
-    createEmptyTaskForm()
-  );
-  const [taskSubmitting, setTaskSubmitting] = useState(false);
-  const [tasksLoading, setTasksLoading] = useState(false);
-
   const fetchVolunteers = useCallback(async () => {
     try {
       setListLoading(true);
@@ -333,44 +329,10 @@ export default function VolunteersPage() {
         tasks: data.tasks || [],
         recentActivity: data.recentActivity || [],
       });
-      if (!data.tasks || data.tasks.length === 0) {
-        await loadTasksFallback();
-      }
     } catch (err) {
       console.error("Error loading summary:", err);
-      // fallback: load tasks בלבד אם חזרה שגיאה
-      await loadTasksFallback();
     } finally {
       setSummaryLoading(false);
-    }
-  }, []);
-
-  const loadTasksFallback = useCallback(async () => {
-    const attempt = async (url: string) => {
-      const res = await fetch(url, { credentials: "include" });
-      const data = await tryParseJson(res);
-      if (data?.success && Array.isArray(data.notes)) {
-        return (data.notes as VolunteerNote[]).map((t) => ({
-          ...t,
-          status: normalizeStatus(t.status),
-        }));
-      }
-      return null;
-    };
-
-    try {
-      setTasksLoading(true);
-      // נסה בשני פרמטרים נפוצים
-      const primary =
-        (await attempt("/api/notes?entity_type=volunteer")) ||
-        (await attempt("/api/notes?entityType=volunteer"));
-      if (primary) {
-        setSummary((prev) => ({ ...prev, tasks: primary }));
-      }
-    } catch (err) {
-      console.error("Error loading volunteer tasks fallback:", err);
-    } finally {
-      setTasksLoading(false);
     }
   }, []);
 
@@ -571,139 +533,6 @@ export default function VolunteersPage() {
     }
   }, []);
 
-  const handleTaskFormChange = <K extends keyof TaskFormState>(
-    key: K,
-    value: TaskFormState[K]
-  ) => {
-    setTaskForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleCreateTask = async () => {
-    if (!taskForm.volunteer_id || !taskForm.body.trim()) {
-      alert("בחר מתנדב והכנס תוכן למשימה/פתק");
-      return;
-    }
-    setTaskSubmitting(true);
-    try {
-      const res = await fetch("/api/notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          entity_type: "volunteer",
-          entity_id: taskForm.volunteer_id,
-          title: taskForm.title || "משימה",
-          body: taskForm.body,
-          status: TASK_STATUSES[0].value,
-          due_date: taskForm.due_date || null,
-        }),
-      });
-      const data = await tryParseJson(res);
-      if (!data.success) throw new Error(data.error || "יצירת משימה נכשלה");
-      setTaskForm(createEmptyTaskForm());
-      // עדכון מקומי מיידי כדי שיופיע בלי להמתין לרענון
-      if (data.note) {
-        setSummary((prev) => ({
-          ...prev,
-          tasks: [
-            ...prev.tasks,
-            { ...data.note, status: normalizeStatus(data.note.status) },
-          ],
-        }));
-      }
-      await fetchSummary();
-      await loadTasksFallback();
-    } catch (err: any) {
-      alert(err.message || "שגיאה ביצירת משימה");
-    } finally {
-      setTaskSubmitting(false);
-    }
-  };
-
-  const handleToggleTaskStatus = async (
-    task: VolunteerNote,
-    nextStatusValue: VolunteerNote["status"]
-  ) => {
-    try {
-      const normalized = normalizeStatus(nextStatusValue);
-      const res = await fetch(`/api/notes/${task.note_id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: normalized }),
-      });
-      await tryParseJson(res);
-      setSummary((prev) => ({
-        ...prev,
-        tasks: prev.tasks.map((t) =>
-          t.note_id === task.note_id ? { ...t, status: normalized } : t
-        ),
-      }));
-      await fetchSummary();
-      await loadTasksFallback();
-    } catch (err) {
-      console.error("Error updating task status:", err);
-      alert("שגיאה בעדכון סטטוס משימה");
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm("למחוק משימה זו?")) return;
-    try {
-      await fetch(`/api/notes/${taskId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      setSummary((prev) => ({
-        ...prev,
-        tasks: prev.tasks.filter((t) => t.note_id !== taskId),
-      }));
-      await fetchSummary();
-      await loadTasksFallback();
-    } catch (err) {
-      console.error("Error deleting task:", err);
-      alert("שגיאה במחיקת משימה");
-    }
-  };
-
-  const handleUpdateTask = async (
-    taskId: string,
-    payload: { title: string; body: string; due_date: string }
-  ) => {
-    try {
-      const res = await fetch(`/api/notes/${taskId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          title: payload.title || null,
-          body: payload.body || "",
-          due_date: payload.due_date || null,
-        }),
-      });
-      const data = await tryParseJson(res);
-      if (!data.success) throw new Error(data.error || "שמירת משימה נכשלה");
-      setSummary((prev) => ({
-        ...prev,
-        tasks: prev.tasks.map((t) =>
-          t.note_id === taskId
-            ? {
-                ...t,
-                title: payload.title || t.title,
-                body: payload.body ?? t.body,
-                due_date: payload.due_date || null,
-              }
-            : t
-        ),
-      }));
-      fetchSummary();
-      loadTasksFallback();
-    } catch (err: any) {
-      console.error("Error updating note:", err);
-      alert(err?.message || "שגיאה בעדכון משימה");
-    }
-  };
-
   const statsCards = [
     { label: "סה״כ מתנדבים", value: summary.stats.total },
     { label: "פעילים", value: summary.stats.active },
@@ -744,15 +573,7 @@ export default function VolunteersPage() {
           loading={summaryLoading}
           summary={summary}
           volunteers={volunteers}
-          taskForm={taskForm}
-          onTaskChange={setTaskForm}
-          onCreateTask={handleCreateTask}
-          submittingTask={taskSubmitting}
           onRefreshSummary={fetchSummary}
-          tasksLoading={tasksLoading}
-          onToggleTaskStatus={handleToggleTaskStatus}
-          onDeleteTask={handleDeleteTask}
-          onUpdateTask={handleUpdateTask}
         />
       )}
 
@@ -1132,58 +953,13 @@ function VolunteersHomeTab({
   loading,
   summary,
   volunteers,
-  taskForm,
-  onTaskChange,
-  onCreateTask,
-  submittingTask,
   onRefreshSummary,
-  tasksLoading,
-  onToggleTaskStatus,
-  onDeleteTask,
-  onUpdateTask,
 }: {
   loading: boolean;
   summary: VolunteerSummaryData;
   volunteers: Volunteer[];
-  taskForm: TaskFormState;
-  onTaskChange: (next: TaskFormState) => void;
-  onCreateTask: () => void;
-  submittingTask: boolean;
   onRefreshSummary: () => void;
-  tasksLoading: boolean;
-  onToggleTaskStatus: (task: VolunteerNote, nextStatus: NoteStatus) => void;
-  onDeleteTask: (taskId: string) => void;
-  onUpdateTask: (
-    taskId: string,
-    payload: { title: string; body: string; due_date: string }
-  ) => void;
 }) {
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [taskEditDraft, setTaskEditDraft] = useState<{
-    title: string;
-    body: string;
-    due_date: string;
-  }>({ title: "", body: "", due_date: "" });
-
-  const startEdit = (task: VolunteerNote) => {
-    setEditingTaskId(task.note_id);
-    setTaskEditDraft({
-      title: task.title || "",
-      body: task.body || "",
-      due_date: task.due_date || "",
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingTaskId(null);
-    setTaskEditDraft({ title: "", body: "", due_date: "" });
-  };
-
-  const saveEdit = async () => {
-    if (!editingTaskId) return;
-    await onUpdateTask(editingTaskId, taskEditDraft);
-    cancelEdit();
-  };
   const statsCards = [
     { label: "סה״כ מתנדבים", value: summary.stats.total },
     { label: "פעילים", value: summary.stats.active },
@@ -1191,6 +967,16 @@ function VolunteersHomeTab({
     { label: "ממתינים", value: summary.stats.pending },
     { label: "משויכים", value: summary.stats.grouped },
   ];
+
+  const volunteerEntities: TaskEntityOption[] = useMemo(
+    () =>
+      volunteers.map((v) => ({
+        id: v.national_id,
+        name: v.full_name,
+        subtitle: v.national_id,
+      })),
+    [volunteers]
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
@@ -1231,273 +1017,11 @@ function VolunteersHomeTab({
           gap: spacing.lg,
         }}
       >
-        <Card style={{ padding: spacing.lg }}>
-          <h4 style={{ margin: "0 0 12px 0" }}>משימות / פתקים</h4>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: spacing.sm,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>שיוך למתנדב</label>
-                <select
-                  style={inputStyle}
-                  value={taskForm.volunteer_id}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, volunteer_id: e.target.value })
-                  }
-                >
-                  <option value="">בחר מתנדב</option>
-                  {volunteers.map((v) => (
-                    <option key={v.national_id} value={v.national_id}>
-                      {v.full_name} ({v.national_id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>תאריך יעד</label>
-                <input
-                  type="date"
-                  style={inputStyle}
-                  value={taskForm.due_date}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, due_date: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 2fr",
-                gap: spacing.sm,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>כותרת</label>
-                <input
-                  style={inputStyle}
-                  value={taskForm.title}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, title: e.target.value })
-                  }
-                  placeholder="למשל: לתאם הדרכה"
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>תוכן</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 70 }}
-                  value={taskForm.body}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, body: e.target.value })
-                  }
-                  placeholder="תיאור המשימה או הפתק"
-                />
-              </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: spacing.sm,
-              }}
-            >
-              <SmallActionButton
-                variant="secondary"
-                onClick={() => onTaskChange(createEmptyTaskForm())}
-              >
-                ניקוי
-              </SmallActionButton>
-              <SmallActionButton
-                onClick={onCreateTask}
-                disabled={submittingTask}
-              >
-                {submittingTask ? "שומר..." : "שמור פתק"}
-              </SmallActionButton>
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: spacing.lg,
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            {(tasksLoading || summary.tasks.length === 0) && (
-              <div style={{ color: muted, fontSize: 13 }}>
-                {tasksLoading ? "טוען משימות..." : "אין משימות. צור אחת חדשה."}
-              </div>
-            )}
-            {summary.tasks.map((task) => (
-              <div
-                key={task.note_id}
-                style={{
-                  padding: spacing.sm,
-                  borderRadius: radii.card,
-                  border: `1px solid ${colors.borderMuted}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                }}
-              >
-                {editingTaskId === task.note_id ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: spacing.xs,
-                    }}
-                  >
-                    <input
-                      style={inputStyle}
-                      value={taskEditDraft.title}
-                      onChange={(e) =>
-                        setTaskEditDraft((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                      placeholder="כותרת"
-                    />
-                    <textarea
-                      style={{ ...inputStyle, minHeight: 70 }}
-                      value={taskEditDraft.body}
-                      onChange={(e) =>
-                        setTaskEditDraft((prev) => ({
-                          ...prev,
-                          body: e.target.value,
-                        }))
-                      }
-                      placeholder="תיאור המשימה"
-                    />
-                    <input
-                      type="date"
-                      style={inputStyle}
-                      value={taskEditDraft.due_date || ""}
-                      onChange={(e) =>
-                        setTaskEditDraft((prev) => ({
-                          ...prev,
-                          due_date: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: spacing.sm,
-                      }}
-                    >
-                      <strong>{task.title || "פתק ללא כותרת"}</strong>
-                      <StatusPill
-                        tone={
-                          task.status === "done"
-                            ? "success"
-                            : task.status === "cancelled"
-                            ? "danger"
-                            : "warning"
-                        }
-                      >
-                        {task.status === "done"
-                          ? "סגור"
-                          : task.status === "cancelled"
-                          ? "בוטל"
-                          : task.status === "in_progress"
-                          ? "בתהליך"
-                          : "פתוח"}
-                      </StatusPill>
-                    </div>
-                    <div style={{ color: muted, fontSize: 13 }}>
-                      {task.body}
-                    </div>
-                    <div style={{ fontSize: 12, color: muted }}>
-                      תאריך יעד:{" "}
-                      {task.due_date
-                        ? new Date(task.due_date).toLocaleDateString("he-IL")
-                        : "—"}
-                    </div>
-                    <div style={{ fontSize: 11, color: muted }}>
-                      נוצר ע"י {task.created_by || "—"} ·{" "}
-                      {task.created_at
-                        ? new Date(task.created_at).toLocaleString("he-IL")
-                        : "—"}
-                    </div>
-                  </>
-                )}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: spacing.xs,
-                    marginTop: spacing.xs,
-                  }}
-                >
-                  {editingTaskId === task.note_id ? (
-                    <>
-                      <SmallActionButton
-                        variant="secondary"
-                        onClick={saveEdit}
-                        style={{ fontSize: 12 }}
-                      >
-                        שמור
-                      </SmallActionButton>
-                      <SmallActionButton
-                        variant="secondary"
-                        onClick={cancelEdit}
-                        style={{ fontSize: 12 }}
-                      >
-                        ביטול
-                      </SmallActionButton>
-                    </>
-                  ) : (
-                    <SmallActionButton
-                      variant="secondary"
-                      onClick={() => startEdit(task)}
-                      style={{ fontSize: 12 }}
-                    >
-                      עריכה
-                    </SmallActionButton>
-                  )}
-                  <SmallActionButton
-                    variant="secondary"
-                    onClick={() =>
-                      onToggleTaskStatus(
-                        task,
-                        task.status === "done" ? "open" : "done"
-                      )
-                    }
-                    style={{ fontSize: 12 }}
-                  >
-                    {task.status === "done" ? "פתח" : "סגור"}
-                  </SmallActionButton>
-                  <SmallActionButton
-                    variant="secondary"
-                    style={{ color: colors.danger, fontSize: 12 }}
-                    onClick={() => onDeleteTask(task.note_id)}
-                  >
-                    מחיקה
-                  </SmallActionButton>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <TasksBoard
+          entityType="volunteer"
+          entities={volunteerEntities}
+          title="משימות"
+        />
 
         <Card style={{ padding: spacing.lg }}>
           <h4 style={{ margin: "0 0 12px 0" }}>פעילות אחרונה</h4>

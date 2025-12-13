@@ -9,6 +9,7 @@ const ENTITY_PAGE_MAP: Record<string, { pageKey: string }> = {
   donor: { pageKey: "donors" },
   equipment: { pageKey: "equipment" },
   surfer: { pageKey: "surfers" },
+  volunteer: { pageKey: "volunteers" },
 };
 
 function getPermissionKey(entityType: string) {
@@ -23,14 +24,16 @@ const ALLOWED_STATUSES = new Set([
   "cancelled",
   "closed", // legacy
   "pending", // legacy -> normalize to open
+  "not_started",
+  "postponed",
 ]);
 
 function normalizeStatus(raw?: string | null) {
-  if (!raw) return "open";
+  if (!raw) return "not_started";
   const value = raw.toLowerCase();
   if (value === "pending") return "open";
   if (ALLOWED_STATUSES.has(value)) return value;
-  return "open";
+  return "not_started";
 }
 
 export async function GET(req: Request) {
@@ -52,34 +55,33 @@ export async function GET(req: Request) {
 
     const entityId =
       searchParams.get("entityId") ?? searchParams.get("entity_id");
-    const limit = Math.min(
-      Number(searchParams.get("limit") ?? 50) || 50,
-      200
-    );
+    const limit = Math.min(Number(searchParams.get("limit") ?? 50) || 50, 200);
 
     let sql = `
       SELECT TOP (@limit)
-        note_id,
-        entity_type,
-        entity_id,
-        title,
-        body,
-        status,
-        priority,
-        due_date,
-        created_by,
-        created_at,
-        updated_by,
-        updated_at
-      FROM note
-      WHERE entity_type = @entityType
+        n.note_id,
+        n.entity_type,
+        n.entity_id,
+        n.title,
+        n.body,
+        n.status,
+        n.priority,
+        n.due_date,
+        n.created_by,
+        u.full_name as created_by_name,
+        n.created_at,
+        n.updated_by,
+        n.updated_at
+      FROM note n
+      LEFT JOIN app_user u ON n.created_by = u.national_id
+      WHERE n.entity_type = @entityType
     `;
 
     if (entityId) {
-      sql += " AND entity_id = @entityId";
+      sql += " AND n.entity_id = @entityId";
     }
 
-    sql += " ORDER BY created_at DESC";
+    sql += " ORDER BY n.created_at DESC";
 
     const result = await query(sql, {
       limit,
@@ -105,7 +107,7 @@ export async function POST(req: Request) {
       entity_id,
       title,
       body: noteBody,
-      status = "open",
+      status = "not_started",
       priority = "normal",
       due_date,
     } = body;
@@ -196,4 +198,3 @@ export async function POST(req: Request) {
     );
   }
 }
-

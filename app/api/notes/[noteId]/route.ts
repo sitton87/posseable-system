@@ -9,6 +9,7 @@ const ENTITY_PAGE_MAP: Record<string, string> = {
   donor: "donors",
   equipment: "equipment",
   surfer: "surfers",
+  volunteer: "volunteers",
 };
 
 function getPageKey(entityType: string | null | undefined) {
@@ -23,6 +24,8 @@ const ALLOWED_STATUSES = new Set([
   "cancelled",
   "closed", // legacy
   "pending", // legacy
+  "not_started",
+  "postponed",
 ]);
 
 function normalizeStatus(raw?: string | null) {
@@ -35,9 +38,10 @@ function normalizeStatus(raw?: string | null) {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { noteId: string } }
+  props: { params: Promise<{ noteId: string }> }
 ) {
   try {
+    const params = await props.params;
     const noteId = params.noteId;
     if (!noteId) {
       return NextResponse.json(
@@ -132,9 +136,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { noteId: string } }
+  props: { params: Promise<{ noteId: string }> }
 ) {
   try {
+    const params = await props.params;
     const noteId = params.noteId;
     if (!noteId) {
       return NextResponse.json(
@@ -158,6 +163,11 @@ export async function DELETE(
       "write"
     );
     if (!permission.allowed) return permission.response;
+
+    // Delete history first (manual cascade)
+    await query(`DELETE FROM note_status_history WHERE note_id = @note_id`, {
+      note_id: noteId,
+    });
 
     await query(`DELETE FROM note WHERE note_id = @note_id`, {
       note_id: noteId,

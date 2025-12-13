@@ -26,6 +26,8 @@ import {
   SmallActionButton,
   StatusPill,
   sectionCardStyle,
+  TasksBoard,
+  TaskEntityOption,
 } from "@/app/components/shared";
 import {
   filterControlStyle,
@@ -545,10 +547,6 @@ export default function SurfersPage() {
           loading={summaryLoading}
           summary={summary}
           surfers={surfers}
-          taskForm={taskForm}
-          onTaskChange={setTaskForm}
-          onCreateTask={handleCreateTask}
-          submittingTask={taskSubmitting}
           onRefreshSummary={fetchSummary}
         />
       )}
@@ -616,68 +614,13 @@ function SurfersHomeTab({
   loading,
   summary,
   surfers,
-  taskForm,
-  onTaskChange,
-  onCreateTask,
-  submittingTask,
   onRefreshSummary,
 }: {
   loading: boolean;
   summary: SurferSummaryData;
   surfers: Surfer[];
-  taskForm: TaskFormState;
-  onTaskChange: (next: TaskFormState) => void;
-  onCreateTask: () => void;
-  submittingTask: boolean;
   onRefreshSummary: () => void;
 }) {
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editBody, setEditBody] = useState("");
-  const [editStatus, setEditStatus] = useState("open");
-  const [editDueDate, setEditDueDate] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
-
-  const beginEdit = (note: SurferNote) => {
-    setEditingNoteId(note.note_id);
-    setEditTitle(note.title || "");
-    setEditBody(note.body || "");
-    setEditStatus(note.status || "open");
-    setEditDueDate(note.due_date || "");
-  };
-
-  const cancelEdit = () => {
-    setEditingNoteId(null);
-    setEditTitle("");
-    setEditBody("");
-    setEditStatus("open");
-    setEditDueDate("");
-  };
-
-  const saveEdit = async () => {
-    if (!editingNoteId) return;
-    setSavingEdit(true);
-    try {
-      const res = await fetch(`/api/notes/${editingNoteId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: editTitle,
-          status: editStatus,
-          due_date: editDueDate || null,
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "שמירה נכשלה");
-      cancelEdit();
-      onRefreshSummary();
-    } catch (err: any) {
-      console.error("Error updating note:", err);
-      alert(err.message || "שגיאה בעדכון פתק");
-    } finally {
-      setSavingEdit(false);
-    }
-  };
   const statsCards = [
     { label: "סה״כ גולשים", value: summary.stats.total },
     { label: "פעילים", value: summary.stats.active },
@@ -687,6 +630,12 @@ function SurfersHomeTab({
     { label: "זקוקים לכיסא גלגלים", value: summary.stats.wheelchair },
     { label: "משויכים לקבוצות", value: summary.stats.grouped },
   ];
+
+  const surferEntities: TaskEntityOption[] = surfers.map((s) => ({
+    id: s.national_id,
+    name: s.full_name,
+    subtitle: s.national_id,
+  }));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
@@ -727,153 +676,11 @@ function SurfersHomeTab({
           gap: spacing.lg,
         }}
       >
-        <Card style={{ padding: spacing.lg }}>
-          <h4 style={{ margin: "0 0 12px 0" }}>משימות / פתקים</h4>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: spacing.sm,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>שיוך לגולש</label>
-                <select
-                  style={inputStyle}
-                  value={taskForm.surfer_id}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, surfer_id: e.target.value })
-                  }
-                >
-                  <option value="">בחר גולש</option>
-                  {surfers.map((s) => (
-                    <option key={s.national_id} value={s.national_id}>
-                      {s.full_name} ({s.national_id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>תאריך יעד</label>
-                <input
-                  type="date"
-                  style={inputStyle}
-                  value={taskForm.due_date}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, due_date: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 2fr",
-                gap: spacing.sm,
-              }}
-            >
-              <div>
-                <label style={labelStyle}>כותרת</label>
-                <input
-                  style={inputStyle}
-                  value={taskForm.title}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, title: e.target.value })
-                  }
-                  placeholder="למשל: לתאם שיחה"
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>תוכן</label>
-                <textarea
-                  style={{ ...inputStyle, minHeight: 70 }}
-                  value={taskForm.body}
-                  onChange={(e) =>
-                    onTaskChange({ ...taskForm, body: e.target.value })
-                  }
-                  placeholder="תיאור המשימה או הפתק"
-                />
-              </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: spacing.sm,
-              }}
-            >
-              <SmallActionButton
-                variant="secondary"
-                onClick={() => onTaskChange(createEmptyTaskForm())}
-              >
-                ניקוי
-              </SmallActionButton>
-              <SmallActionButton
-                onClick={onCreateTask}
-                disabled={submittingTask}
-              >
-                {submittingTask ? "שומר..." : "שמור פתק"}
-              </SmallActionButton>
-            </div>
-          </div>
-          <div
-            style={{
-              marginTop: spacing.lg,
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            {summary.tasks.length === 0 && (
-              <div style={{ color: muted, fontSize: 13 }}>
-                אין משימות. צור אחת חדשה.
-              </div>
-            )}
-            {summary.tasks.map((task) => (
-              <div
-                key={task.note_id}
-                style={{
-                  padding: spacing.sm,
-                  borderRadius: radii.card,
-                  border: `1px solid ${colors.borderMuted}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: spacing.sm,
-                  }}
-                >
-                  <strong>{task.title || "פתק ללא כותרת"}</strong>
-                  <StatusPill
-                    tone={task.status === "closed" ? "success" : "warning"}
-                  >
-                    {task.status === "closed" ? "סגור" : "פתוח"}
-                  </StatusPill>
-                </div>
-                <div style={{ color: muted, fontSize: 13 }}>{task.body}</div>
-                <div style={{ fontSize: 12, color: muted }}>
-                  תאריך יעד:{" "}
-                  {task.due_date
-                    ? new Date(task.due_date).toLocaleDateString("he-IL")
-                    : "—"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <TasksBoard
+          entityType="surfer"
+          entities={surferEntities}
+          title="משימות"
+        />
 
         <Card style={{ padding: spacing.lg }}>
           <h4 style={{ margin: "0 0 12px 0" }}>פעילות אחרונה</h4>
