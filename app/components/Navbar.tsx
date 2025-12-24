@@ -232,6 +232,27 @@ export default function Navbar() {
           href: "/activities",
           icon: <Calendar size={22} />,
           label: "פעילויות",
+          children: [
+            { href: "/activities", label: "דף הבית", pageKey: "activities" },
+            {
+              href: "/activities",
+              label: "רשימת פעילויות",
+              pageKey: "activities-list",
+              query: { view: "list" },
+            },
+            {
+              href: "/activities",
+              label: "גאנט פעילויות",
+              pageKey: "activities-gantt",
+              query: { view: "gantt" },
+            },
+            {
+              href: "/activities",
+              label: "מצב שטח",
+              pageKey: "activities-field",
+              query: { view: "field" },
+            },
+          ],
         },
         {
           pageKey: "seasons",

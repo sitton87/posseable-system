@@ -13,11 +13,7 @@ import {
   DonorTabId,
   DonorFilters,
 } from "./types";
-import {
-  createEmptyDonorForm,
-  defaultStats,
-  buildTasks,
-} from "./utils";
+import { createEmptyDonorForm, defaultStats, buildTasks } from "./utils";
 import DonorsHomeTab from "./tabs/DonorsHomeTab";
 import DonorListTab from "./tabs/DonorListTab";
 import DonorFormModal from "./modals/DonorFormModal";

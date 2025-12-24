@@ -17,13 +17,20 @@ export async function GET(req: Request) {
         a.group_id,
         a.kind,
         a.activity_date,
-        a.start_time,
-        a.end_time,
+        CONVERT(varchar(5), a.start_time, 108) as start_time,
+        CONVERT(varchar(5), a.end_time, 108) as end_time,
         a.location,
         a.capacity,
         a.status,
         a.notes,
         a.created_at,
+        a.activity_manager_id,
+        a.safety_manager_id,
+        a.sea_condition,
+        a.weather_notes,
+        a.summary_general,
+        a.summary_preserve,
+        a.summary_improve,
         g.name as group_name,
         sas.name as series_name,
         (
@@ -32,10 +39,14 @@ export async function GET(req: Request) {
           WHERE r.activity_id = a.id
         ) AS participant_count,
         lead_info.lead_national_id,
-        lead_info.lead_name
+        lead_info.lead_name,
+        vm.full_name AS activity_manager_name,
+        vs.full_name AS safety_manager_name
       FROM activity a
       INNER JOIN season_activity_series sas ON sas.id = a.series_id
       LEFT JOIN [group] g ON a.group_id = g.id
+      LEFT JOIN volunteer vm ON a.activity_manager_id = vm.national_id
+      LEFT JOIN volunteer vs ON a.safety_manager_id = vs.national_id
       OUTER APPLY (
         SELECT TOP 1
           av.volunteer_national_id AS lead_national_id,

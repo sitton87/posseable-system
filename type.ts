@@ -23,6 +23,7 @@ export type Volunteer = {
   availability?: string | null; // זמינות
   personal_website?: string | null; // אתר אישי
   documents?: string | null; // JSON של מסמכים
+  classification: string; // management / staff / volunteer
 };
 
 export type Role = {
@@ -145,10 +146,10 @@ export type ActivitySeries = {
 };
 
 export type Activity = {
-  id: string;
-  season_id: number; // INT not string
+  id: number; // INT
+  season_id: number; // INT
   series_id: number;
-  group_id?: string | null; // קישור לקבוצה
+  group_id?: string | null; // uniqueidentifier
   kind: string;
   activity_date: Date | string;
   start_time?: string | null;
@@ -158,21 +159,65 @@ export type Activity = {
   status: string;
   notes?: string | null;
   created_at: Date | string;
+
+  // New fields
+  activity_manager_id?: string | null;
+  safety_manager_id?: string | null;
+  sea_condition?: string | null;
+  weather_notes?: string | null;
+  summary_general?: string | null;
+  summary_preserve?: string | null;
+  summary_improve?: string | null;
+
   // From JOIN
   group_name?: string;
   series_name?: string;
   participant_count?: number;
   lead_name?: string | null;
   lead_national_id?: string | null;
+  activity_manager_name?: string | null;
+  safety_manager_name?: string | null;
+};
+
+export type ActivityChecklist = {
+  id: string;
+  activity_id: number;
+  item_text: string;
+  is_completed: boolean;
+  category?: string | null;
+};
+
+export type ActivityEquipmentRequest = {
+  id: string;
+  activity_id: number;
+  item_id: string;
+  quantity: number;
+  status: string; // REQUESTED, APPROVED, TAKEN, RETURNED
+  notes?: string | null;
+  // Joined fields
+  item_name?: string;
+};
+
+export type ActivitySurferAssignment = {
+  id: string;
+  activity_id: number;
+  surfer_id: string;
+  volunteer_id: string;
+  role?: string | null;
+  // Joined fields
+  surfer_name?: string;
+  volunteer_name?: string;
 };
 
 export type Registration = {
-  id: string;
-  activity_id: string;
+  id: number;
+  activity_id: number;
   surfer_id: string;
   status: string;
   notes?: string | null;
   created_at: Date | string;
+  attendance_status?: string | null;
+  summary_feedback?: string | null;
 };
 
 export type EquipmentFamily = {
@@ -273,8 +318,8 @@ export type EquipmentItem = {
 export type Equipment = EquipmentItem;
 
 export type ActivityEquipment = {
-  activity_id: string;
-  equipment_id: string;
+  activity_id: number;
+  equipment_id: number;
   quantity: number;
   notes?: string | null;
 };
@@ -404,6 +449,8 @@ export type ActivityFormData = Omit<
   | "participant_count"
   | "lead_name"
   | "lead_national_id"
+  | "activity_manager_name"
+  | "safety_manager_name"
 >;
 export type GroupFormData = Omit<
   Group,

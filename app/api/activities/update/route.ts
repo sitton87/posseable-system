@@ -21,6 +21,13 @@ export async function PUT(req: Request) {
       capacity,
       status,
       notes,
+      activity_manager_id,
+      safety_manager_id,
+      sea_condition,
+      weather_notes,
+      summary_general,
+      summary_preserve,
+      summary_improve,
     } = body;
 
     if (!id) {
@@ -70,7 +77,14 @@ export async function PUT(req: Request) {
         location = @location,
         capacity = @capacity,
         status = @status,
-        notes = @notes
+        notes = @notes,
+        activity_manager_id = @activity_manager_id,
+        safety_manager_id = @safety_manager_id,
+        sea_condition = @sea_condition,
+        weather_notes = @weather_notes,
+        summary_general = @summary_general,
+        summary_preserve = @summary_preserve,
+        summary_improve = @summary_improve
       WHERE id = @id
     `;
 
@@ -87,6 +101,13 @@ export async function PUT(req: Request) {
       capacity,
       status: status || "מתוכנן",
       notes,
+      activity_manager_id,
+      safety_manager_id,
+      sea_condition,
+      weather_notes,
+      summary_general,
+      summary_preserve,
+      summary_improve,
     });
 
     return NextResponse.json({ success: true });

@@ -20,6 +20,13 @@ export async function POST(req: Request) {
       capacity,
       status,
       notes,
+      activity_manager_id,
+      safety_manager_id,
+      sea_condition,
+      weather_notes,
+      summary_general,
+      summary_preserve,
+      summary_improve,
     } = body;
 
     // Validation
@@ -53,11 +60,15 @@ export async function POST(req: Request) {
     const sql = `
       INSERT INTO activity (
         season_id, series_id, group_id, kind, activity_date, start_time, end_time,
-        location, capacity, status, notes
+        location, capacity, status, notes,
+        activity_manager_id, safety_manager_id, sea_condition, weather_notes,
+        summary_general, summary_preserve, summary_improve
       )
       VALUES (
         @season_id, @series_id, @group_id, @kind, @activity_date, @start_time, @end_time,
-        @location, @capacity, @status, @notes
+        @location, @capacity, @status, @notes,
+        @activity_manager_id, @safety_manager_id, @sea_condition, @weather_notes,
+        @summary_general, @summary_preserve, @summary_improve
       )
     `;
 
@@ -75,6 +86,13 @@ export async function POST(req: Request) {
       capacity,
       status: normalizedStatus,
       notes,
+      activity_manager_id,
+      safety_manager_id,
+      sea_condition,
+      weather_notes,
+      summary_general,
+      summary_preserve,
+      summary_improve,
     });
 
     return NextResponse.json({ success: true });

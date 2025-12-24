@@ -128,4 +128,3 @@ export const buildTasks = (donors: Donor[]): DonorTask[] => {
 
   return tasks;
 };
-
