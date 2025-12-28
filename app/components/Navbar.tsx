@@ -246,12 +246,6 @@ export default function Navbar() {
               pageKey: "activities-gantt",
               query: { view: "gantt" },
             },
-            {
-              href: "/activities",
-              label: "מצב שטח",
-              pageKey: "activities-field",
-              query: { view: "field" },
-            },
           ],
         },
         {

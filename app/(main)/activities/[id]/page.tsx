@@ -8,7 +8,7 @@ import { Activity } from "@/type";
 import { ActivityHeader, TabButton } from "./components";
 import { PlanningTab } from "./PlanningTab";
 import { PreparationTab } from "./PreparationTab";
-import { ExecutionTab } from "./ExecutionTab";
+import { AssignmentsTab } from "./AssignmentsTab";
 import { SummaryTab } from "./SummaryTab";
 import { toast } from "sonner";
 
@@ -19,7 +19,7 @@ export default function ActivityManagementPage() {
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"planning" | "prep" | "exec" | "summary">("planning");
+  const [activeTab, setActiveTab] = useState<"planning" | "prep" | "assignments" | "summary">("planning");
 
   useEffect(() => {
     fetchActivity();
@@ -36,7 +36,7 @@ export default function ActivityManagementPage() {
         
         // Auto-select tab based on status if not manually set (simple logic)
         if (data.activity.status === "Completed") setActiveTab("summary");
-        else if (data.activity.status === "In Progress") setActiveTab("exec");
+        else if (data.activity.status === "In Progress") setActiveTab("assignments");
       } else {
         toast.error("לא ניתן לטעון את הפעילות");
       }
@@ -83,8 +83,8 @@ export default function ActivityManagementPage() {
           <TabButton active={activeTab === "prep"} onClick={() => setActiveTab("prep")}>
             2. הכנה
           </TabButton>
-          <TabButton active={activeTab === "exec"} onClick={() => setActiveTab("exec")}>
-            3. ביצוע
+          <TabButton active={activeTab === "assignments"} onClick={() => setActiveTab("assignments")}>
+            3. שיבוצים
           </TabButton>
           <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
             4. סיכום
@@ -98,8 +98,8 @@ export default function ActivityManagementPage() {
           {activeTab === "prep" && (
             <PreparationTab activity={activity} refresh={fetchActivity} />
           )}
-          {activeTab === "exec" && (
-            <ExecutionTab activity={activity} />
+          {activeTab === "assignments" && (
+            <AssignmentsTab activity={activity} />
           )}
           {activeTab === "summary" && (
             <SummaryTab activity={activity} onUpdate={handleUpdateActivity} />

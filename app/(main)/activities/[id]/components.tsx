@@ -3,7 +3,6 @@ import { colors, spacing, radii } from "@/app/styles/foundations";
 import { Activity } from "@/type";
 import { Button } from "@/app/components/ui";
 import { useRouter } from "next/navigation";
-import { Smartphone } from "lucide-react";
 
 export function ActivityHeader({ activity }: { activity: Activity }) {
   const router = useRouter();
@@ -30,14 +29,6 @@ export function ActivityHeader({ activity }: { activity: Activity }) {
           </div>
         </div>
         <div style={{ display: "flex", gap: spacing.md, alignItems: "center" }}>
-          <Button 
-            variant="outline" 
-            onClick={() => router.push(`/activities/${activity.id}/field-mode`)}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <Smartphone size={16} />
-            מצב שטח
-          </Button>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontWeight: "bold", color: colors.primary }}>
               {activity.status}

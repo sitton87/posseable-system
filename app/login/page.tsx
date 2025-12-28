@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ENABLE_DEV_LOGIN } from "@/lib/config";
 
 export default function LoginPage() {
   const [nationalId, setNationalId] = useState("");
@@ -13,6 +14,25 @@ export default function LoginPage() {
   const [resetMessage, setResetMessage] = useState("");
   const [resetError, setResetError] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // פונקציה לכניסה במצב פיתוח
+  const handleDevLogin = async () => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_dev_login: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.href = data.redirect;
+      } else {
+        setError("Dev login failed: " + data.error);
+      }
+    } catch (e) {
+      setError("Network error");
+    }
+  };
 
   const handleLogin = async () => {
     setError("");
@@ -77,6 +97,27 @@ export default function LoginPage() {
       setResetLoading(false);
     }
   };
+
+  // --- תצוגת מצב פיתוח (עטיפה) ---
+  if (ENABLE_DEV_LOGIN === "1") {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-yellow-50">
+        <div className="w-[350px] p-8 bg-white rounded-xl shadow-lg text-center border-2 border-yellow-400">
+          <h1 className="text-3xl font-bold mb-2">🚧 מצב פיתוח</h1>
+          <p className="text-gray-600 mb-6">הכניסה למערכת חופשית לצרכי בדיקה</p>
+          
+          <button
+            onClick={handleDevLogin}
+            className="w-full bg-yellow-500 text-white text-lg font-bold py-4 rounded-lg hover:bg-yellow-600 transition-colors shadow-md"
+          >
+            🚀 כניסה מהירה למערכת
+          </button>
+          
+          {error && <div className="text-red-500 mt-4">{error}</div>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-gray-100">

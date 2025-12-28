@@ -118,17 +118,20 @@ export function PlanningTab({
   });
   const [saving, setSaving] = useState(false);
   const [staff, setStaff] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch staff volunteers for selection
-    async function fetchStaff() {
+    // Fetch staff volunteers and groups
+    async function fetchData() {
       try {
-        const [staffRes, managementRes] = await Promise.all([
+        const [staffRes, managementRes, groupsRes] = await Promise.all([
            fetch("/api/volunteers?classification=staff"),
-           fetch("/api/volunteers?classification=management")
+           fetch("/api/volunteers?classification=management"),
+           fetch("/api/groups")
         ]);
         const sData = await staffRes.json();
         const mData = await managementRes.json();
+        const gData = await groupsRes.json();
         
         const allStaff = [
             ...(sData.success ? sData.volunteers : []),
@@ -137,11 +140,13 @@ export function PlanningTab({
          const uniqueStaff = Array.from(new Map(allStaff.map(item => [item.national_id, item])).values());
          setStaff(uniqueStaff);
 
+         if(gData.success) setGroups(gData.groups);
+
       } catch (err) {
-        console.error("Failed to load staff", err);
+        console.error("Failed to load data", err);
       }
     }
-    fetchStaff();
+    fetchData();
   }, []);
 
   const handleSave = async () => {
@@ -175,6 +180,15 @@ export function PlanningTab({
             label="מיקום"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          />
+          <Select 
+            label="קבוצה משויכת"
+            value={formData.group_id}
+            onChange={(e) => setFormData({ ...formData, group_id: e.target.value })}
+            options={[
+                { value: "", label: "בחר קבוצה..." },
+                ...groups.map(g => ({ value: g.id, label: g.name }))
+            ]}
           />
           <Input
             type="time"

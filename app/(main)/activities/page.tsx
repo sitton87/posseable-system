@@ -6,7 +6,6 @@ import { PagePermissionGate } from "@/app/components/PagePermissionGate";
 import ActivitiesHomeTab from "./tabs/ActivitiesHomeTab";
 import ActivitiesListTab from "./tabs/ActivitiesListTab";
 import ActivitiesGanttTab from "./tabs/ActivitiesGanttTab";
-import FieldStatusTab from "./tabs/FieldModeTab";
 
 export default function ActivitiesPage() {
   const searchParams = useSearchParams();
@@ -20,10 +19,9 @@ export default function ActivitiesPage() {
         {view === "home" && <ActivitiesHomeTab />}
         {view === "list" && <ActivitiesListTab />}
         {view === "gantt" && <ActivitiesGanttTab />}
-        {view === "field" && <FieldStatusTab />}
         
         {/* If view is unknown, default to home or list? currently home */}
-        {!["home", "list", "gantt", "field"].includes(view) && <ActivitiesHomeTab />}
+        {!["home", "list", "gantt"].includes(view) && <ActivitiesHomeTab />}
       </div>
     </PagePermissionGate>
   );
