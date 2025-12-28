@@ -10,24 +10,51 @@ export function ActivityHeader({ activity }: { activity: Activity }) {
   return (
     <div
       style={{
-        background: colors.white,
-        padding: spacing.lg,
-        borderRadius: radii.card,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
         marginBottom: spacing.lg,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: "bold", color: colors.text, margin: 0 }}>
-            {activity.group_name} - {activity.kind === "surf" ? "גלישה" : "פעילות"}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {/* Group Name */}
+          <h1 style={{ fontSize: 24, fontWeight: "bold", color: colors.textPrimary, margin: 0 }}>
+            {activity.group_name}
           </h1>
-          <div style={{ display: "flex", gap: spacing.md, marginTop: spacing.sm, color: colors.textMuted }}>
-            <span>📅 {new Date(activity.activity_date).toLocaleDateString("he-IL")}</span>
-            <span>⏰ {activity.start_time?.slice(0, 5)} - {activity.end_time?.slice(0, 5)}</span>
-            <span>📍 {activity.location}</span>
-          </div>
+
+          {/* Series Info */}
+          {activity.series_name && (
+            <>
+                <span style={{ color: colors.border, fontSize: 20 }}>|</span>
+                <span style={{ fontSize: 16, color: colors.textMuted, background: colors.surfaceAlt, padding: "2px 8px", borderRadius: 4 }}>
+                    {activity.series_name} {(activity as any).series_index ? `(${(activity as any).series_index}/${(activity as any).series_total_count})` : ""}
+                </span>
+            </>
+          )}
+
+          {/* Location */}
+          {activity.location && (
+            <>
+                <span style={{ color: colors.border, fontSize: 20 }}>|</span>
+                <span style={{ fontSize: 16, color: colors.textMuted }}>{activity.location}</span>
+            </>
+          )}
+
+          {/* Date */}
+          <span style={{ color: colors.border, fontSize: 20 }}>|</span>
+          <span style={{ fontSize: 16, color: colors.textMuted }}>
+            {new Date(activity.activity_date).toLocaleDateString("he-IL")}
+          </span>
+
+          {/* Time */}
+          {activity.start_time && (
+            <>
+                <span style={{ color: colors.border, fontSize: 20 }}>|</span>
+                <span style={{ fontSize: 16, color: colors.textMuted }}>
+                    {activity.start_time.slice(0, 5)} - {activity.end_time?.slice(0, 5)}
+                </span>
+            </>
+          )}
         </div>
+        
         <div style={{ display: "flex", gap: spacing.md, alignItems: "center" }}>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontWeight: "bold", color: colors.primary }}>
@@ -70,4 +97,3 @@ export function TabButton({
     </button>
   );
 }
-

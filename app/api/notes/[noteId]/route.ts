@@ -69,9 +69,9 @@ export async function PATCH(
     if (!permission.allowed) return permission.response;
 
     const body = await req.json();
-    const { status, title, due_date, body: noteBody, priority } = body;
+    const { status, title, due_date, body: noteBody, priority, assigned_to } = body;
 
-    if (!status && !title && !due_date && !noteBody && !priority) {
+    if (!status && !title && !due_date && !noteBody && !priority && assigned_to === undefined) {
       return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
@@ -88,6 +88,7 @@ export async function PATCH(
           body = COALESCE(@noteBody, body),
           due_date = COALESCE(@due_date, due_date),
           priority = COALESCE(@priority, priority),
+          assigned_to = COALESCE(@assigned_to, assigned_to),
           updated_by = @updated_by,
           updated_at = SYSUTCDATETIME()
         WHERE note_id = @note_id
@@ -99,6 +100,7 @@ export async function PATCH(
         noteBody,
         due_date,
         priority,
+        assigned_to: assigned_to || null,
         updated_by: permission.session?.national_id ?? null,
       }
     );

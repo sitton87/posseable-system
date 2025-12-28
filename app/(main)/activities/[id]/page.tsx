@@ -1,42 +1,59 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { colors, spacing } from "@/app/styles/foundations";
 import { PagePermissionGate } from "@/app/components/PagePermissionGate";
 import { Activity } from "@/type";
 import { ActivityHeader, TabButton } from "./components";
-import { PlanningTab } from "./PlanningTab";
-import { PreparationTab } from "./PreparationTab";
+import { OverviewTab } from "./OverviewTab";
+import { TimelineTab } from "./TimelineTab";
 import { AssignmentsTab } from "./AssignmentsTab";
+import { LogisticsTab } from "./LogisticsTab";
 import { SummaryTab } from "./SummaryTab";
 import { toast } from "sonner";
 
 export default function ActivityManagementPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const id = params.id as string;
+  const initialTab = searchParams.get("tab") as any;
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"planning" | "prep" | "assignments" | "summary">("planning");
+  const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "assignments" | "logistics" | "summary">(
+      initialTab || "overview"
+  );
 
   useEffect(() => {
     fetchActivity();
   }, [id]);
 
-  async function fetchActivity() {
+  useEffect(() => {
+      if(initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
+  const updateTab = (tab: string) => {
+      setActiveTab(tab as any);
+      // Optional: update URL
+      // router.replace(`/activities/${id}?tab=${tab}`, { scroll: false });
+  };
+
+  async function fetchActivity(silent = false) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch(`/api/activities/${id}`);
       const data = await res.json();
       
       if (data.success) {
         setActivity(data.activity);
         
-        // Auto-select tab based on status if not manually set (simple logic)
+        // Auto-select tab logic if no initial tab and just loaded
+        if (!initialTab && loading) { // Only check auto-tab on initial load
         if (data.activity.status === "Completed") setActiveTab("summary");
         else if (data.activity.status === "In Progress") setActiveTab("assignments");
+        }
       } else {
         toast.error("לא ניתן לטעון את הפעילות");
       }
@@ -44,7 +61,7 @@ export default function ActivityManagementPage() {
       console.error(error);
       toast.error("שגיאה בשרת");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -59,11 +76,13 @@ export default function ActivityManagementPage() {
       const data = await res.json();
       if (data.success) {
         fetchActivity(); // Refresh
+        toast.success("פעילות עודכנה");
       } else {
         throw new Error(data.error);
       }
     } catch (error) {
       console.error(error);
+      toast.error("שגיאה בעדכון");
       throw error;
     }
   };
@@ -73,33 +92,39 @@ export default function ActivityManagementPage() {
 
   return (
     <PagePermissionGate>
-      <div style={{ padding: spacing.lg, maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ padding: spacing.lg, width: "100%" }}> {/* Full width container */}
         <ActivityHeader activity={activity} />
 
-        <div style={{ display: "flex", gap: spacing.sm, marginBottom: spacing.lg, background: colors.surfaceAlt, padding: spacing.sm, borderRadius: 50, width: "fit-content" }}>
-          <TabButton active={activeTab === "planning"} onClick={() => setActiveTab("planning")}>
-            1. תכנון
+        <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.lg, background: "#f1f5f9", padding: 4, borderRadius: 50, width: "fit-content", flexWrap: "wrap" }}>
+          <TabButton active={activeTab === "overview"} onClick={() => updateTab("overview")}>
+            מבט על
           </TabButton>
-          <TabButton active={activeTab === "prep"} onClick={() => setActiveTab("prep")}>
-            2. הכנה
+          <TabButton active={activeTab === "timeline"} onClick={() => updateTab("timeline")}>
+            ציר זמן והכנות
           </TabButton>
-          <TabButton active={activeTab === "assignments"} onClick={() => setActiveTab("assignments")}>
-            3. שיבוצים
+          <TabButton active={activeTab === "assignments"} onClick={() => updateTab("assignments")}>
+            שיבוצים וצוותים
           </TabButton>
-          <TabButton active={activeTab === "summary"} onClick={() => setActiveTab("summary")}>
-            4. סיכום
+          <TabButton active={activeTab === "logistics"} onClick={() => updateTab("logistics")}>
+            לוגיסטיקה וציוד
+          </TabButton>
+          <TabButton active={activeTab === "summary"} onClick={() => updateTab("summary")}>
+            סיכום ומשוב
           </TabButton>
         </div>
 
-        <div style={{ background: colors.white, borderRadius: 8, minHeight: 400 }}>
-          {activeTab === "planning" && (
-            <PlanningTab activity={activity} onUpdate={handleUpdateActivity} />
+        <div style={{ minHeight: 400 }}>
+          {activeTab === "overview" && (
+            <OverviewTab activity={activity} onUpdate={handleUpdateActivity} />
           )}
-          {activeTab === "prep" && (
-            <PreparationTab activity={activity} refresh={fetchActivity} />
+          {activeTab === "timeline" && (
+            <TimelineTab activity={activity} refresh={() => fetchActivity(true)} />
           )}
           {activeTab === "assignments" && (
             <AssignmentsTab activity={activity} />
+          )}
+          {activeTab === "logistics" && (
+            <LogisticsTab activity={activity} refresh={() => fetchActivity(true)} />
           )}
           {activeTab === "summary" && (
             <SummaryTab activity={activity} onUpdate={handleUpdateActivity} />
@@ -109,4 +134,3 @@ export default function ActivityManagementPage() {
     </PagePermissionGate>
   );
 }
-

@@ -1,27 +1,27 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { colors, spacing } from "@/app/styles/foundations";
+import { spacing } from "@/app/styles/foundations";
 import { PagePermissionGate } from "@/app/components/PagePermissionGate";
 import ActivitiesHomeTab from "./tabs/ActivitiesHomeTab";
-import ActivitiesListTab from "./tabs/ActivitiesListTab";
-import ActivitiesGanttTab from "./tabs/ActivitiesGanttTab";
+import OperationsTab from "./tabs/OperationsTab";
+import PlanningTab from "./tabs/PlanningTab";
 
 export default function ActivitiesPage() {
   const searchParams = useSearchParams();
-  const view = searchParams?.get("view") || "home";
+  const tab = searchParams?.get("tab") || "dashboard";
+
+  // Map legacy 'view' param to 'tab' if necessary, but we are moving to 'tab'
+  // If someone accesses /activities without params, they get dashboard.
 
   return (
     <PagePermissionGate>
       <div style={{ padding: spacing.lg, display: "flex", flexDirection: "column", gap: spacing.lg }}>
-        {/* <h1 style={{ fontSize: 24, fontWeight: "bold", color: colors.text }}>ניהול פעילות</h1> - Removed title as requested */}
+        {tab === "dashboard" && <ActivitiesHomeTab />}
+        {tab === "operations" && <OperationsTab />}
+        {tab === "planning" && <PlanningTab />}
         
-        {view === "home" && <ActivitiesHomeTab />}
-        {view === "list" && <ActivitiesListTab />}
-        {view === "gantt" && <ActivitiesGanttTab />}
-        
-        {/* If view is unknown, default to home or list? currently home */}
-        {!["home", "list", "gantt"].includes(view) && <ActivitiesHomeTab />}
+        {!["dashboard", "operations", "planning"].includes(tab) && <ActivitiesHomeTab />}
       </div>
     </PagePermissionGate>
   );

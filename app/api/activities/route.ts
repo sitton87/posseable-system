@@ -9,6 +9,8 @@ export async function GET(req: Request) {
     const seasonId = searchParams.get("season_id");
     const seriesId = searchParams.get("series_id");
 
+    const sort = searchParams.get("sort"); // date_asc, date_desc
+
     let sql = `
       SELECT
         a.id,
@@ -43,7 +45,7 @@ export async function GET(req: Request) {
         vm.full_name AS activity_manager_name,
         vs.full_name AS safety_manager_name
       FROM activity a
-      INNER JOIN season_activity_series sas ON sas.id = a.series_id
+      LEFT JOIN season_activity_series sas ON sas.id = a.series_id
       LEFT JOIN [group] g ON a.group_id = g.id
       LEFT JOIN volunteer vm ON a.activity_manager_id = vm.national_id
       LEFT JOIN volunteer vs ON a.safety_manager_id = vs.national_id
@@ -83,7 +85,11 @@ export async function GET(req: Request) {
       params.series_id = Number(seriesId);
     }
 
-    sql += " ORDER BY a.activity_date DESC, a.start_time DESC";
+    if (sort === "date_asc") {
+        sql += " ORDER BY a.activity_date ASC, a.start_time ASC";
+    } else {
+        sql += " ORDER BY a.activity_date DESC, a.start_time DESC";
+    }
 
     const result = await query(sql, params);
 

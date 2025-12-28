@@ -1,22 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, ActivityEquipmentRequest, EquipmentItem } from "@/type";
+import { Activity, EquipmentItem, ActivityEquipmentRequest } from "@/type";
 import { Section } from "@/app/components/shared/layoutPrimitives";
 import { Button, Input, Select } from "@/app/components/ui";
 import { colors, spacing } from "@/app/styles/foundations";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
-import { ChecklistSection } from "./ChecklistSection";
-
-export function PreparationTab({ 
+export function LogisticsTab({ 
   activity,
   refresh
 }: { 
   activity: Activity & { 
     equipment?: ActivityEquipmentRequest[];
-    checklist?: any[];
   }; 
   refresh: () => void;
 }) {
@@ -76,14 +73,8 @@ export function PreparationTab({
   const equipmentList = activity.equipment || [];
 
   return (
-    <div style={{ 
-      display: "grid", 
-      gridTemplateColumns: "1fr 1fr", 
-      gap: spacing.lg,
-      alignItems: "start"
-    }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
-        <Section title="רשימת ציוד לפעילות">
+    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+      <Section title="רשימת ציוד לוגיסטי">
         <div style={{ display: "flex", gap: spacing.md, alignItems: "flex-end", marginBottom: spacing.lg }}>
            <div style={{ flex: 1 }}>
              <Select
@@ -148,11 +139,6 @@ export function PreparationTab({
           </div>
         )}
       </Section>
-      </div>
-      
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <ChecklistSection activity={activity} refresh={refresh} />
-      </div>
     </div>
   );
 }

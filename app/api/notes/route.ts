@@ -10,6 +10,7 @@ const ENTITY_PAGE_MAP: Record<string, { pageKey: string }> = {
   equipment: { pageKey: "equipment" },
   surfer: { pageKey: "surfers" },
   volunteer: { pageKey: "volunteers" },
+  activity: { pageKey: "activities" },
 };
 
 function getPermissionKey(entityType: string) {
@@ -71,9 +72,12 @@ export async function GET(req: Request) {
         u.full_name as created_by_name,
         n.created_at,
         n.updated_by,
-        n.updated_at
+        n.updated_at,
+        n.assigned_to,
+        v.full_name as assigned_to_name
       FROM note n
       LEFT JOIN app_user u ON n.created_by = u.national_id
+      LEFT JOIN volunteer v ON n.assigned_to = v.national_id
       WHERE n.entity_type = @entityType
     `;
 
@@ -110,6 +114,7 @@ export async function POST(req: Request) {
       status = "not_started",
       priority = "normal",
       due_date,
+      assigned_to,
     } = body;
 
     if (!entity_type || !entity_id || !noteBody) {
@@ -138,7 +143,8 @@ export async function POST(req: Request) {
           status,
           priority,
           due_date,
-          created_by
+          created_by,
+          assigned_to
         )
         OUTPUT INSERTED.*
         VALUES (
@@ -149,7 +155,8 @@ export async function POST(req: Request) {
           @status,
           @priority,
           @due_date,
-          @created_by
+          @created_by,
+          @assigned_to
         )
       `,
       {
@@ -161,6 +168,7 @@ export async function POST(req: Request) {
         priority,
         due_date,
         created_by: session.national_id,
+        assigned_to: assigned_to || null,
       }
     );
 

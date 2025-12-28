@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       const surfersByGroup = surfersResult.recordset.reduce(
         (acc: Record<string, any[]>, surfer: any) => {
           if (!surfer.group_id) return acc;
-          const key = surfer.group_id.toLowerCase?.() ?? surfer.group_id;
+          const key = String(surfer.group_id).toLowerCase();
           const list = acc[key] || [];
           list.push(surfer);
           acc[key] = list;
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
       );
 
       groups = groups.map((group: any) => {
-        const key = group.id?.toLowerCase?.() ?? group.id;
+        const key = String(group.id).toLowerCase();
         return {
           ...group,
           surfers: surfersByGroup[key] || [],

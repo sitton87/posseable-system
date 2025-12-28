@@ -13,6 +13,7 @@ import {
   tableStyle,
 } from "@/app/styles/components";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const muted = colors.textMuted;
 
@@ -30,11 +31,12 @@ export default function ActivitiesListTab() {
     status: "",
     kind: "",
     search: "",
+    sort: "date_desc"
   });
 
   useEffect(() => {
     fetchActivities();
-  }, [filters.status, filters.kind]);
+  }, [filters.status, filters.kind, filters.sort]);
 
   async function fetchActivities() {
     try {
@@ -42,6 +44,7 @@ export default function ActivitiesListTab() {
       const params = new URLSearchParams();
       if (filters.status) params.set("status", filters.status);
       if (filters.kind) params.set("kind", filters.kind);
+      if (filters.sort) params.set("sort", filters.sort);
 
       const res = await fetch(`/api/activities?${params.toString()}`);
       const data = await res.json();
@@ -54,6 +57,24 @@ export default function ActivitiesListTab() {
       setLoading(false);
     }
   }
+
+  const handleDelete = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    if (!confirm("האם אתה בטוח שברצונך למחוק פעילות זו?")) return;
+
+    try {
+      const res = await fetch(`/api/activities/update?id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("פעילות נמחקה בהצלחה");
+        fetchActivities();
+      } else {
+        toast.error("שגיאה במחיקת הפעילות");
+      }
+    } catch (err) {
+      toast.error("שגיאה במחיקת הפעילות");
+    }
+  };
 
   const filteredActivities = activities.filter((activity) => {
     if (!filters.search) return true;
@@ -126,7 +147,7 @@ export default function ActivitiesListTab() {
           </SmallActionButton>
           <SmallActionButton 
             variant="secondary" 
-            onClick={() => setFilters({ status: "", kind: "", search: "" })}
+            onClick={() => setFilters({ status: "", kind: "", search: "", sort: "date_desc" })}
           >
             ניקוי פילטרים
           </SmallActionButton>
@@ -159,6 +180,18 @@ export default function ActivitiesListTab() {
           <option value="">כל הסוגים</option>
           <option value="surf">גלישה</option>
           <option value="social">חברתי</option>
+          <option value="lecture">הדרכה/הרצאה</option>
+          <option value="preparation">הכנה</option>
+          <option value="special">אירוע מיוחד</option>
+          <option value="other">אחר</option>
+        </select>
+        <select
+          style={filterControlStyle}
+          value={filters.sort}
+          onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+        >
+          <option value="date_desc">תאריך (מהחדש לישן)</option>
+          <option value="date_asc">תאריך (מהישן לחדש)</option>
         </select>
       </FilterToolbar>
 
@@ -184,7 +217,13 @@ export default function ActivitiesListTab() {
             </thead>
             <tbody>
               {filteredActivities.map((activity) => (
-                <tr key={activity.id}>
+                <tr 
+                    key={activity.id} 
+                    onClick={() => router.push(`/activities/${activity.id}`)}
+                    style={{ cursor: "pointer", transition: "background-color 0.2s" }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.surfaceAlt}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                >
                   <td style={tableCellStyle}>
                     {format(new Date(activity.activity_date), "dd/MM/yyyy")}
                   </td>
@@ -194,7 +233,15 @@ export default function ActivitiesListTab() {
                   <td style={{ ...tableCellStyle, fontWeight: 700 }}>
                     {activity.group_name || "-"}
                   </td>
-                  <td style={tableCellStyle}>{activity.kind}</td>
+                  <td style={tableCellStyle}>{
+                    activity.kind === "surf" ? "גלישה" :
+                    activity.kind === "social" ? "חברתי" :
+                    activity.kind === "lecture" ? "הדרכה/הרצאה" :
+                    activity.kind === "preparation" ? "הכנה" :
+                    activity.kind === "special" ? "אירוע מיוחד" :
+                    activity.kind === "other" ? "אחר" :
+                    activity.kind
+                  }</td>
                   <td style={tableCellStyle}>{activity.location || "-"}</td>
                   <td style={tableCellStyle}>
                     {activity.activity_manager_name || activity.lead_name || "-"}
@@ -209,9 +256,16 @@ export default function ActivitiesListTab() {
                     <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
                       <SmallActionButton
                         variant="secondary"
-                        onClick={() => router.push(`/activities/${activity.id}`)}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/activities/${activity.id}`); }}
                       >
                         ניהול
+                      </SmallActionButton>
+                      <SmallActionButton
+                        variant="secondary"
+                        style={{ color: colors.danger, borderColor: colors.danger + "40", backgroundColor: colors.danger + "10" }}
+                        onClick={(e) => handleDelete(activity.id, e)}
+                      >
+                        מחיקה
                       </SmallActionButton>
                     </div>
                   </td>

@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     if (!permission.allowed) return permission.response;
 
     const body = await req.json();
-    const { activity_id, item_text, category, assigned_to_volunteer_id } = body;
+    const { activity_id, item_text, category, assigned_to_volunteer_id, due_date } = body;
 
     if (!activity_id || !item_text) {
       return NextResponse.json(
@@ -18,12 +18,18 @@ export async function POST(req: Request) {
     }
 
     const sql = `
-      INSERT INTO activity_checklist (activity_id, item_text, category, is_completed, assigned_to_volunteer_id)
+      INSERT INTO activity_checklist (activity_id, item_text, category, is_completed, assigned_to_volunteer_id, due_date)
       OUTPUT inserted.id
-      VALUES (@activity_id, @item_text, @category, 0, @assigned_to_volunteer_id)
+      VALUES (@activity_id, @item_text, @category, 0, @assigned_to_volunteer_id, @due_date)
     `;
 
-    const result = await query(sql, { activity_id, item_text, category, assigned_to_volunteer_id: assigned_to_volunteer_id || null });
+    const result = await query(sql, { 
+      activity_id, 
+      item_text, 
+      category, 
+      assigned_to_volunteer_id: assigned_to_volunteer_id || null,
+      due_date: due_date || null
+    });
 
     return NextResponse.json({
       success: true,
@@ -44,7 +50,7 @@ export async function PUT(req: Request) {
     if (!permission.allowed) return permission.response;
 
     const body = await req.json();
-    const { id, is_completed, item_text, assigned_to_volunteer_id } = body;
+    const { id, is_completed, item_text, assigned_to_volunteer_id, due_date, is_deleted } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Checklist ID is required" }, { status: 400 });
@@ -58,6 +64,10 @@ export async function PUT(req: Request) {
       updates.push("is_completed = @is_completed");
       params.is_completed = is_completed;
     }
+    if (is_deleted !== undefined) {
+      updates.push("is_deleted = @is_deleted");
+      params.is_deleted = is_deleted;
+    }
     if (item_text !== undefined) {
       updates.push("item_text = @item_text");
       params.item_text = item_text;
@@ -65,6 +75,10 @@ export async function PUT(req: Request) {
     if (assigned_to_volunteer_id !== undefined) {
       updates.push("assigned_to_volunteer_id = @assigned_to_volunteer_id");
       params.assigned_to_volunteer_id = assigned_to_volunteer_id || null;
+    }
+    if (due_date !== undefined) {
+      updates.push("due_date = @due_date");
+      params.due_date = due_date || null;
     }
 
     if (updates.length === 0) {
@@ -100,7 +114,7 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await query("DELETE FROM activity_checklist WHERE id = @id", { id });
+    await query("UPDATE activity_checklist SET is_deleted = 1 WHERE id = @id", { id });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
@@ -111,4 +125,3 @@ export async function DELETE(req: Request) {
     );
   }
 }
-

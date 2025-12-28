@@ -37,7 +37,9 @@ export async function GET(
         g.name as group_name,
         sas.name as series_name,
         vm.full_name AS activity_manager_name,
-        vs.full_name AS safety_manager_name
+        vs.full_name AS safety_manager_name,
+        (SELECT COUNT(*) FROM activity a2 WHERE a2.series_id = a.series_id) as series_total_count,
+        (SELECT COUNT(*) FROM activity a3 WHERE a3.series_id = a.series_id AND a3.activity_date <= a.activity_date) as series_index
       FROM activity a
       INNER JOIN season_activity_series sas ON sas.id = a.series_id
       LEFT JOIN [group] g ON a.group_id = g.id

@@ -19,6 +19,9 @@ import {
   Edit2,
   RotateCcw,
   AlertCircle,
+  CheckSquare,
+  Square,
+  Plus,
 } from "lucide-react";
 
 // --- Types ---
@@ -27,6 +30,11 @@ export type TaskEntityOption = {
   id: string;
   name: string;
   subtitle?: string;
+};
+
+export type TaskAssigneeOption = {
+  id: string;
+  name: string;
 };
 
 type TaskNote = {
@@ -38,6 +46,8 @@ type TaskNote = {
   status: NoteStatus;
   priority?: string;
   due_date?: string | null;
+  assigned_to?: string | null;
+  assigned_to_name?: string | null;
   created_by?: string | null;
   created_by_name?: string | null;
   created_at?: string | null;
@@ -57,8 +67,10 @@ type HistoryEntry = {
 type TasksBoardProps = {
   entityType: string;
   entities?: TaskEntityOption[];
+  assignees?: TaskAssigneeOption[];
   fixedEntityId?: string;
   title?: string;
+  variant?: "grid" | "list";
 };
 
 // --- Helpers ---
@@ -107,8 +119,10 @@ const getStatusLabel = (val: string) =>
 export function TasksBoard({
   entityType,
   entities = [],
+  assignees = [],
   fixedEntityId,
   title = "משימות ופתקים",
+  variant = "grid",
 }: TasksBoardProps) {
   const [tasks, setTasks] = useState<TaskNote[]>([]);
   const [loading, setLoading] = useState(false);
@@ -123,6 +137,7 @@ export function TasksBoard({
     body: "",
     due_date: "",
     status: "not_started" as NoteStatus,
+    assigned_to: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -189,6 +204,7 @@ export function TasksBoard({
         entity_type: entityType,
         entity_id: fixedEntityId || formData.entity_id,
         due_date: formData.due_date || null,
+        assigned_to: formData.assigned_to || null,
       };
 
       const res = await fetch(endpoint, {
@@ -253,6 +269,11 @@ export function TasksBoard({
     }
   };
 
+  const handleToggleComplete = async (task: TaskNote) => {
+    const newStatus = task.status === "done" ? "open" : "done";
+    handleStatusChange(task, newStatus);
+  };
+
   const handleShowHistory = async (task: TaskNote) => {
     setCurrentHistoryTitle(task.title);
     setHistoryModalOpen(true);
@@ -283,6 +304,7 @@ export function TasksBoard({
       body: task.body,
       due_date: task.due_date ? task.due_date.split("T")[0] : "",
       status: task.status,
+      assigned_to: task.assigned_to || "",
     });
   };
 
@@ -295,6 +317,7 @@ export function TasksBoard({
       body: "",
       due_date: "",
       status: "not_started",
+      assigned_to: "",
     });
   };
 
@@ -306,365 +329,565 @@ export function TasksBoard({
         body: "",
         due_date: "",
         status: "not_started",
+        assigned_to: "",
       });
     }
   };
 
-  // --- Render ---
+  // --- Render Helpers ---
 
-  return (
-    <Card style={{ padding: spacing.lg }}>
-      <div style={{ marginBottom: spacing.lg }}>
-        <h4 style={{ margin: "0 0 16px 0" }}>{title}</h4>
+  const renderCreationForm = () => (
+    <div
+      style={{
+        background: colors.background,
+        padding: spacing.md,
+        borderRadius: radii.card,
+        border: `1px solid ${colors.border}`,
+        marginBottom: spacing.lg,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: spacing.md,
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: spacing.md,
+          }}
+        >
+          {!fixedEntityId && (
+            <div>
+              <label style={labelStyle}>שיוך</label>
+              <select
+                style={inputStyle}
+                value={formData.entity_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, entity_id: e.target.value })
+                }
+              >
+                <option value="">בחר...</option>
+                {entities.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name} {e.subtitle ? `(${e.subtitle})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-        {/* Creation Form */}
-        {!isEditing && (
+          {assignees.length > 0 && (
+            <div>
+              <label style={labelStyle}>אחריות (אופציונלי)</label>
+              <select
+                style={inputStyle}
+                value={formData.assigned_to}
+                onChange={(e) =>
+                  setFormData({ ...formData, assigned_to: e.target.value })
+                }
+              >
+                <option value="">ללא שיוך</option>
+                {assignees.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label style={labelStyle}>תאריך יעד</label>
+            <input
+              type="date"
+              style={inputStyle}
+              value={formData.due_date}
+              onChange={(e) =>
+                setFormData({ ...formData, due_date: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 2fr",
+            gap: spacing.md,
+          }}
+        >
+          <div>
+            <label style={labelStyle}>כותרת</label>
+            <input
+              style={inputStyle}
+              value={formData.title}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
+              placeholder="נושא המשימה"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>תוכן</label>
+            <input
+              style={inputStyle}
+              value={formData.body}
+              onChange={(e) =>
+                setFormData({ ...formData, body: e.target.value })
+              }
+              placeholder="פירוט..."
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: spacing.sm,
+          }}
+        >
+          <SmallActionButton
+            variant="secondary"
+            onClick={clearFormContent}
+            title="נקה טופס"
+          >
+            <RotateCcw size={14} /> נקה תוכן
+          </SmallActionButton>
+          <SmallActionButton onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "שומר..." : "צור משימה"}
+          </SmallActionButton>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderGridView = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+      {tasks.map((task) => {
+        const entityName = entities.find((e) => e.id === task.entity_id)?.name;
+        const statusObj = TASK_STATUSES.find((s) => s.value === task.status);
+        const isOverdue =
+          task.due_date &&
+          new Date(task.due_date) < new Date() &&
+          task.status !== "done" &&
+          task.status !== "cancelled";
+
+        return (
           <div
+            key={task.note_id}
             style={{
-              background: colors.background,
-              padding: spacing.md,
+              background: "#fff",
               borderRadius: radii.card,
-              border: `1px solid ${colors.border}`,
+              border: `1px solid ${colors.borderMuted}`,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              overflow: "hidden",
             }}
           >
+            {/* Header */}
             <div
               style={{
+                padding: `${spacing.sm} ${spacing.md}`,
+                borderBottom: `1px solid ${colors.border}`,
+                background: "rgba(249, 250, 251, 0.5)",
                 display: "flex",
-                flexDirection: "column",
-                gap: spacing.md,
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: spacing.md,
+                  fontWeight: 600,
+                  fontSize: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                {!fixedEntityId && (
-                  <div>
-                    <label style={labelStyle}>שיוך</label>
-                    <select
-                      style={inputStyle}
-                      value={formData.entity_id}
-                      onChange={(e) =>
-                        setFormData({ ...formData, entity_id: e.target.value })
-                      }
-                    >
-                      <option value="">בחר...</option>
-                      {entities.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.name} {e.subtitle ? `(${e.subtitle})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                {task.title}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {task.due_date && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      padding: "2px 8px",
+                      background: isOverdue
+                        ? "rgba(239, 68, 68, 0.1)"
+                        : "rgba(0,0,0,0.04)",
+                      borderRadius: radii.pill,
+                      color: isOverdue ? colors.danger : colors.textMuted,
+                    }}
+                  >
+                    <Calendar size={13} />
+                    <span>
+                      {new Date(task.due_date).toLocaleDateString("he-IL")}
+                    </span>
+                    {isOverdue && <AlertCircle size={13} />}
                   </div>
                 )}
 
-                <div>
-                  <label style={labelStyle}>תאריך יעד</label>
-                  <input
-                    type="date"
-                    style={inputStyle}
-                    value={formData.due_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, due_date: e.target.value })
-                    }
-                  />
-                </div>
+                <select
+                  style={{
+                    fontSize: 12,
+                    padding: "4px 8px",
+                    borderRadius: radii.pill,
+                    border: "none",
+                    background: TONE_COLORS[statusObj?.tone || "neutral"].bg,
+                    color: TONE_COLORS[statusObj?.tone || "neutral"].text,
+                    cursor: "pointer",
+                    outline: "none",
+                    fontWeight: 600,
+                  }}
+                  value={task.status}
+                  onChange={(e) =>
+                    handleStatusChange(task, e.target.value as NoteStatus)
+                  }
+                >
+                  {TASK_STATUSES.map((s) => (
+                    <option
+                      key={s.value}
+                      value={s.value}
+                      style={{ backgroundColor: "#fff", color: "#000" }}
+                    >
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
               </div>
+            </div>
 
+            {/* Body */}
+            <div style={{ padding: spacing.md }}>
+              <p
+                style={{
+                  margin: "0 0 16px 0",
+                  color: colors.textPrimary,
+                  whiteSpace: "pre-wrap",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                }}
+              >
+                {task.body}
+              </p>
+
+              {/* Metadata Grid */}
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 2fr",
-                  gap: spacing.md,
+                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                  gap: 12,
+                  fontSize: 12,
+                  color: colors.textMuted,
                 }}
               >
-                <div>
-                  <label style={labelStyle}>כותרת</label>
-                  <input
-                    style={inputStyle}
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                    placeholder="נושא המשימה"
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>תוכן</label>
-                  <input
-                    style={inputStyle}
-                    value={formData.body}
-                    onChange={(e) =>
-                      setFormData({ ...formData, body: e.target.value })
-                    }
-                    placeholder="פירוט..."
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: spacing.sm,
-                }}
-              >
-                <SmallActionButton
-                  variant="secondary"
-                  onClick={clearFormContent}
-                  title="נקה טופס"
-                >
-                  <RotateCcw size={14} /> נקה תוכן
-                </SmallActionButton>
-                <SmallActionButton onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "שומר..." : "צור משימה"}
-                </SmallActionButton>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* List Area */}
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-      >
-        <h4 style={{ margin: "16px 0 0 0" }}>משימות קיימות</h4>
-        {loading && (
-          <div style={{ color: colors.textMuted, textAlign: "center" }}>
-            טוען...
-          </div>
-        )}
-
-        {!loading && tasks.length === 0 && (
-          <div
-            style={{
-              color: colors.textMuted,
-              textAlign: "center",
-              padding: spacing.lg,
-            }}
-          >
-            אין משימות להצגה.
-          </div>
-        )}
-
-        {tasks.map((task) => {
-          const entityName = entities.find(
-            (e) => e.id === task.entity_id
-          )?.name;
-          const statusObj = TASK_STATUSES.find((s) => s.value === task.status);
-          const isOverdue =
-            task.due_date &&
-            new Date(task.due_date) < new Date() &&
-            task.status !== "done" &&
-            task.status !== "cancelled";
-
-          return (
-            <div
-              key={task.note_id}
-              style={{
-                background: "#fff",
-                borderRadius: radii.card,
-                border: `1px solid ${colors.borderMuted}`,
-                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                overflow: "hidden",
-              }}
-            >
-              {/* Header */}
-              <div
-                style={{
-                  padding: `${spacing.sm} ${spacing.md}`,
-                  borderBottom: `1px solid ${colors.border}`,
-                  background: "rgba(249, 250, 251, 0.5)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 15,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  {task.title}
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {task.due_date && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 12,
-                        padding: "2px 8px",
-                        background: isOverdue
-                          ? "rgba(239, 68, 68, 0.1)"
-                          : "rgba(0,0,0,0.04)",
-                        borderRadius: radii.pill,
-                        color: isOverdue ? colors.danger : colors.textMuted,
-                      }}
-                    >
-                      <Calendar size={13} />
-                      <span>
-                        {new Date(task.due_date).toLocaleDateString("he-IL")}
-                      </span>
-                      {isOverdue && <AlertCircle size={13} />}
-                    </div>
-                  )}
-
-                  <select
-                    style={{
-                      fontSize: 12,
-                      padding: "4px 8px",
-                      borderRadius: radii.pill,
-                      border: "none", // Remove border for cleaner pill look
-                      background: TONE_COLORS[statusObj?.tone || "neutral"].bg,
-                      color: TONE_COLORS[statusObj?.tone || "neutral"].text,
-                      cursor: "pointer",
-                      outline: "none",
-                      fontWeight: 600,
-                    }}
-                    value={task.status}
-                    onChange={(e) =>
-                      handleStatusChange(task, e.target.value as NoteStatus)
-                    }
-                  >
-                    {TASK_STATUSES.map((s) => (
-                      <option
-                        key={s.value}
-                        value={s.value}
-                        style={{ backgroundColor: "#fff", color: "#000" }}
-                      >
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding: spacing.md }}>
-                <p
-                  style={{
-                    margin: "0 0 16px 0",
-                    color: colors.textPrimary,
-                    whiteSpace: "pre-wrap",
-                    fontSize: 14,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {task.body}
-                </p>
-
-                {/* Metadata Grid */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                    gap: 12,
-                    fontSize: 12,
-                    color: colors.textMuted,
-                  }}
-                >
-                  {!fixedEntityId && entityName && (
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    >
-                      <User size={14} />
-                      <span>
-                        עבור: <strong>{entityName}</strong>
-                      </span>
-                    </div>
-                  )}
+                {!fixedEntityId && entityName && (
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 6 }}
                   >
                     <User size={14} />
                     <span>
-                      נוצר ע"י:{" "}
-                      <strong>
-                        {task.created_by_name || task.created_by || "?"}
-                      </strong>
+                      עבור: <strong>{entityName}</strong>
                     </span>
                   </div>
+                )}
+                {task.assigned_to_name && (
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 6 }}
                   >
-                    <Clock size={14} />
-                    <span>נוצר: {formatDateTime(task.created_at)}</span>
+                    <User size={14} />
+                    <span>
+                      אחריות: <strong>{task.assigned_to_name}</strong>
+                    </span>
                   </div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <User size={14} />
+                  <span>
+                    נוצר ע"י:{" "}
+                    <strong>
+                      {task.created_by_name || task.created_by || "?"}
+                    </strong>
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Clock size={14} />
+                  <span>נוצר: {formatDateTime(task.created_at)}</span>
                 </div>
               </div>
+            </div>
 
-              {/* Footer Actions */}
-              <div
+            {/* Footer Actions */}
+            <div
+              style={{
+                padding: `${spacing.xs} ${spacing.xl}`,
+                borderTop: `1px solid ${colors.border}`,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: spacing.md,
+                background: "#fff",
+              }}
+            >
+              <button
+                onClick={() => handleShowHistory(task)}
                 style={{
-                  padding: `${spacing.xs} ${spacing.xl}`, // הגדלנו את הריווח האופקי ל-xl
-                  borderTop: `1px solid ${colors.border}`,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
                   display: "flex",
-                  justifyContent: "flex-end", // החזרנו ליישור לשמאל (ב-RTL)
-                  gap: spacing.md,
-                  background: "#fff",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 12,
+                  color: colors.primary,
                 }}
               >
-                <button
-                  onClick={() => handleShowHistory(task)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 12,
-                    color: colors.primary,
-                  }}
-                >
-                  <History size={14} /> היסטוריה
-                </button>
-                <button
-                  onClick={() => startEdit(task)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 12,
-                    color: colors.textMuted,
-                  }}
-                >
-                  <Edit2 size={14} /> ערוך
-                </button>
-                <button
-                  onClick={() => handleDelete(task.note_id)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: 12,
-                    color: colors.danger,
-                  }}
-                >
-                  <Trash2 size={14} /> מחק
-                </button>
-              </div>
+                <History size={14} /> היסטוריה
+              </button>
+              <button
+                onClick={() => startEdit(task)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 12,
+                  color: colors.textMuted,
+                }}
+              >
+                <Edit2 size={14} /> ערוך
+              </button>
+              <button
+                onClick={() => handleDelete(task.note_id)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 12,
+                  color: colors.danger,
+                }}
+              >
+                <Trash2 size={14} /> מחק
+              </button>
             </div>
-          );
-        })}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderListView = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <Button
+        variant="secondary"
+        onClick={() => setIsEditing(true)}
+        style={{ alignSelf: "flex-start", marginBottom: 8 }}
+      >
+        <Plus size={14} style={{ marginLeft: 6 }} /> הוסף משימה
+      </Button>
+      {tasks.map((task) => {
+        const isCompleted = task.status === "done";
+        const isOverdue =
+          task.due_date &&
+          new Date(task.due_date) < new Date() &&
+          !isCompleted &&
+          task.status !== "cancelled";
+
+        return (
+          <div
+            key={task.note_id}
+            style={{
+              background: isCompleted ? colors.surfaceAlt : "#fff",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              opacity: isCompleted ? 0.7 : 1,
+              transition: "all 0.2s",
+            }}
+          >
+            {/* 1. Checkbox */}
+            <div
+              onClick={() => handleToggleComplete(task)}
+              style={{
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                color: isCompleted ? colors.success : colors.textMuted,
+              }}
+            >
+              {isCompleted ? <CheckSquare size={20} /> : <Square size={20} />}
+            </div>
+
+            {/* 2. Title & Assignee */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                overflow: "hidden",
+              }}
+            >
+              <span
+                onClick={() => startEdit(task)}
+                style={{
+                  fontWeight: 500,
+                  fontSize: 14,
+                  textDecoration: isCompleted ? "line-through" : "none",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {task.title}
+              </span>
+
+              {task.assigned_to_name && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: colors.surfaceAlt,
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    color: colors.textMuted,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <User
+                    size={10}
+                    style={{ verticalAlign: "middle", marginLeft: 2 }}
+                  />
+                  {task.assigned_to_name}
+                </span>
+              )}
+            </div>
+
+            {/* 3. Due Date */}
+            {task.due_date && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: isOverdue ? colors.danger : colors.textMuted,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Calendar size={12} />
+                {new Date(task.due_date).toLocaleDateString("he-IL", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
+              </div>
+            )}
+
+            {/* 4. Actions */}
+            <div style={{ display: "flex", gap: 4 }}>
+              <button
+                onClick={() => handleShowHistory(task)}
+                title="היסטוריה"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: colors.textMuted,
+                  padding: 4,
+                }}
+              >
+                <History size={16} />
+              </button>
+              <button
+                onClick={() => handleDelete(task.note_id)}
+                title="מחק"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: colors.textMuted, // Using muted instead of danger for cleaner look until hover
+                  padding: 4,
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // --- Render ---
+
+  return (
+    <Card
+      style={{
+        padding: spacing.lg,
+        background: variant === "list" ? "transparent" : undefined,
+        boxShadow: variant === "list" ? "none" : undefined,
+        border: variant === "list" ? "none" : undefined,
+      }}
+    >
+      <div
+        style={{
+          marginBottom: spacing.lg,
+          display: variant === "list" ? "none" : "block",
+        }}
+      >
+        <h4 style={{ margin: "0 0 16px 0" }}>{title}</h4>
       </div>
+
+      {/* Creation Form - Only show if not editing (modal handles editing) and variant is grid OR if variant is list but we want inline? actually list uses modal for everything for simplicity now */}
+      {!isEditing && variant === "grid" && renderCreationForm()}
+
+      {/* List Area */}
+      {loading && (
+        <div
+          style={{ color: colors.textMuted, textAlign: "center", padding: 20 }}
+        >
+          טוען...
+        </div>
+      )}
+
+      {!loading && tasks.length === 0 && (
+        <div
+          style={{
+            color: colors.textMuted,
+            textAlign: "center",
+            padding: spacing.lg,
+          }}
+        >
+          אין משימות להצגה.
+          {variant === "list" && (
+            <Button
+              variant="secondary"
+              onClick={() => setIsEditing(true)}
+              style={{ marginTop: 8 }}
+            >
+              <Plus size={14} style={{ marginLeft: 6 }} /> הוסף משימה ראשונה
+            </Button>
+          )}
+        </div>
+      )}
+
+      {!loading &&
+        tasks.length > 0 &&
+        (variant === "list" ? renderListView() : renderGridView())}
 
       {/* Edit Modal */}
       <Modal
@@ -673,7 +896,9 @@ export function TasksBoard({
         width="min(500px, 90vw)"
         style={{ padding: spacing.xl }}
       >
-        <h3 style={{ marginTop: 0 }}>עריכת משימה</h3>
+        <h3 style={{ marginTop: 0 }}>
+          {editingId ? "עריכת משימה" : "הוספת משימה חדשה"}
+        </h3>
         <div
           style={{
             display: "flex",
@@ -690,10 +915,32 @@ export function TasksBoard({
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
               }
+              autoFocus
             />
           </div>
+
+          {assignees.length > 0 && (
+            <div>
+              <label style={labelStyle}>אחריות</label>
+              <select
+                style={inputStyle}
+                value={formData.assigned_to}
+                onChange={(e) =>
+                  setFormData({ ...formData, assigned_to: e.target.value })
+                }
+              >
+                <option value="">ללא שיוך</option>
+                {assignees.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
-            <label style={labelStyle}>תוכן</label>
+            <label style={labelStyle}>תוכן (אופציונלי)</label>
             <textarea
               style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
               value={formData.body}
@@ -753,7 +1000,7 @@ export function TasksBoard({
               ביטול
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "שומר..." : "עדכן"}
+              {submitting ? "שמור" : "שמור"}
             </Button>
           </div>
         </div>

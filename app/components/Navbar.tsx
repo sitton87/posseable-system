@@ -228,44 +228,28 @@ export default function Navbar() {
       title: "ניהול פעילות",
       items: [
         {
-          pageKey: "activities",
+          pageKey: "activities-module",
           href: "/activities",
-          icon: <Calendar size={22} />,
-          label: "פעילויות",
+          icon: <CalendarRange size={22} />, // Icon representing the whole module
+          label: "ניהול פעילות",
           children: [
-            { href: "/activities", label: "דף הבית", pageKey: "activities" },
             {
               href: "/activities",
-              label: "רשימת פעילויות",
-              pageKey: "activities-list",
-              query: { view: "list" },
+              label: "דף הבית",
+              pageKey: "activities-dashboard",
+              query: { tab: "dashboard" },
             },
             {
               href: "/activities",
-              label: "גאנט פעילויות",
-              pageKey: "activities-gantt",
-              query: { view: "gantt" },
-            },
-          ],
-        },
-        {
-          pageKey: "seasons",
-          href: "/seasons",
-          icon: <CalendarRange size={22} />,
-          label: "עונות",
-          children: [
-            { href: "/seasons", label: "דף הבית", pageKey: "seasons" },
-            {
-              href: "/seasons",
-              label: "רשימת עונות",
-              pageKey: "seasons-list",
-              query: { view: "seasons-list" },
+              label: "המוקד המבצעי",
+              pageKey: "activities-operations",
+              query: { tab: "operations" },
             },
             {
-              href: "/seasons",
-              label: "רשימת סדרות",
-              pageKey: "series-list",
-              query: { view: "series-list" },
+              href: "/activities",
+              label: "תכנון והגדרות",
+              pageKey: "activities-planning",
+              query: { tab: "planning" },
             },
           ],
         },
@@ -328,6 +312,7 @@ export default function Navbar() {
 
   const hasAccess = (key?: string, fallback?: string) => {
     if (permissionsLoading) return true;
+    if (isAdmin) return true;
     if (key) {
       const level = permissions[key];
       if (level && level !== "none") {
@@ -475,14 +460,45 @@ export default function Navbar() {
     const hasChildren = Boolean(item.children?.length);
     const childIsActive = (child: MenuChild) => {
       if (!pathname) return false;
+
+      // Basic path matching
       const pathMatch =
         child.href === "/" ? pathname === "/" : pathname.startsWith(child.href);
       if (!pathMatch) return false;
-      if (!child.query) return true;
-      if (!searchParams) return false;
-      return Object.entries(child.query).every(
-        ([key, value]) => searchParams.get(key) === value
-      );
+
+      // Logic for Activity Workspace pages:
+      // If we are in /activities/[id] (but not /activities root), we want "Operations" to be active
+      if (
+        child.pageKey === "activities-operations" &&
+        pathname.startsWith("/activities/") &&
+        pathname !== "/activities" &&
+        pathname !== "/activities/new"
+      ) {
+        return true;
+      }
+
+      // Default Logic: Query Params check
+      // If child requires specific queries, check them.
+      if (child.query && Object.keys(child.query).length > 0) {
+        if (!searchParams) return false;
+
+        // Special case: Default Dashboard (no tab param)
+        // If we are on /activities with NO tab param, and this child is 'activities-dashboard' (tab=dashboard), match it?
+        // Actually, clearer to let 'activities-dashboard' match if tab=dashboard OR (tab is missing AND we are exactly at /activities)
+        if (
+          child.pageKey === "activities-dashboard" &&
+          pathname === "/activities" &&
+          !searchParams.get("tab")
+        ) {
+          return true;
+        }
+
+        return Object.entries(child.query).every(
+          ([key, value]) => searchParams.get(key) === value
+        );
+      }
+
+      return true;
     };
     const isActive = hasChildren
       ? item.children!.some(childIsActive)

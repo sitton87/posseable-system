@@ -144,7 +144,10 @@ export default function NewActivityPage() {
               options={[
                 { value: "surf", label: "גלישה" },
                 { value: "social", label: "חברתי" },
-                { value: "lecture", label: "הרצאה" },
+                { value: "lecture", label: "הדרכה/הרצאה" },
+                { value: "preparation", label: "הכנה" },
+                { value: "special", label: "אירוע מיוחד" },
+                { value: "other", label: "אחר" },
               ]}
               required
             />
