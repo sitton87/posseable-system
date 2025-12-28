@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SeasonPlan, ActivitySeries, Activity } from "@/type";
+import { SeasonPlan, ActivitySeries } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
-import { colors, spacing, radii } from "@/app/styles/foundations";
+import { colors, spacing } from "@/app/styles/foundations";
 import { inputStyle, labelStyle } from "@/app/styles/components";
+import { Search, X, Filter } from "lucide-react";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
@@ -15,13 +16,19 @@ const SERIES_STATUS_OPTIONS = ["פעיל", "בהקמה", "הוקפא", "נסגר
 
 export default function SeriesListTab() {
   const [seasons, setSeasons] = useState<SeasonPlan[]>([]);
-  const [selectedSeasonId, setSelectedSeasonId] = useState<number | "all">("all");
   const [seriesList, setSeriesList] = useState<ActivitySeries[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Data needed for forms
+  // Data needed for forms & display
   const [groups, setGroups] = useState<any[]>([]);
   const [staffList, setStaffList] = useState<any[]>([]);
+
+  // Filters
+  const [selectedSeasonId, setSelectedSeasonId] = useState<number | "all">("all");
+  const [filterText, setFilterText] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterGroup, setFilterGroup] = useState<string>("");
+  const [showFilters, setShowFilters] = useState(false); // Toggle for mobile/cleaner look if needed, but we'll show inline
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -58,12 +65,10 @@ export default function SeriesListTab() {
 
   const fetchInitialData = async () => {
     try {
-      // Fetch seasons
       const seasonsRes = await fetch("/api/seasons");
       const seasonsData = await seasonsRes.json();
       if (seasonsData.success) {
         setSeasons(seasonsData.seasons);
-        // Default to first active season if available, or just 'all'
         const active = seasonsData.seasons.find((s: SeasonPlan) => {
             const now = new Date();
             return new Date(s.start_date) <= now && new Date(s.end_date) >= now;
@@ -72,12 +77,10 @@ export default function SeriesListTab() {
         else if (seasonsData.seasons.length > 0) setSelectedSeasonId(seasonsData.seasons[0].id);
       }
 
-      // Fetch groups
       const groupsRes = await fetch("/api/groups");
       const groupsData = await groupsRes.json();
       if (groupsData.success) setGroups(groupsData.groups);
 
-      // Fetch staff
       const [staffRes, mgmtRes] = await Promise.all([
         fetch("/api/volunteers?classification=staff"),
         fetch("/api/volunteers?classification=management"),
@@ -103,9 +106,6 @@ export default function SeriesListTab() {
       if (selectedSeasonId !== "all") {
         url += `?season_id=${selectedSeasonId}`;
       }
-      // Note: The API might need adjustment to return ALL series if no season_id is provided, 
-      // or we might iterate. Assuming for now it returns based on query.
-      // If the current API requires season_id strictly, we handle that.
       
       const res = await fetch(url);
       const data = await res.json();
@@ -121,9 +121,25 @@ export default function SeriesListTab() {
     }
   };
 
+  const clearFilters = () => {
+    setFilterText("");
+    setFilterStatus("");
+    setFilterGroup("");
+  };
+
+  const filteredSeries = seriesList.filter(s => {
+      if (filterText && !s.name.includes(filterText)) return false;
+      if (filterStatus && s.status !== filterStatus) return false;
+      if (filterGroup && s.group_id !== filterGroup) return false;
+      return true;
+  });
+
+  const getGroupName = (groupId: string) => {
+      const g = groups.find(group => group.id === groupId);
+      return g ? g.name : "-";
+  };
+
   const openModal = (series?: ActivitySeries) => {
-    // If we are in "all" view and creating new, we must force user to select season first or default to something?
-    // Let's simplify: if "all" is selected, default to first season in list.
     const seasonIdToUse = (series ? series.season_id : (selectedSeasonId === "all" ? seasons[0]?.id : selectedSeasonId));
     const season = seasons.find(s => s.id === Number(seasonIdToUse));
     
@@ -135,7 +151,6 @@ export default function SeriesListTab() {
     setSeriesModalSeason(season);
     setEditingSeries(series || null);
 
-    // Calculate initial date
     let initialDate = "";
     if (series?.start_date) {
       initialDate = new Date(series.start_date).toISOString().split("T")[0];
@@ -245,11 +260,19 @@ export default function SeriesListTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
       <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: spacing.md }}>
+        {/* Header Row: Title + Add Button + Global Season Select */}
+        <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            flexWrap: "wrap", 
+            gap: spacing.md,
+            marginBottom: spacing.md 
+        }}>
           <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>רשימת סדרות</h2>
             <select 
-                style={{ ...inputStyle, width: "auto", minWidth: 200 }}
+                style={{ ...inputStyle, width: "auto", minWidth: 200, margin: 0 }}
                 value={selectedSeasonId}
                 onChange={(e) => {
                     const val = e.target.value;
@@ -263,10 +286,68 @@ export default function SeriesListTab() {
           </div>
           <Button onClick={() => openModal()}>+ הוסף סדרה</Button>
         </div>
-      </Card>
+        
+        {/* Filters Row - Integrated nicely */}
+        <div style={{ 
+            display: "flex", 
+            gap: spacing.sm, 
+            paddingTop: spacing.sm, 
+            borderTop: `1px solid ${colors.borderMuted}`, 
+            alignItems: "center", 
+            flexWrap: "wrap" 
+        }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: muted }}>
+                <Filter size={14} />
+                <span style={{ fontSize: 13, fontWeight: 600 }}>סינון:</span>
+            </div>
+            
+            <input 
+                type="text" 
+                placeholder="חיפוש לפי שם..." 
+                style={{ ...inputStyle, width: 150, margin: 0, fontSize: 13, height: 36 }}
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+            />
 
-      <Card>
-        <div style={{ overflowX: "auto" }}>
+            <select 
+                style={{ ...inputStyle, width: 140, margin: 0, fontSize: 13, height: 36 }}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+            >
+                <option value="">כל הסטטוסים</option>
+                {SERIES_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            <select 
+                style={{ ...inputStyle, width: 160, margin: 0, fontSize: 13, height: 36 }}
+                value={filterGroup}
+                onChange={(e) => setFilterGroup(e.target.value)}
+            >
+                <option value="">כל הקבוצות</option>
+                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+
+            {(filterText || filterStatus || filterGroup) && (
+                <button 
+                    onClick={clearFilters} 
+                    style={{ 
+                        background: "none", 
+                        border: "none", 
+                        fontSize: 12, 
+                        color: colors.danger, 
+                        cursor: "pointer", 
+                        display: "flex", 
+                        alignItems: "center",
+                        gap: 4
+                    }}
+                >
+                    <X size={12} /> ניקוי פילטרים
+                </button>
+            )}
+        </div>
+        
+        {/* Table */}
+        <div style={{ overflowX: "auto", marginTop: spacing.sm }}>
           <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
             <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
               <tr style={{ color: muted, fontSize: 13 }}>
@@ -281,16 +362,18 @@ export default function SeriesListTab() {
             <tbody>
               {loading ? (
                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 20 }}>טוען...</td></tr>
-              ) : seriesList.length === 0 ? (
-                 <tr><td colSpan={6} style={{ textAlign: "center", padding: 20, color: muted }}>אין סדרות להצגה בעונה זו.</td></tr>
-              ) : seriesList.map((series) => (
+              ) : filteredSeries.length === 0 ? (
+                 <tr><td colSpan={6} style={{ textAlign: "center", padding: 20, color: muted }}>לא נמצאו סדרות.</td></tr>
+              ) : filteredSeries.map((series) => (
                   <tr key={series.id} style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}>
                     <td style={{ padding: 8, fontWeight: 600 }}>{series.name}</td>
-                    <td style={{ textAlign: "center", padding: 8 }}>{series.group_name || "-"}</td>
-                    <td style={{ textAlign: "center", padding: 8 }}>{series.default_activity_kind}</td>
+                    <td style={{ textAlign: "center", padding: 8 }}>
+                        {series.group_name || "-"}
+                    </td>
+                    <td style={{ textAlign: "center", padding: 8 }}>{series.default_activity_kind || "-"}</td>
                     <td style={{ textAlign: "center", padding: 8, fontSize: 12 }}>
                         {series.schedule_type === 'Fixed' ? 
-                            `${series.frequency === 'Weekly' ? 'שבועי' : series.frequency} (${series.occurrences_count || 0} חזרות)` : 
+                            `${series.frequency === 'Weekly' ? 'שבועי' : series.frequency === 'Daily' ? 'יומי' : series.frequency === 'Monthly' ? 'חודשי' : series.frequency} (${series.occurrences_count || 0} חזרות)` : 
                             'ידני'}
                     </td>
                     <td style={{ textAlign: "center", padding: 8 }}>
@@ -310,8 +393,7 @@ export default function SeriesListTab() {
           </table>
         </div>
       </Card>
-
-      {/* Insert Modal Code Here - Copied from original but cleaned up */}
+      {/* Modal - same as before */}
       <Modal
         open={showModal}
         onClose={closeModal}
@@ -327,7 +409,6 @@ export default function SeriesListTab() {
               עונה: <strong>{seriesModalSeason.name}</strong>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
-              {/* Form Content - Same as before */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: spacing.md }}>
                 <div>
                   <label style={labelStyle}>שם הסדרה <span style={{ color: colors.danger }}>*</span></label>
@@ -469,4 +550,3 @@ export default function SeriesListTab() {
     </div>
   );
 }
-

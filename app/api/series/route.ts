@@ -18,6 +18,13 @@ type SeriesRow = {
   season_year?: number;
   activities_count?: number;
   activities?: any[];
+  // New fields
+  group_id?: string | null;
+  group_name?: string | null;
+  schedule_type?: string | null;
+  frequency?: string | null;
+  occurrences_count?: number | null;
+  default_activity_kind?: string | null;
 };
 
 export async function GET(req: Request) {
@@ -46,8 +53,14 @@ export async function GET(req: Request) {
         sas.notes,
         sas.is_default,
         sas.created_at,
+        sas.group_id,
+        sas.schedule_type,
+        sas.frequency,
+        sas.occurrences_count,
+        sas.default_activity_kind,
         sp.name AS season_name,
-        sp.year AS season_year
+        sp.year AS season_year,
+        g.name AS group_name
     `;
 
     if (includeStats) {
@@ -64,6 +77,7 @@ export async function GET(req: Request) {
       ${selectClause}
       FROM season_activity_series sas
       INNER JOIN season_plan sp ON sp.id = sas.season_id
+      LEFT JOIN [group] g ON g.id = sas.group_id
     `;
 
     if (includeStats) {
@@ -170,4 +184,3 @@ export async function GET(req: Request) {
     );
   }
 }
-

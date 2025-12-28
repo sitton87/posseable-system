@@ -253,6 +253,21 @@ export default function Navbar() {
           href: "/seasons",
           icon: <CalendarRange size={22} />,
           label: "עונות",
+          children: [
+            { href: "/seasons", label: "דף הבית", pageKey: "seasons" },
+            {
+              href: "/seasons",
+              label: "רשימת עונות",
+              pageKey: "seasons-list",
+              query: { view: "seasons-list" },
+            },
+            {
+              href: "/seasons",
+              label: "רשימת סדרות",
+              pageKey: "series-list",
+              query: { view: "series-list" },
+            },
+          ],
         },
       ],
     },
