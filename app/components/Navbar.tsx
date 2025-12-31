@@ -17,6 +17,7 @@ import {
   CalendarRange,
   Settings,
   ChevronDown,
+  CheckSquare,
 } from "lucide-react";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
 import { usePermissions } from "@/app/hooks/usePagePermission";
@@ -292,6 +293,12 @@ export default function Navbar() {
       id: "admin",
       title: "מנהלה",
       items: [
+        {
+          pageKey: "tasks",
+          href: "/tasks",
+          icon: <CheckSquare size={22} />,
+          label: "מרכז משימות",
+        },
         {
           pageKey: "finance",
           href: "/finance",

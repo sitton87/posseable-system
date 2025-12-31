@@ -99,7 +99,7 @@ const quickActionStyle: CSSProperties = {
 
 type DashboardStats = {
   volunteers: { total: number; active: number };
-  surfers: { total: number; active: number; byProgram: Record<string, number> };
+  surfers: { total: number; active: number; byGroup: Record<string, number> };
   activities: {
     total: number;
     upcoming: number;
@@ -387,13 +387,13 @@ export default function DashboardView() {
           }}
         >
           <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>
-            גולשים לפי תוכנית
+            גולשים לפי קבוצה
           </h3>
           <div style={detailListStyle}>
-            {Object.entries(stats.surfers.byProgram).map(([program, count]) => (
-              <div key={program} style={detailItemStyle}>
+            {Object.entries(stats.surfers.byGroup).map(([group, count]) => (
+              <div key={group} style={detailItemStyle}>
                 <span style={{ fontWeight: 600, color: colors.textPrimary }}>
-                  {program}
+                  {group}
                 </span>
                 <span
                   style={{
@@ -406,7 +406,7 @@ export default function DashboardView() {
                 </span>
               </div>
             ))}
-            {Object.keys(stats.surfers.byProgram).length === 0 && (
+            {Object.keys(stats.surfers.byGroup).length === 0 && (
               <div style={{ textAlign: "center", color: muted }}>
                 אין נתונים זמינים
               </div>

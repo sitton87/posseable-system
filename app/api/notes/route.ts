@@ -40,17 +40,26 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const entityType =
       searchParams.get("entityType") ?? searchParams.get("entity_type");
+    
+    // Allow "all" or specific type
     if (!entityType) {
       return NextResponse.json(
         { error: "entityType (or entity_type) query parameter is required" },
         { status: 400 }
       );
     }
-    const permission = await ensurePermissionResponse(
-      getPermissionKey(entityType),
-      "read"
-    );
-    if (!permission.allowed) return permission.response;
+
+    if (entityType !== "all") {
+      const permission = await ensurePermissionResponse(
+        getPermissionKey(entityType),
+        "read"
+      );
+      if (!permission.allowed) return permission.response;
+    } else {
+      // For "all", we check generic access (e.g. dashboard or admin)
+      const permission = await ensurePermissionResponse("dashboard", "read");
+      if (!permission.allowed) return permission.response;
+    }
 
     const entityId =
       searchParams.get("entityId") ?? searchParams.get("entity_id");
@@ -77,8 +86,12 @@ export async function GET(req: Request) {
       FROM note n
       LEFT JOIN app_user u ON n.created_by = u.national_id
       LEFT JOIN volunteer v ON n.assigned_to = v.national_id
-      WHERE n.entity_type = @entityType
+      WHERE 1=1
     `;
+
+    if (entityType !== "all") {
+      sql += " AND n.entity_type = @entityType";
+    }
 
     if (entityId) {
       if (entityId === "general") {

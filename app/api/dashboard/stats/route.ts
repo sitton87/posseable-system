@@ -81,10 +81,10 @@ export async function GET(req: Request) {
       FROM supplier
     `);
 
-    // Build surfers by program object
-    const surfersByProgram: Record<string, number> = {};
-    surfersByProgramResult.recordset.forEach((row: any) => {
-      surfersByProgram[row.program] = row.count;
+    // Build surfers by group object
+    const surfersByGroup: Record<string, number> = {};
+    surfersByGroupResult.recordset.forEach((row: any) => {
+      surfersByGroup[row.group_name || 'ללא שם'] = row.count;
     });
 
     // Build activities by kind object
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
       surfers: {
         total: surfersResult.recordset[0].total,
         active: surfersResult.recordset[0].active || 0,
-        byProgram: surfersByProgram,
+        byGroup: surfersByGroup,
       },
       activities: {
         total: activitiesResult.recordset[0].total,
