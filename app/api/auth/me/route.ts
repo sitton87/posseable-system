@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getUserBasicInfo } from "@/lib/services/authService";
+import { decryptSession } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -11,7 +12,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = JSON.parse(sessionCookie.value);
+    // פענוח ה-Token המוצפן (במקום JSON.parse)
+    const session = await decryptSession(sessionCookie.value);
 
     const userResult = await getUserBasicInfo(session.national_id);
     if (!userResult.recordset.length) {

@@ -225,7 +225,7 @@ export default function PlanningSeasonsTab() {
                             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                         </button>
                       </td>
-                      <td style={{ padding: 8, fontWeight: 600 }}>{s.name}</td>
+                      <td style={{ textAlign: "center", padding: 8, fontWeight: 600 }}>{s.name}</td>
                       <td style={{ textAlign: "center", padding: 8, color: muted }}>{s.year}</td>
                       <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>{start.toLocaleDateString("he-IL")}</td>
                       <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>{end.toLocaleDateString("he-IL")}</td>

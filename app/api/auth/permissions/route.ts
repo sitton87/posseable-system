@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchPermissionsForRoleGroup } from "@/lib/services/systemUserService";
+import { decryptSession } from "@/lib/auth";
 
 type SessionPayload = {
   national_id: string;
@@ -15,7 +16,8 @@ async function getSession(): Promise<SessionPayload | null> {
     if (!sessionCookie?.value) {
       return null;
     }
-    return JSON.parse(sessionCookie.value);
+    // שימוש בפענוח החדש
+    return await decryptSession(sessionCookie.value);
   } catch (error) {
     console.error("Failed to parse session cookie", error);
     return null;
@@ -50,4 +52,3 @@ export async function GET() {
     );
   }
 }
-

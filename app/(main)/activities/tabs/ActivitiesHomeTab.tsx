@@ -2,13 +2,14 @@
 
 import { colors, spacing, radii } from "@/app/styles/foundations";
 import { useEffect, useState } from "react";
-import { Activity } from "@/type";
+import { Activity, Volunteer } from "@/type";
 import { Card } from "@/app/components/ui";
 import {
   SmallActionButton,
   StatCardGrid,
   TasksBoard,
   TaskEntityOption,
+  TaskAssigneeOption,
 } from "@/app/components/shared";
 
 const muted = colors.textMuted;
@@ -20,28 +21,43 @@ export default function ActivitiesHomeTab() {
     completed: 0,
     cancelled: 0,
     thisWeek: 0,
+    future: 0,
   });
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
 
   useEffect(() => {
     fetchStats();
+    fetchVolunteers();
   }, []);
+
+  async function fetchVolunteers() {
+    try {
+      const res = await fetch("/api/volunteers?limit=1000"); // Basic list of volunteers
+      const data = await res.json();
+      if (data.success) {
+        setVolunteers(data.volunteers);
+      }
+    } catch (err) {
+      console.error("Failed to load volunteers for assignment", err);
+    }
+  }
 
   async function fetchStats() {
     try {
       setLoading(true);
-      const res = await fetch("/api/activities?status=Planned"); // Simplified fetch
+      // Fetch stats
+      const statsRes = await fetch("/api/activities/stats");
+      const statsData = await statsRes.json();
+      if (statsData.success) {
+        setStats(statsData.stats);
+      }
+
+      // Fetch recent activities separately (only 5 items)
+      const res = await fetch("/api/activities?sort=date_desc&limit=5");
       const data = await res.json();
       if (data.success) {
-        // Mock stats calculation from list (in real app, use summary endpoint)
-        const all: Activity[] = data.activities;
-        setStats({
-          planned: all.filter(a => a.status === "Planned").length,
-          completed: all.filter(a => a.status === "Completed").length,
-          cancelled: all.filter(a => a.status === "Cancelled").length,
-          thisWeek: 0, // Logic omitted for brevity
-        });
-        setRecentActivities(all.slice(0, 5));
+        setRecentActivities(data.activities.slice(0, 5));
       }
     } catch (err) {
       console.error(err);
@@ -51,17 +67,25 @@ export default function ActivitiesHomeTab() {
   }
 
   const statCards = [
-    { label: "פעילויות מתוכננות", value: stats.planned },
+    { label: "פעילויות מתוכננות", value: stats.future },
     { label: "השבוע", value: stats.thisWeek },
     { label: "הושלמו", value: stats.completed },
     { label: "בוטלו", value: stats.cancelled },
   ];
 
+  // Map volunteers to assignees
+  const assignees: TaskAssigneeOption[] = volunteers.map((v) => ({
+    id: v.national_id,
+    name: v.full_name,
+  }));
+
   // Map activities to "task entities" if we want to attach tasks to activities
-  const activityEntities: TaskEntityOption[] = recentActivities.map(a => ({
+  const activityEntities: TaskEntityOption[] = recentActivities.map((a) => ({
     id: a.id.toString(),
     name: a.group_name || "פעילות ללא שם",
-    subtitle: a.activity_date ? new Date(a.activity_date).toLocaleDateString("he-IL") : "",
+    subtitle: a.activity_date
+      ? new Date(a.activity_date).toLocaleDateString("he-IL")
+      : "",
   }));
 
   return (
@@ -106,7 +130,9 @@ export default function ActivitiesHomeTab() {
         <TasksBoard
           entityType="activity"
           entities={activityEntities}
-          title="משימות ופתקים"
+          assignees={assignees}
+          title="משימות ופתקים (כללי)"
+          fixedEntityId="general"
         />
 
         <Card style={{ padding: spacing.lg }}>
@@ -135,7 +161,9 @@ export default function ActivitiesHomeTab() {
                 <div
                   style={{ display: "flex", justifyContent: "space-between" }}
                 >
-                  <div style={{ fontWeight: 700 }}>{item.group_name || "ללא קבוצה"}</div>
+                  <div style={{ fontWeight: 700 }}>
+                    {item.group_name || "ללא קבוצה"}
+                  </div>
                   <div style={{ color: muted, fontSize: 12 }}>
                     {item.activity_date
                       ? new Date(item.activity_date).toLocaleDateString("he-IL")

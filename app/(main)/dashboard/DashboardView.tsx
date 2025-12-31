@@ -110,6 +110,16 @@ type DashboardStats = {
   suppliers: { total: number; active: number };
 };
 
+const ACTIVITY_KIND_LABELS: Record<string, string> = {
+  surf: "גלישה",
+  social: "חברתי",
+  special: "אירוע מיוחד",
+  training: "הכשרה והדרכה",
+  lecture: "הכשרה והדרכה", // Legacy
+  preparation: "הכנה", // Legacy
+  other: "אחר",
+};
+
 export default function DashboardView() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -419,7 +429,7 @@ export default function DashboardView() {
             {Object.entries(stats.activities.byKind).map(([kind, count]) => (
               <div key={kind} style={detailItemStyle}>
                 <span style={{ fontWeight: 600, color: colors.textPrimary }}>
-                  {kind}
+                  {ACTIVITY_KIND_LABELS[kind] || kind}
                 </span>
                 <span
                   style={{

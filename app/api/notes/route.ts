@@ -1,5 +1,3 @@
-"use server";
-
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
 import { ensurePermissionResponse } from "@/lib/server/accessControl";
@@ -57,6 +55,7 @@ export async function GET(req: Request) {
     const entityId =
       searchParams.get("entityId") ?? searchParams.get("entity_id");
     const limit = Math.min(Number(searchParams.get("limit") ?? 50) || 50, 200);
+    const showArchived = searchParams.get("showArchived") === "true";
 
     let sql = `
       SELECT TOP (@limit)
@@ -82,7 +81,20 @@ export async function GET(req: Request) {
     `;
 
     if (entityId) {
-      sql += " AND n.entity_id = @entityId";
+      if (entityId === "general") {
+         sql += " AND n.entity_id = 'general'";
+      } else {
+         sql += " AND n.entity_id = @entityId";
+      }
+    }
+
+    if (showArchived) {
+      // Show ONLY deleted OR completed tasks
+      // IMPORTANT: status check should be case-insensitive usually, but here we assume standard values
+      sql += " AND (n.is_deleted = 1 OR n.status IN ('done', 'cancelled', 'closed'))";
+    } else {
+      // Default: Show ONLY active tasks (not deleted, not completed)
+      sql += " AND (n.is_deleted = 0 OR n.is_deleted IS NULL) AND (n.status NOT IN ('done', 'cancelled', 'closed') OR n.status IS NULL)";
     }
 
     sql += " ORDER BY n.created_at DESC";
@@ -117,9 +129,9 @@ export async function POST(req: Request) {
       assigned_to,
     } = body;
 
-    if (!entity_type || !entity_id || !noteBody) {
+    if (!entity_type || !entity_id || !title) {
       return NextResponse.json(
-        { error: "entity_type, entity_id and body are required" },
+        { error: "entity_type, entity_id and title are required" },
         { status: 400 }
       );
     }
@@ -144,7 +156,8 @@ export async function POST(req: Request) {
           priority,
           due_date,
           created_by,
-          assigned_to
+          assigned_to,
+          is_deleted
         )
         OUTPUT INSERTED.*
         VALUES (
@@ -156,14 +169,15 @@ export async function POST(req: Request) {
           @priority,
           @due_date,
           @created_by,
-          @assigned_to
+          @assigned_to,
+          0
         )
       `,
       {
         entity_type,
-        entity_id,
+        entity_id: entity_id,
         title,
-        body: noteBody,
+        body: noteBody || "",
         status: normalizedStatus,
         priority,
         due_date,
@@ -205,4 +219,18 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function PATCH() {
+  return NextResponse.json(
+    { error: "Method not allowed. Use /api/notes/[id] to update a specific note." },
+    { status: 405 }
+  );
+}
+
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Method not allowed. Use /api/notes/[id] to delete a specific note." },
+    { status: 405 }
+  );
 }

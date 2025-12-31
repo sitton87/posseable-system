@@ -15,6 +15,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "googleapis": "^166.0.0",
+    "jose": "^6.1.3",
     "lucide-react": "^0.539.0",
     "mssql": "^12.1.0",
     "next": "16.0.3",

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function GET(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("volunteers", "read");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const activeOnly = searchParams.get("active");
     const classification = searchParams.get("classification");
@@ -35,6 +39,7 @@ export async function GET(req: Request) {
     `;
 
     const conditions: string[] = [];
+    const params: any = {};
 
     // Filter by active status if requested
     if (activeOnly === "true") {
@@ -47,7 +52,8 @@ export async function GET(req: Request) {
       classification &&
       ["volunteer", "staff", "management"].includes(classification)
     ) {
-      conditions.push(`classification = '${classification}'`);
+      conditions.push("classification = @classification");
+      params.classification = classification;
     }
 
     if (conditions.length > 0) {
@@ -56,7 +62,7 @@ export async function GET(req: Request) {
 
     sql += " ORDER BY created_at DESC";
 
-    const result = await query(sql);
+    const result = await query(sql, params);
 
     return NextResponse.json({
       success: true,

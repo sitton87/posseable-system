@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
+import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function GET(req: Request) {
   try {
+    const permission = await ensurePermissionResponse("donors", "read");
+    if (!permission.allowed) return permission.response;
+
     const { searchParams } = new URL(req.url);
     const activeOnly = searchParams.get("active");
 
@@ -90,4 +94,3 @@ export async function GET(req: Request) {
     );
   }
 }
-

@@ -7,38 +7,33 @@ export async function GET() {
     const permission = await ensurePermissionResponse("volunteers", "read");
     if (!permission.allowed) return permission.response;
 
-    // Note: The 'volunteer' table currently does not have 'status' or 'group_id' columns in the schema.
-    // We are approximating stats based on 'active' status.
-    const statsResult = await query(`
+    const sql = `
+      -- 1. Stats
       SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS active,
         SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS approved,
         0 AS pending,
         0 AS grouped
-      FROM volunteer
-    `);
+      FROM volunteer;
 
-    const tasksResult = await query(
-      `
-        SELECT TOP (8)
-          note_id,
-          entity_id,
-          title,
-          body,
-          status,
-          priority,
-          due_date,
-          created_by,
-          created_at,
-          updated_at
-        FROM note
-        WHERE entity_type = 'volunteer'
-        ORDER BY COALESCE(due_date, created_at) DESC
-      `
-    );
+      -- 2. Tasks (Notes)
+      SELECT TOP (8)
+        note_id,
+        entity_id,
+        title,
+        body,
+        status,
+        priority,
+        due_date,
+        created_by,
+        created_at,
+        updated_at
+      FROM note
+      WHERE entity_type = 'volunteer'
+      ORDER BY COALESCE(due_date, created_at) DESC;
 
-    const recentActivityResult = await query(`
+      -- 3. Recent Activity (New Volunteers)
       SELECT TOP (8)
         national_id,
         full_name,
@@ -47,10 +42,18 @@ export async function GET() {
         NULL as group_name,
         created_at
       FROM volunteer
-      ORDER BY created_at DESC
-    `);
+      ORDER BY created_at DESC;
+    `;
 
-    const statsRow = statsResult.recordset?.[0] || {};
+    const result = await query(sql);
+
+    // result.recordsets[0] -> Stats
+    // result.recordsets[1] -> Tasks
+    // result.recordsets[2] -> Recent Activity
+
+    const statsRow = result.recordsets[0]?.[0] || {};
+    const tasks = result.recordsets[1] || [];
+    const recentActivity = result.recordsets[2] || [];
 
     return NextResponse.json({
       success: true,
@@ -61,8 +64,8 @@ export async function GET() {
         pending: Number(statsRow.pending || 0),
         grouped: Number(statsRow.grouped || 0),
       },
-      tasks: tasksResult.recordset || [],
-      recentActivity: recentActivityResult.recordset || [],
+      tasks,
+      recentActivity,
     });
   } catch (err: any) {
     console.error("Error fetching volunteer summary:", err);
@@ -72,4 +75,3 @@ export async function GET() {
     );
   }
 }
-

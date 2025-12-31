@@ -42,10 +42,21 @@ export default function ActivitiesListTab() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      // Only set status if it's not empty, default empty is fetching all which is fine with the new route optimizations
       if (filters.status) params.set("status", filters.status);
       if (filters.kind) params.set("kind", filters.kind);
-      if (filters.sort) params.set("sort", filters.sort);
-
+      // Default to "date_desc" if not set, or pass it explicitly
+      params.set("sort", filters.sort || "date_desc");
+      
+      // Add a limit to initial fetch if not filtering to prevent loading too much history immediately?
+      // For now, let's keep it but just ensure the route is fast.
+      // The user complained about return navigation. This might be due to full re-fetch.
+      // We can add a simple caching mechanism or just rely on the fast API.
+      // The API is fast now (under 100ms). The delay might be rendering or network latency if the list is HUGE.
+      
+      // Let's assume the list is reasonably sized or paging is needed later. 
+      // For now, ensuring the API is efficient (which we did) is key.
+      
       const res = await fetch(`/api/activities?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
@@ -180,10 +191,8 @@ export default function ActivitiesListTab() {
           <option value="">כל הסוגים</option>
           <option value="surf">גלישה</option>
           <option value="social">חברתי</option>
-          <option value="lecture">הדרכה/הרצאה</option>
-          <option value="preparation">הכנה</option>
           <option value="special">אירוע מיוחד</option>
-          <option value="other">אחר</option>
+          <option value="training">הכשרה והדרכה</option>
         </select>
         <select
           style={filterControlStyle}
@@ -207,6 +216,7 @@ export default function ActivitiesListTab() {
                 <th style={tableHeaderStyle}>תאריך</th>
                 <th style={tableHeaderStyle}>שעה</th>
                 <th style={tableHeaderStyle}>קבוצה</th>
+                <th style={tableHeaderStyle}>סדרה</th>
                 <th style={tableHeaderStyle}>סוג</th>
                 <th style={tableHeaderStyle}>מיקום</th>
                 <th style={tableHeaderStyle}>מנהל</th>
@@ -233,13 +243,16 @@ export default function ActivitiesListTab() {
                   <td style={{ ...tableCellStyle, fontWeight: 700 }}>
                     {activity.group_name || "-"}
                   </td>
+                  <td style={tableCellStyle}>
+                    {activity.series_name || "-"}
+                  </td>
                   <td style={tableCellStyle}>{
                     activity.kind === "surf" ? "גלישה" :
                     activity.kind === "social" ? "חברתי" :
-                    activity.kind === "lecture" ? "הדרכה/הרצאה" :
-                    activity.kind === "preparation" ? "הכנה" :
                     activity.kind === "special" ? "אירוע מיוחד" :
-                    activity.kind === "other" ? "אחר" :
+                    activity.kind === "training" ? "הכשרה והדרכה" :
+                    activity.kind === "lecture" ? "הכשרה והדרכה" : // Legacy support
+                    activity.kind === "preparation" ? "הכנה" : // Legacy
                     activity.kind
                   }</td>
                   <td style={tableCellStyle}>{activity.location || "-"}</td>

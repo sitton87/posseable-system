@@ -135,7 +135,22 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const sql = `DELETE FROM activity WHERE id = @id`;
+    const sql = `
+      BEGIN TRANSACTION;
+      
+      -- Delete related records
+      DELETE FROM activity_volunteer WHERE activity_id = @id;
+      DELETE FROM registration WHERE activity_id = @id;
+      DELETE FROM activity_checklist WHERE activity_id = @id;
+      DELETE FROM activity_equipment_request WHERE activity_id = @id;
+      DELETE FROM activity_surfer_assignment WHERE activity_id = @id;
+      DELETE FROM note WHERE entity_type = 'activity' AND entity_id = CAST(@id AS NVARCHAR(50));
+      
+      -- Finally delete the activity
+      DELETE FROM activity WHERE id = @id;
+      
+      COMMIT;
+    `;
     await query(sql, { id });
 
     return NextResponse.json({ success: true });

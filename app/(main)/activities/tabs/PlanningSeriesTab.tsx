@@ -5,7 +5,9 @@ import { SeasonPlan, ActivitySeries, Activity } from "@/type";
 import { Button, Card, Modal } from "@/app/components/ui";
 import { colors, spacing, radii } from "@/app/styles/foundations";
 import { inputStyle, labelStyle } from "@/app/styles/components";
-import { Search, X, Filter } from "lucide-react";
+import { Search, X, Filter, Eye } from "lucide-react";
+import { format } from "date-fns";
+import { StatusPill } from "@/app/components/shared";
 
 const px = (value: number) => `${value}px`;
 const muted = colors.textMuted;
@@ -14,10 +16,8 @@ const smallButtonStyle = { fontSize: 12, padding: `${px(spacing.xs)} ${px(spacin
 const ACTIVITY_KINDS = [
   { value: "surf", label: "גלישה" },
   { value: "social", label: "חברתי" },
-  { value: "lecture", label: "הדרכה/הרצאה" },
-  { value: "preparation", label: "הכנה" },
   { value: "special", label: "אירוע מיוחד" },
-  { value: "other", label: "אחר" },
+  { value: "training", label: "הכשרה והדרכה" },
 ] as const;
 const SERIES_STATUS_OPTIONS = ["פעיל", "בהקמה", "הוקפא", "נסגר"] as const;
 
@@ -41,6 +41,12 @@ export default function PlanningSeriesTab() {
   const [editingSeries, setEditingSeries] = useState<ActivitySeries | null>(null);
   const [seriesModalSeason, setSeriesModalSeason] = useState<SeasonPlan | null>(null);
   const [seriesSaving, setSeriesSaving] = useState(false);
+
+  // Activities View Modal
+  const [showActivitiesModal, setShowActivitiesModal] = useState(false);
+  const [viewingSeries, setViewingSeries] = useState<ActivitySeries | null>(null);
+  const [seriesActivities, setSeriesActivities] = useState<Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
   
   const [seriesForm, setSeriesForm] = useState({
     name: "",
@@ -139,6 +145,25 @@ export default function PlanningSeriesTab() {
       if (filterGroup && s.group_id !== filterGroup) return false;
       return true;
   });
+
+  const openActivitiesModal = async (series: ActivitySeries) => {
+    setViewingSeries(series);
+    setShowActivitiesModal(true);
+    setSeriesActivities([]);
+    setLoadingActivities(true);
+
+    try {
+        const res = await fetch(`/api/activities?series_id=${series.id}`);
+        const data = await res.json();
+        if (data.success) {
+            setSeriesActivities(data.activities);
+        }
+    } catch (err) {
+        console.error("Failed to load series activities", err);
+    } finally {
+        setLoadingActivities(false);
+    }
+  };
 
   const openModal = (series?: ActivitySeries) => {
     const seasonIdToUse = (series ? series.season_id : (selectedSeasonId === "all" ? seasons[0]?.id : selectedSeasonId));
@@ -367,7 +392,7 @@ export default function PlanningSeriesTab() {
                  <tr><td colSpan={6} style={{ textAlign: "center", padding: 20, color: muted }}>לא נמצאו סדרות.</td></tr>
               ) : filteredSeries.map((series) => (
                   <tr key={series.id} style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}>
-                    <td style={{ padding: 8, fontWeight: 600 }}>{series.name}</td>
+                    <td style={{ textAlign: "center", padding: 8, fontWeight: 600 }}>{series.name}</td>
                     <td style={{ textAlign: "center", padding: 8 }}>
                         {series.group_name || "-"}
                     </td>
@@ -386,6 +411,7 @@ export default function PlanningSeriesTab() {
                     </td>
                     <td style={{ textAlign: "center", padding: 8 }}>
                       <div style={{ display: "flex", gap: spacing.xs, justifyContent: "center" }}>
+                        <Button variant="secondary" style={smallButtonStyle} onClick={() => openActivitiesModal(series)} title="צפה בפעילויות"><Eye size={14} /></Button>
                         <Button variant="secondary" style={smallButtonStyle} onClick={() => openModal(series)} title="עריכה">✏️</Button>
                         <Button variant="secondary" style={{ ...smallButtonStyle, color: colors.danger }} onClick={() => handleDelete(series)} title="מחיקה">🗑️</Button>
                       </div>
@@ -549,6 +575,64 @@ export default function PlanningSeriesTab() {
             </div>
           </>
         )}
+      </Modal>
+
+      <Modal
+        open={showActivitiesModal}
+        onClose={() => setShowActivitiesModal(false)}
+        width="min(900px, 95vw)"
+        style={{ padding: spacing.xl, maxHeight: "90vh", overflowY: "auto" }}
+      >
+        <h3 style={{ margin: "0 0 4px 0" }}>פעילויות בסדרה: {viewingSeries?.name}</h3>
+        <p style={{ margin: "0 0 16px 0", fontSize: 13, color: muted }}>רשימת כל הפעילויות שנוצרו עבור סדרה זו.</p>
+        
+        {loadingActivities ? (
+            <div style={{ textAlign: "center", padding: 20, color: muted }}>טוען פעילויות...</div>
+        ) : seriesActivities.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 20, color: muted, border: `1px dashed ${colors.border}`, borderRadius: radii.card }}>
+                לא נמצאו פעילויות משויכות.
+            </div>
+        ) : (
+            <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                        <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
+                            <th style={{ textAlign: "center", padding: 8 }}>תאריך</th>
+                            <th style={{ textAlign: "center", padding: 8 }}>שעה</th>
+                            <th style={{ textAlign: "center", padding: 8 }}>מיקום</th>
+                            <th style={{ textAlign: "center", padding: 8 }}>משתתפים</th>
+                            <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {seriesActivities.map(activity => (
+                            <tr key={activity.id} style={{ borderBottom: `1px solid ${colors.borderMuted}` }}>
+                                <td style={{ textAlign: "center", padding: 8 }}>{format(new Date(activity.activity_date), "dd/MM/yyyy")}</td>
+                                <td style={{ textAlign: "center", padding: 8 }}>{activity.start_time?.slice(0,5) || "-"} - {activity.end_time?.slice(0,5) || "-"}</td>
+                                <td style={{ textAlign: "center", padding: 8 }}>{activity.location || "-"}</td>
+                                <td style={{ textAlign: "center", padding: 8 }}>{activity.participant_count || 0}</td>
+                                <td style={{ textAlign: "center", padding: 8 }}>
+                                    <StatusPill tone={
+                                        activity.status === 'Completed' ? 'success' : 
+                                        activity.status === 'Cancelled' ? 'error' : 
+                                        activity.status === 'In Progress' ? 'info' : 'neutral'
+                                    }>
+                                        {activity.status === 'Planned' ? 'מתוכנן' : 
+                                         activity.status === 'Completed' ? 'הושלם' : 
+                                         activity.status === 'Cancelled' ? 'בוטל' : 
+                                         activity.status === 'In Progress' ? 'בביצוע' : activity.status}
+                                    </StatusPill>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
+        
+        <div style={{ marginTop: spacing.lg, textAlign: "right" }}>
+            <Button variant="secondary" onClick={() => setShowActivitiesModal(false)}>סגור</Button>
+        </div>
       </Modal>
     </div>
   );

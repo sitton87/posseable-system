@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { decryptSession } from "@/lib/auth";
 
-export function middleware(req: NextRequest) {
-  const session = req.cookies.get("session")?.value;
+export async function middleware(req: NextRequest) {
+  const sessionCookie = req.cookies.get("session")?.value;
   const url = req.nextUrl.pathname;
 
   // מסכים שמותר להיכנס בלי התחברות
@@ -17,11 +18,20 @@ export function middleware(req: NextRequest) {
   }
 
   // אם אין session – שולחים לדף login
-  if (!session) {
+  if (!sessionCookie) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  return NextResponse.next();
+  // אימות ה-Token
+  try {
+    await decryptSession(sessionCookie);
+    return NextResponse.next();
+  } catch (err) {
+    // אם ה-Token לא תקין (זויף או פג תוקף), מוחקים אותו ושולחים ל-Login
+    const response = NextResponse.redirect(new URL("/login", req.url));
+    response.cookies.delete("session");
+    return response;
+  }
 }
 
 export const config = {

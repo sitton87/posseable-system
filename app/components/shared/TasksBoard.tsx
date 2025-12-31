@@ -71,6 +71,8 @@ type TasksBoardProps = {
   fixedEntityId?: string;
   title?: string;
   variant?: "grid" | "list";
+  hideAddButton?: boolean;
+  externalTrigger?: any;
 };
 
 // --- Helpers ---
@@ -83,6 +85,7 @@ const TONE_COLORS: Record<string, { bg: string; text: string }> = {
   purple: { bg: "#f3e8ff", text: "#6b21a8" },
   success: { bg: "#dcfce7", text: "#166534" },
   danger: { bg: "#fee2e2", text: "#991b1b" },
+  muted: { bg: "#f3f4f6", text: "#6b7280" },
 };
 
 const TASK_STATUSES: { value: NoteStatus; label: string; tone: StatusTone }[] =
@@ -123,10 +126,18 @@ export function TasksBoard({
   fixedEntityId,
   title = "משימות ופתקים",
   variant = "grid",
+  hideAddButton = false,
+  externalTrigger,
 }: TasksBoardProps) {
-  const [tasks, setTasks] = useState<TaskNote[]>([]);
+  // Split into active and completed lists
+  const [activeTasks, setActiveTasks] = useState<TaskNote[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<TaskNote[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Toggle for showing all completed tasks
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
 
   // Form State
   const [isEditing, setIsEditing] = useState(false);
@@ -153,35 +164,63 @@ export function TasksBoard({
     try {
       setLoading(true);
       setError(null);
-      const params = new URLSearchParams();
-      params.append("entityType", entityType);
-      if (fixedEntityId) {
-        params.append("entityId", fixedEntityId);
-      }
 
-      const res = await fetch(`/api/notes?${params.toString()}`, {
-        credentials: "include",
-      });
-      const data = await res.json();
+      const baseUrl = `/api/notes?entityType=${entityType}`;
+      const entityParam = fixedEntityId ? `&entityId=${fixedEntityId}` : "";
 
-      if (!data.success) throw new Error(data.error || "Failed to load tasks");
+      // 1. Load active tasks
+      const activeRes = await fetch(
+        `${baseUrl}${entityParam}&showArchived=false`
+      );
+      const activeData = await activeRes.json();
 
-      const normalizedTasks = (data.notes || []).map((t: any) => ({
+      // 2. Load completed tasks (limited to 10 or 100)
+      const limit = showAllCompleted ? 100 : 10;
+      const completedRes = await fetch(
+        `${baseUrl}${entityParam}&showArchived=true&limit=${limit}`
+      );
+      const completedData = await completedRes.json();
+
+      const normalize = (t: any) => ({
         ...t,
         status: normalizeStatus(t.status),
-      }));
-      setTasks(normalizedTasks);
+      });
+
+      if (activeData.success)
+        setActiveTasks((activeData.notes || []).map(normalize));
+      if (completedData.success)
+        setCompletedTasks((completedData.notes || []).map(normalize));
     } catch (err: any) {
       console.error("Error loading tasks:", err);
       setError("שגיאה בטעינת המשימות");
     } finally {
       setLoading(false);
     }
-  }, [entityType, fixedEntityId]);
+  }, [entityType, fixedEntityId, showAllCompleted]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  useEffect(() => {
+    if (
+      externalTrigger &&
+      typeof externalTrigger === "object" &&
+      externalTrigger.action === "open_add_modal"
+    ) {
+      setIsEditing(true);
+      setEditingId(null);
+      // Reset form just in case
+      setFormData({
+        entity_id: fixedEntityId || "",
+        title: "",
+        body: "",
+        due_date: "",
+        status: "not_started" as NoteStatus,
+        assigned_to: "",
+      });
+    }
+  }, [externalTrigger, fixedEntityId]);
 
   const handleSubmit = async () => {
     if (!formData.entity_id && !fixedEntityId) {
@@ -195,9 +234,12 @@ export function TasksBoard({
 
     try {
       setSubmitting(true);
-      const endpoint =
-        isEditing && editingId ? `/api/notes/${editingId}` : "/api/notes";
-      const method = isEditing ? "PATCH" : "POST";
+
+      const isUpdate = isEditing && !!editingId;
+      const endpoint = isUpdate ? `/api/notes/${editingId}` : "/api/notes";
+      const method = isUpdate ? "PATCH" : "POST";
+
+      console.log(`Submitting task: ${method} ${endpoint}`, formData);
 
       const payload = {
         ...formData,
@@ -247,13 +289,49 @@ export function TasksBoard({
   };
 
   const handleStatusChange = async (task: TaskNote, newStatus: NoteStatus) => {
-    try {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.note_id === task.note_id ? { ...t, status: newStatus } : t
+    // Optimistic update
+    const isNowCompleted =
+      newStatus === "done" ||
+      newStatus === "cancelled" ||
+      (newStatus as string) === "closed";
+    const wasCompleted =
+      task.status === "done" ||
+      task.status === "cancelled" ||
+      (task.status as string) === "closed";
+
+    if (isNowCompleted && !wasCompleted) {
+      // Move from active to completed
+      setActiveTasks((prev) => prev.filter((t) => t.note_id !== task.note_id));
+      setCompletedTasks((prev) =>
+        [{ ...task, status: newStatus }, ...prev].slice(
+          0,
+          showAllCompleted ? 100 : 10
         )
       );
+    } else if (!isNowCompleted && wasCompleted) {
+      // Move from completed to active
+      setCompletedTasks((prev) =>
+        prev.filter((t) => t.note_id !== task.note_id)
+      );
+      setActiveTasks((prev) => [{ ...task, status: newStatus }, ...prev]);
+    } else {
+      // Update within same list
+      if (wasCompleted) {
+        setCompletedTasks((prev) =>
+          prev.map((t) =>
+            t.note_id === task.note_id ? { ...t, status: newStatus } : t
+          )
+        );
+      } else {
+        setActiveTasks((prev) =>
+          prev.map((t) =>
+            t.note_id === task.note_id ? { ...t, status: newStatus } : t
+          )
+        );
+      }
+    }
 
+    try {
       const res = await fetch(`/api/notes/${task.note_id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -466,26 +544,28 @@ export function TasksBoard({
     </div>
   );
 
-  const renderGridView = () => (
+  const renderGridView = (listTasks: TaskNote[]) => (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
-      {tasks.map((task) => {
+      {listTasks.map((task) => {
         const entityName = entities.find((e) => e.id === task.entity_id)?.name;
         const statusObj = TASK_STATUSES.find((s) => s.value === task.status);
+        const isCompleted =
+          task.status === "done" ||
+          task.status === "cancelled" ||
+          (task.status as string) === "closed";
         const isOverdue =
-          task.due_date &&
-          new Date(task.due_date) < new Date() &&
-          task.status !== "done" &&
-          task.status !== "cancelled";
+          task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
 
         return (
           <div
             key={task.note_id}
             style={{
-              background: "#fff",
+              background: isCompleted ? colors.surfaceAlt : "#fff",
               borderRadius: radii.card,
               border: `1px solid ${colors.borderMuted}`,
               boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
               overflow: "hidden",
+              opacity: isCompleted ? 0.7 : 1,
             }}
           >
             {/* Header */}
@@ -493,7 +573,9 @@ export function TasksBoard({
               style={{
                 padding: `${spacing.sm} ${spacing.md}`,
                 borderBottom: `1px solid ${colors.border}`,
-                background: "rgba(249, 250, 251, 0.5)",
+                background: isCompleted
+                  ? "transparent"
+                  : "rgba(249, 250, 251, 0.5)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -506,6 +588,7 @@ export function TasksBoard({
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
+                  textDecoration: isCompleted ? "line-through" : "none",
                 }}
               >
                 {task.title}
@@ -574,6 +657,7 @@ export function TasksBoard({
                   whiteSpace: "pre-wrap",
                   fontSize: 14,
                   lineHeight: 1.5,
+                  textDecoration: isCompleted ? "line-through" : "none",
                 }}
               >
                 {task.body}
@@ -633,7 +717,7 @@ export function TasksBoard({
                 display: "flex",
                 justifyContent: "flex-end",
                 gap: spacing.md,
-                background: "#fff",
+                background: isCompleted ? "transparent" : "#fff",
               }}
             >
               <button
@@ -688,22 +772,15 @@ export function TasksBoard({
     </div>
   );
 
-  const renderListView = () => (
+  const renderTaskList = (listTasks: TaskNote[]) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <Button
-        variant="secondary"
-        onClick={() => setIsEditing(true)}
-        style={{ alignSelf: "flex-start", marginBottom: 8 }}
-      >
-        <Plus size={14} style={{ marginLeft: 6 }} /> הוסף משימה
-      </Button>
-      {tasks.map((task) => {
-        const isCompleted = task.status === "done";
+      {listTasks.map((task) => {
+        const isCompleted =
+          task.status === "done" ||
+          task.status === "cancelled" ||
+          (task.status as string) === "closed";
         const isOverdue =
-          task.due_date &&
-          new Date(task.due_date) < new Date() &&
-          !isCompleted &&
-          task.status !== "cancelled";
+          task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
 
         return (
           <div
@@ -716,7 +793,7 @@ export function TasksBoard({
               display: "flex",
               alignItems: "center",
               gap: 12,
-              opacity: isCompleted ? 0.7 : 1,
+              opacity: isCompleted ? 0.6 : 1,
               transition: "all 0.2s",
             }}
           >
@@ -846,48 +923,97 @@ export function TasksBoard({
       <div
         style={{
           marginBottom: spacing.lg,
-          display: variant === "list" ? "none" : "block",
+          display: variant === "list" ? "none" : "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <h4 style={{ margin: "0 0 16px 0" }}>{title}</h4>
+        <h4 style={{ margin: "0" }}>{title}</h4>
       </div>
 
-      {/* Creation Form - Only show if not editing (modal handles editing) and variant is grid OR if variant is list but we want inline? actually list uses modal for everything for simplicity now */}
-      {!isEditing && variant === "grid" && renderCreationForm()}
-
-      {/* List Area */}
-      {loading && (
-        <div
-          style={{ color: colors.textMuted, textAlign: "center", padding: 20 }}
-        >
-          טוען...
-        </div>
-      )}
-
-      {!loading && tasks.length === 0 && (
-        <div
-          style={{
-            color: colors.textMuted,
-            textAlign: "center",
-            padding: spacing.lg,
-          }}
-        >
-          אין משימות להצגה.
-          {variant === "list" && (
+      {!isEditing && !hideAddButton && (
+        <div style={{ marginBottom: 16 }}>
+          {variant === "grid" ? (
+            renderCreationForm()
+          ) : (
             <Button
               variant="secondary"
               onClick={() => setIsEditing(true)}
-              style={{ marginTop: 8 }}
+              style={{ width: "100%", justifyContent: "flex-start" }}
             >
-              <Plus size={14} style={{ marginLeft: 6 }} /> הוסף משימה ראשונה
+              <Plus size={14} style={{ marginLeft: 6 }} /> הוסף משימה חדשה
             </Button>
           )}
         </div>
       )}
 
-      {!loading &&
-        tasks.length > 0 &&
-        (variant === "list" ? renderListView() : renderGridView())}
+      {/* List Area */}
+      {loading && activeTasks.length === 0 ? (
+        <div
+          style={{ color: colors.textMuted, textAlign: "center", padding: 20 }}
+        >
+          טוען...
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Active Tasks */}
+          {activeTasks.length > 0 ? (
+            variant === "list" ? (
+              renderTaskList(activeTasks)
+            ) : (
+              renderGridView(activeTasks)
+            )
+          ) : (
+            <div
+              style={{
+                textAlign: "center",
+                color: colors.textMuted,
+                padding: 20,
+              }}
+            >
+              אין משימות פתוחות
+            </div>
+          )}
+
+          {/* Completed Tasks Section */}
+          {completedTasks.length > 0 && (
+            <div
+              style={{
+                borderTop: `1px solid ${colors.border}`,
+                paddingTop: 20,
+              }}
+            >
+              <h5
+                style={{
+                  margin: "0 0 12px 0",
+                  color: colors.textMuted,
+                  fontSize: 13,
+                }}
+              >
+                הושלמו לאחרונה
+              </h5>
+              {variant === "list"
+                ? renderTaskList(completedTasks)
+                : renderGridView(completedTasks)}
+
+              {/* Show All Button */}
+              {(completedTasks.length >= 10 || showAllCompleted) && (
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowAllCompleted(!showAllCompleted)}
+                    style={{ fontSize: 12 }}
+                  >
+                    {showAllCompleted
+                      ? "הצג פחות"
+                      : "הצג את כל המשימות שהסתיימו"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Edit Modal */}
       <Modal

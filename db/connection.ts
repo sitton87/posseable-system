@@ -7,14 +7,48 @@ const config: sql.config = {
   database: process.env.DB_DATABASE!,
   options: {
     port: Number(process.env.DB_PORT) || 1433,
-    encrypt: false, // MSSQL local
+    encrypt: process.env.NODE_ENV === "production",
     trustServerCertificate: true,
   },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
+  }
 };
 
+// Singleton pool management
+let pool: sql.ConnectionPool | null = null;
+let poolPromise: Promise<sql.ConnectionPool> | null = null;
+
+async function getPool() {
+  if (pool?.connected) {
+    return pool;
+  }
+
+  if (poolPromise) {
+    return poolPromise;
+  }
+
+  poolPromise = sql.connect(config)
+    .then((p) => {
+      pool = p;
+      console.log("Database connected successfully");
+      return p;
+    })
+    .catch((err) => {
+      poolPromise = null;
+      console.error("Database connection failed:", err);
+      throw err;
+    });
+
+  return poolPromise;
+}
+
 export async function query(q: string, params: any = {}) {
-  const pool = await sql.connect(config);
-  const request = pool.request();
+  const currentPool = await getPool();
+  
+  const request = currentPool.request();
 
   for (const key in params) {
     const value = params[key];

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/connection";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     // Get volunteers stats
@@ -19,14 +21,15 @@ export async function GET(req: Request) {
       FROM surfer
     `);
 
-    // Get surfers by program
-    const surfersByProgramResult = await query(`
+    // Get surfers by group
+    const surfersByGroupResult = await query(`
       SELECT 
-        program,
+        g.name as group_name,
         COUNT(*) as count
-      FROM surfer
-      WHERE active = 1 AND program IS NOT NULL
-      GROUP BY program
+      FROM surfer s
+      LEFT JOIN [group] g ON s.group_id = g.id
+      WHERE s.group_id IS NOT NULL
+      GROUP BY g.name
       ORDER BY count DESC
     `);
 

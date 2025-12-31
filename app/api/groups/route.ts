@@ -16,7 +16,7 @@ export async function GET(req: Request) {
         g.additional_seasons,
         g.min_participants,
         g.max_participants,
-        g.current_participants,
+        (SELECT COUNT(*) FROM surfer WHERE group_id = CAST(g.id AS NVARCHAR(50))) as current_participants,
         g.status,
         g.is_active,
         g.notes,
@@ -26,6 +26,7 @@ export async function GET(req: Request) {
         s.year as season_year
       FROM [group] g
       LEFT JOIN season_plan s ON g.season_id = s.id
+      WHERE g.is_deleted = 0
       ORDER BY g.created_at DESC
     `;
 

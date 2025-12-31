@@ -88,8 +88,8 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // Soft delete - mark as inactive
-    const sql = `UPDATE [group] SET is_active = 0, updated_at = GETDATE() WHERE id = @id`;
+    // Soft delete - set is_deleted flag
+    const sql = `UPDATE [group] SET is_deleted = 1, updated_at = GETDATE() WHERE id = @id`;
     await query(sql, { id });
 
     return NextResponse.json({ success: true });

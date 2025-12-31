@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import PlanningSeasonsTab from "./PlanningSeasonsTab";
 import PlanningSeriesTab from "./PlanningSeriesTab";
 import { colors, spacing } from "@/app/styles/foundations";
 import { CalendarRange, Layers } from "lucide-react";
 
 export default function PlanningTab() {
-  const [view, setView] = useState<"seasons" | "series">("seasons");
+  const searchParams = useSearchParams();
+  const initialView = searchParams?.get("subtab") === "series" ? "series" : "seasons";
+  const [view, setView] = useState<"seasons" | "series">(initialView);
+
+  useEffect(() => {
+    if (searchParams?.get("subtab") === "series") {
+        setView("series");
+    }
+  }, [searchParams]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>

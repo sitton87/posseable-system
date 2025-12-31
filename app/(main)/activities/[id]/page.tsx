@@ -9,7 +9,6 @@ import { ActivityHeader, TabButton } from "./components";
 import { OverviewTab } from "./OverviewTab";
 import { TimelineTab } from "./TimelineTab";
 import { AssignmentsTab } from "./AssignmentsTab";
-import { LogisticsTab } from "./LogisticsTab";
 import { SummaryTab } from "./SummaryTab";
 import { toast } from "sonner";
 
@@ -22,7 +21,7 @@ export default function ActivityManagementPage() {
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "assignments" | "logistics" | "summary">(
+  const [activeTab, setActiveTab] = useState<"overview" | "timeline" | "assignments" | "summary">(
       initialTab || "overview"
   );
 
@@ -105,9 +104,6 @@ export default function ActivityManagementPage() {
           <TabButton active={activeTab === "assignments"} onClick={() => updateTab("assignments")}>
             שיבוצים וצוותים
           </TabButton>
-          <TabButton active={activeTab === "logistics"} onClick={() => updateTab("logistics")}>
-            לוגיסטיקה וציוד
-          </TabButton>
           <TabButton active={activeTab === "summary"} onClick={() => updateTab("summary")}>
             סיכום ומשוב
           </TabButton>
@@ -122,9 +118,6 @@ export default function ActivityManagementPage() {
           )}
           {activeTab === "assignments" && (
             <AssignmentsTab activity={activity} />
-          )}
-          {activeTab === "logistics" && (
-            <LogisticsTab activity={activity} refresh={() => fetchActivity(true)} />
           )}
           {activeTab === "summary" && (
             <SummaryTab activity={activity} onUpdate={handleUpdateActivity} />

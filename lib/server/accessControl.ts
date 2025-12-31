@@ -49,6 +49,8 @@ async function loadPermissions(roleGroupCode: string) {
   return permissions;
 }
 
+import { decryptSession } from "@/lib/auth";
+
 export async function getSession(): Promise<SessionPayload | null> {
   try {
     const cookieStore = await cookies();
@@ -56,7 +58,7 @@ export async function getSession(): Promise<SessionPayload | null> {
     if (!sessionCookie?.value) {
       return null;
     }
-    return JSON.parse(sessionCookie.value);
+    return await decryptSession(sessionCookie.value);
   } catch (error) {
     console.error("Failed to parse session cookie", error);
     return null;

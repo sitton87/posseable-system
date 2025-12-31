@@ -166,14 +166,14 @@ export async function DELETE(
     );
     if (!permission.allowed) return permission.response;
 
-    // Delete history first (manual cascade)
-    await query(`DELETE FROM note_status_history WHERE note_id = @note_id`, {
-      note_id: noteId,
-    });
-
-    await query(`DELETE FROM note WHERE note_id = @note_id`, {
-      note_id: noteId,
-    });
+    // Soft delete
+    await query(
+      `UPDATE note SET is_deleted = 1, updated_at = SYSUTCDATETIME(), updated_by = @user_id WHERE note_id = @note_id`,
+      {
+        note_id: noteId,
+        user_id: permission.session?.national_id ?? null,
+      }
+    );
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

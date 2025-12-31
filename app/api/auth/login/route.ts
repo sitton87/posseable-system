@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { cookies } from "next/headers";
 import { findUserByCredentials } from "@/lib/services/authService";
 import { ENABLE_DEV_LOGIN } from "@/lib/config";
+import { encryptSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -33,11 +34,13 @@ export async function POST(req: Request) {
         role_group_code: user.role_group_code ?? "management",
       };
 
+      const token = await encryptSession(sessionData);
+
       const cookieStore = await cookies();
-      cookieStore.set("session", JSON.stringify(sessionData), {
+      cookieStore.set("session", token, {
         httpOnly: true,
         sameSite: "strict",
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         maxAge: 60 * 60 * 2,
         path: "/",
       });
@@ -45,12 +48,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ redirect: "/dashboard" }, { status: 200 });
     }
     // --- סוף לוגיקת פיתוח ---
-
-    console.log("LOGIN INPUT:", {
-      national_id,
-      email,
-      password,
-    });
 
     if (!national_id || !email || !password) {
       return NextResponse.json(
@@ -69,13 +66,14 @@ export async function POST(req: Request) {
     const user = result.recordset[0];
 
     // 2. בדיקת סיסמה
-    console.log("LOGIN INPUT:", { national_id, email, password });
-    console.log("HASH FROM DB:", user.password_hash);
-
     const valid = await bcrypt.compare(password, user.password_hash);
 
-    console.log("COMPARE:", password, user.password_hash);
-    console.log("COMPARE RESULT:", valid);
+    if (!valid) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
 
     // 3. יצירת session
     const sessionData = {
@@ -84,13 +82,15 @@ export async function POST(req: Request) {
       role_group_code: user.role_group_code ?? "management",
     };
 
+    const token = await encryptSession(sessionData);
+
     // שמירת session בתוך cookie
     const cookieStore = await cookies();
 
-    cookieStore.set("session", JSON.stringify(sessionData), {
+    cookieStore.set("session", token, {
       httpOnly: true,
       sameSite: "strict",
-      secure: false, // בפרודקשן: TRUE
+      secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 2, // שעתיים
       path: "/",
     });
