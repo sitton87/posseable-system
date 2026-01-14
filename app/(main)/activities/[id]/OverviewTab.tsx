@@ -192,7 +192,7 @@ export function OverviewTab({
           <Card className="p-4 flex items-center gap-4">
               <div
                 className="p-2.5 rounded-full"
-                style={{ backgroundColor: cssVar.status.infoSoft, color: cssVar.brand.primary }}
+                style={{ backgroundColor: cssVar.status.infoLight, color: cssVar.brand.primary }}
               >
                   <UsersIcon className="w-6 h-6" />
               </div>
