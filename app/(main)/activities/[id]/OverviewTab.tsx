@@ -346,7 +346,7 @@ export function OverviewTab({
       </div>
 
       {/* Bottom Placeholder */}
-      <Section title="רשימות מיוחדות" className="opacity-70">
+      <Section title="רשימות מיוחדות" style={{ opacity: 0.7 }}>
           <Text className="italic text-center p-4" style={{ color: cssVar.text.muted }}>
               כאן יופיעו רשימות דינמיות בהתאם לתוכנית הפעילות (בפיתוח)
           </Text>
