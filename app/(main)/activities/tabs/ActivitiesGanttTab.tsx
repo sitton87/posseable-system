@@ -123,7 +123,7 @@ export default function ActivitiesGanttTab() {
           <div className="flex gap-3 items-center">
             <div
               className="flex rounded-md p-0.5"
-              style={{ backgroundColor: cssVar.bg.surfaceAlt }}
+              style={{ backgroundColor: cssVar.bg.tertiary }}
             >
               <button
                 onClick={() => setViewMode("month")}
@@ -240,7 +240,7 @@ function GanttView({
           style={{
             height: HEADER_HEIGHT,
             borderBottom: `1px solid ${cssVar.border.primary}`,
-            backgroundColor: cssVar.bg.surfaceAlt,
+            backgroundColor: cssVar.bg.tertiary,
           }}
         >
           קבוצה / סדרה
@@ -276,7 +276,7 @@ function GanttView({
           style={{
             height: HEADER_HEIGHT,
             borderBottom: `1px solid ${cssVar.border.primary}`,
-            backgroundColor: cssVar.bg.surfaceAlt,
+            backgroundColor: cssVar.bg.tertiary,
           }}
         >
           {columns.map((colDate, i) => {
