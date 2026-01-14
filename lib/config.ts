@@ -1,2 +1,2 @@
 // הגדרה: "1" = מצב פיתוח (כניסה חופשית), "0" = מצב רגיל
-export const ENABLE_DEV_LOGIN = "1";
+export const ENABLE_DEV_LOGIN = "0";
