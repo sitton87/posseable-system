@@ -1,10 +1,25 @@
-import { Button, Card } from "@/app/components/ui";
-import { StatCardGrid, TasksBoard, TaskEntityOption } from "@/app/components/shared";
-import { colors, radii, spacing } from "@/app/styles/foundations";
+"use client";
+
+import {
+  Card,
+  Grid,
+  Text,
+  Metric,
+  Flex,
+  Icon,
+  Title,
+  Button,
+} from "@tremor/react";
+import {
+  TruckIcon,
+  CheckBadgeIcon,
+  WrenchScrewdriverIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
+import { TasksBoard, TaskEntityOption } from "@/app/components/shared";
+import { cssVar } from "@/app/styles/design-system";
 import { Supplier } from "@/type";
 import { SupplierSummaryData } from "../types";
-
-const muted = colors.textMuted;
 
 type Props = {
   suppliers: Supplier[];
@@ -32,90 +47,138 @@ export default function SupplierHomeTab({
     subtitle: s.contact_name || undefined,
   }));
 
-  const statsCards = [
-    {
-      label: 'סה"כ ספקים',
-      value: stats.totalSuppliers,
-      hint: "כל הספקים במערכת",
-    },
-    {
-      label: "ספקים פעילים",
-      value: stats.activeSuppliers,
-      hint: "זמינים לשיוך עבודות",
-    },
-    {
-      label: "בעלי מקצוע",
-      value: stats.serviceSuppliers,
-      hint: "ספקים המסווגים לשירות",
-    },
-    {
-      label: "חוזים פעילים",
-      value: stats.activeContracts,
-      hint: "חוזים בתוקף",
-    },
-  ];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="space-y-6">
+      {/* Header */}
       <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: spacing.sm,
-            alignItems: "center",
-            marginBottom: spacing.md,
-          }}
-        >
+        <Flex justifyContent="between" alignItems="center" className="flex-wrap gap-4">
           <div>
-            <h3 style={{ margin: 0 }}>סקירת ספקים</h3>
-            <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            <Title className="text-xl font-bold" style={{ color: cssVar.text.primary }}>
+              סקירת ספקים
+            </Title>
+            <Text style={{ color: cssVar.text.muted }}>
               תמונת מצב של המערך והפעילות האחרונה.
-            </p>
+            </Text>
           </div>
           <Button variant="secondary" onClick={onRefresh} disabled={loading}>
             רענן נתונים
           </Button>
-        </div>
-        <StatCardGrid stats={statsCards} />
+        </Flex>
       </Card>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: spacing.lg,
-        }}
-      >
+      {/* KPI Cards */}
+      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6">
+        <Card decoration="top" decorationColor="slate">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                סה״כ ספקים
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {stats.totalSuppliers}
+              </Metric>
+            </div>
+            <Icon icon={TruckIcon} variant="light" size="lg" color="slate" />
+          </Flex>
+          <Text className="text-xs mt-2" style={{ color: cssVar.text.muted }}>
+            כל הספקים במערכת
+          </Text>
+        </Card>
+
+        <Card decoration="top" decorationColor="emerald">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                ספקים פעילים
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {stats.activeSuppliers}
+              </Metric>
+            </div>
+            <Icon icon={CheckBadgeIcon} variant="light" size="lg" color="emerald" />
+          </Flex>
+          <Text className="text-xs mt-2" style={{ color: cssVar.text.muted }}>
+            זמינים לשיוך עבודות
+          </Text>
+        </Card>
+
+        <Card decoration="top" decorationColor="blue">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                בעלי מקצוע
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {stats.serviceSuppliers}
+              </Metric>
+            </div>
+            <Icon icon={WrenchScrewdriverIcon} variant="light" size="lg" color="blue" />
+          </Flex>
+          <Text className="text-xs mt-2" style={{ color: cssVar.text.muted }}>
+            ספקים המסווגים לשירות
+          </Text>
+        </Card>
+
+        <Card decoration="top" decorationColor="amber">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                חוזים פעילים
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {stats.activeContracts}
+              </Metric>
+            </div>
+            <Icon icon={DocumentTextIcon} variant="light" size="lg" color="amber" />
+          </Flex>
+          <Text className="text-xs mt-2" style={{ color: cssVar.text.muted }}>
+            חוזים בתוקף
+          </Text>
+        </Card>
+      </Grid>
+
+      {/* Tasks and Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
         <TasksBoard
           entityType="supplier"
           entities={supplierEntities}
           title="משימות"
         />
 
-        <Card style={{ padding: spacing.lg }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4 style={{ margin: 0 }}>פעילות אחרונה</h4>
+        <Card>
+          <Flex justifyContent="between" alignItems="center" className="mb-4">
+            <Title>פעילות אחרונה</Title>
             {loading && (
-              <span style={{ fontSize: 12, color: muted }}>טוען...</span>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+                טוען...
+              </Text>
             )}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-              marginTop: spacing.md,
-              maxHeight: 360,
-              overflowY: "auto",
-            }}
-          >
+          </Flex>
+          <div className="flex flex-col gap-3 max-h-[360px] overflow-y-auto">
             {(summary?.recentActivity || []).map((activity) => {
               const supplierName =
                 suppliers.find(
@@ -124,54 +187,45 @@ export default function SupplierHomeTab({
               return (
                 <div
                   key={activity.activity_id}
-                  style={{
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: radii.card,
-                    padding: spacing.sm,
-                    background: colors.surface,
-                  }}
+                  className="p-3 border rounded-lg transition-colors hover:bg-tremor-background-subtle"
+                  style={{ borderColor: cssVar.border.muted }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: spacing.sm,
-                    }}
-                  >
-                    <strong>{supplierName}</strong>
-                    <span style={{ fontSize: 12, color: muted }}>
+                  <Flex justifyContent="between" className="gap-2">
+                    <Text className="font-semibold" style={{ color: cssVar.text.primary }}>
+                      {supplierName}
+                    </Text>
+                    <Text className="text-xs" style={{ color: cssVar.text.muted }}>
                       {new Date(activity.occurred_at).toLocaleString("he-IL")}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 13, color: muted }}>
+                    </Text>
+                  </Flex>
+                  <Text className="text-sm" style={{ color: cssVar.text.muted }}>
                     סוג פעילות: {activity.activity_type}
-                  </div>
+                  </Text>
                   {activity.description && (
-                    <div style={{ fontSize: 13 }}>{activity.description}</div>
+                    <Text className="text-sm" style={{ color: cssVar.text.secondary }}>
+                      {activity.description}
+                    </Text>
                   )}
                   {(activity.amount || activity.quantity) && (
-                    <div style={{ fontSize: 12, color: muted }}>
+                    <Text className="text-xs" style={{ color: cssVar.text.muted }}>
                       {activity.quantity && `כמות: ${activity.quantity} `}
                       {activity.amount && `· עלות: ₪${activity.amount}`}
-                    </div>
+                    </Text>
                   )}
                   {activity.related_document_id && (
-                    <div style={{ fontSize: 11, color: muted }}>
+                    <Text className="text-xs" style={{ color: cssVar.text.muted }}>
                       מסמך: {activity.related_document_id}
-                    </div>
+                    </Text>
                   )}
                 </div>
               );
             })}
             {!summary?.recentActivity?.length && (
               <div
+                className="text-center py-6 border border-dashed rounded-lg"
                 style={{
-                  color: muted,
-                  fontSize: 13,
-                  textAlign: "center",
-                  border: `1px dashed ${colors.border}`,
-                  borderRadius: radii.card,
-                  padding: spacing.md,
+                  color: cssVar.text.muted,
+                  borderColor: cssVar.border.muted,
                 }}
               >
                 אין פעילות רשומה עדיין.
@@ -183,4 +237,3 @@ export default function SupplierHomeTab({
     </div>
   );
 }
-

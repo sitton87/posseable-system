@@ -1,31 +1,226 @@
+/**
+ * PosSEAble Global Styles
+ * =======================
+ * 
+ * קובץ זה מייבא את ה-Design System ומגדיר סגנונות גלובליים.
+ */
+
+/* === Design System Imports === */
+@import "./styles/design-system/design-tokens.css";
+
+/* === Tailwind === */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* === Tremor Components === */
+@source "../node_modules/@tremor/react/dist";
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* === Design System Tailwind Theme === */
+@import "./styles/design-system/tailwind-theme.css";
+
+/* ===================================================================
+   TREMOR INTEGRATION
+   =================================================================== 
+   מיפוי Tremor variables ל-Design System שלנו
+*/
+
+:root {
+  /* Legacy variables - for backwards compatibility */
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-secondary);
+
+  /* Tremor Light Mode - mapped to Design System */
+  --tremor-brand-faint: var(--color-brand-primary-light);
+  --tremor-brand-muted: var(--color-brand-primary-muted);
+  --tremor-brand-subtle: #60a5fa; /* Blue-400 */
+  --tremor-brand: var(--color-brand-primary);
+  --tremor-brand-emphasis: var(--color-brand-primary-active);
+  --tremor-brand-inverted: var(--color-text-inverted);
+
+  --tremor-background-muted: var(--color-bg-secondary);
+  --tremor-background-subtle: var(--color-bg-tertiary);
+  --tremor-background: var(--color-bg-primary);
+  --tremor-background-emphasis: var(--color-text-secondary);
+
+  --tremor-border: var(--color-border-primary);
+  --tremor-ring: var(--color-border-primary);
+
+  --tremor-content-subtle: var(--color-text-subtle);
+  --tremor-content: var(--color-text-muted);
+  --tremor-content-emphasis: var(--color-text-secondary);
+  --tremor-content-strong: var(--color-text-primary);
+  --tremor-content-inverted: var(--color-text-inverted);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Legacy variables */
+    --background: var(--color-bg-primary);
+    --foreground: var(--color-text-secondary);
+
+    /* Tremor Dark Mode - mapped to Design System dark values */
+    --tremor-brand-faint: #0f172a;
+    --tremor-brand-muted: #1e293b;
+    --tremor-brand-subtle: #334155;
+    --tremor-brand: var(--color-brand-primary);
+    --tremor-brand-emphasis: #60a5fa;
+    --tremor-brand-inverted: #0f172a;
+
+    --tremor-background-muted: var(--color-bg-primary);
+    --tremor-background-subtle: var(--color-bg-secondary);
+    --tremor-background: var(--color-bg-primary);
+    --tremor-background-emphasis: var(--color-text-muted);
+
+    --tremor-border: var(--color-border-primary);
+    --tremor-ring: var(--color-border-primary);
+
+    --tremor-content-subtle: var(--color-text-subtle);
+    --tremor-content: var(--color-text-muted);
+    --tremor-content-emphasis: var(--color-text-secondary);
+    --tremor-content-strong: var(--color-text-primary);
+    --tremor-content-inverted: var(--color-bg-primary);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+/* ===================================================================
+   TAILWIND THEME MAPPING
+   =================================================================== */
+
+@theme inline {
+  /* Background & Foreground */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Font families */
+  --font-sans: var(--font-family-primary);
+  --font-mono: var(--font-family-mono);
+
+  /* Tremor Theme Mapping */
+  --color-tremor-brand-faint: var(--tremor-brand-faint);
+  --color-tremor-brand-muted: var(--tremor-brand-muted);
+  --color-tremor-brand-subtle: var(--tremor-brand-subtle);
+  --color-tremor-brand: var(--tremor-brand);
+  --color-tremor-brand-emphasis: var(--tremor-brand-emphasis);
+  --color-tremor-brand-inverted: var(--tremor-brand-inverted);
+
+  --color-tremor-background-muted: var(--tremor-background-muted);
+  --color-tremor-background-subtle: var(--tremor-background-subtle);
+  --color-tremor-background: var(--tremor-background);
+  --color-tremor-background-emphasis: var(--tremor-background-emphasis);
+
+  --color-tremor-border: var(--tremor-border);
+  --color-tremor-ring: var(--tremor-ring);
+
+  --color-tremor-content-subtle: var(--tremor-content-subtle);
+  --color-tremor-content: var(--tremor-content);
+  --color-tremor-content-emphasis: var(--tremor-content-emphasis);
+  --color-tremor-content-strong: var(--tremor-content-strong);
+  --color-tremor-content-inverted: var(--tremor-content-inverted);
+
+  /* Tremor radii */
+  --radius-tremor-default: var(--radius-lg);
+  --radius-tremor-small: var(--radius-md);
+  --radius-tremor-full: var(--radius-full);
+
+  /* Tremor text sizes */
+  --text-tremor-default: var(--font-size-sm);
+  --text-tremor-title: var(--font-size-lg);
+  --text-tremor-metric: var(--font-size-3xl);
 }
+
+/* ===================================================================
+   GLOBAL STYLES
+   =================================================================== */
+
+body {
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+/* ===================================================================
+   UTILITY CLASSES
+   =================================================================== */
 
 .filter-control {
   text-align: center;
   text-align-last: center;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border-secondary);
+  border-radius: var(--radius-full);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-subtle);
+}
+
+/* ===================================================================
+   RTL SUPPORT FOR HEBREW
+   =================================================================== */
+
+/* Form inputs and Tremor components */
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select,
+[dir="rtl"] .tremor-TextInput-root input,
+[dir="rtl"] .tremor-Textarea-root textarea,
+[dir="rtl"] .tremor-Select-root button,
+[dir="rtl"] .tremor-SelectItem-root {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] input::placeholder,
+[dir="rtl"] textarea::placeholder {
+  text-align: right;
+}
+
+/* Tremor Dialog RTL adjustments */
+[dir="rtl"] .tremor-Dialog-root,
+[dir="rtl"] .tremor-DialogPanel-root {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Select dropdown RTL */
+[dir="rtl"] [data-headlessui-state] {
+  text-align: right;
+}
+
+/* Grid items alignment for RTL */
+[dir="rtl"] .tremor-Grid-root {
+  direction: rtl;
+}
+
+/* Labels and text alignment */
+[dir="rtl"] label,
+[dir="rtl"] .tremor-Text-root {
+  text-align: right;
+}
+
+/* Table RTL support */
+[dir="rtl"] th,
+[dir="rtl"] td {
+  text-align: right;
+}
+
+[dir="rtl"] .text-center th,
+[dir="rtl"] .text-center td,
+[dir="rtl"] th.text-center,
+[dir="rtl"] td.text-center {
+  text-align: center;
 }

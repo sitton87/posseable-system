@@ -1,19 +1,32 @@
 "use client";
 
-import { Card, Button } from "@/app/components/ui";
-import { DraftList } from "@/app/components/shared";
 import {
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+  Card,
+  Title,
+  Text,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
+import { DraftList } from "@/app/components/shared";
+import { cssVar, numericValues } from "@/app/styles/design-system";
 import type { DraftEntry } from "@/app/hooks/useDraftManager";
 import type {
   InventoryDocumentFormState,
   InventoryDocumentSummary,
 } from "../types";
-import { formatCurrency, formatDate, px } from "../utils";
+import { formatCurrency, formatDate } from "../utils";
+import {
+  PlusIcon,
+  ArrowPathIcon,
+  Cog6ToothIcon,
+  EyeIcon,
+  PencilIcon,
+} from "@heroicons/react/24/outline";
 
 type InventoryTabProps = {
   documents: InventoryDocumentSummary[];
@@ -29,7 +42,6 @@ type InventoryTabProps = {
   onGoToStructure: () => void;
 };
 
-const muted = colors.textMuted;
 const ACTION_LABELS: Record<string, string> = {
   RECEIPT: "קליטת ספק",
   DONATION: "תרומה נכנסת",
@@ -37,6 +49,7 @@ const ACTION_LABELS: Record<string, string> = {
   TRANSFER: "העברה",
   STOCKTAKE_ADJUST: "התאמת מלאי",
 };
+
 export function InventoryTab({
   documents,
   documentsLoading,
@@ -53,42 +66,28 @@ export function InventoryTab({
   return (
     <>
       <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: spacing.sm,
-            marginBottom: spacing.md,
-          }}
-        >
+        <div className="flex justify-between items-center flex-wrap gap-ds-spacing-2 mb-ds-spacing-4">
           <div>
-            <h3 style={{ margin: 0 }}>מסמכי מלאי</h3>
-            <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            <Title>מסמכי מלאי</Title>
+            <Text className="mt-1">
               יצירת תעודה חדשה ותיעוד כל תנועות המלאי
-            </p>
+            </Text>
           </div>
-          <div
-            style={{
-              display: "flex",
-              gap: spacing.sm,
-              flexWrap: "wrap",
-            }}
-          >
-            <Button variant="secondary" onClick={onRefreshDocuments}>
+          <div className="flex gap-ds-spacing-2 flex-wrap">
+            <Button variant="secondary" icon={ArrowPathIcon} onClick={onRefreshDocuments}>
               רענן נתונים
             </Button>
-            <Button variant="secondary" onClick={onGoToStructure}>
+            <Button variant="secondary" icon={Cog6ToothIcon} onClick={onGoToStructure}>
               הגדרות מחסנים
             </Button>
-            <Button onClick={onOpenDocumentModal} disabled={!canEdit}>
-              + תעודת מלאי חדשה
+            <Button icon={PlusIcon} onClick={onOpenDocumentModal} disabled={!canEdit}>
+              תעודת מלאי חדשה
             </Button>
           </div>
         </div>
+
         {drafts && drafts.length > 0 && (
-          <div style={{ marginBottom: spacing.lg }}>
+          <div className="mb-ds-spacing-5">
             <DraftList
               drafts={drafts}
               title={`טיוטות תעודות (${drafts.length})`}
@@ -106,126 +105,98 @@ export function InventoryTab({
             />
           </div>
         )}
+
         <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <strong>תעודות אחרונות</strong>
-          </div>
-          <div style={{ marginTop: spacing.sm }}>
-            {documentsLoading ? (
-              <div
-                style={{
-                  padding: px(spacing.md),
-                  textAlign: "center",
-                  color: muted,
-                }}
-              >
-                טוען נתונים...
-              </div>
-            ) : documents.length === 0 ? (
-              <div
-                style={{
-                  padding: px(spacing.md),
-                  textAlign: "center",
-                  color: muted,
-                }}
-              >
-                עדיין לא נרשמו תעודות במערכת.
-              </div>
-            ) : (
-              <table style={{ ...tableStyle, width: "100%" }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>תעודה</th>
-                    <th style={tableHeaderStyle}>תאריך</th>
-                    <th style={tableHeaderStyle}>סוג פעולה</th>
-                    <th style={tableHeaderStyle}>ספק / תורם</th>
-                    <th style={tableHeaderStyle}>מחסן שולח</th>
-                    <th style={tableHeaderStyle}>מחסן מקבל</th>
-                    <th style={tableHeaderStyle}>סה"כ כמות</th>
-                    <th style={tableHeaderStyle}>ערך כספי</th>
-                    <th style={tableHeaderStyle}>משתמש</th>
-                    <th style={tableHeaderStyle}>פעולות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map((entry) => (
-                    <tr key={entry.id}>
-                      <td style={tableCellStyle}>{entry.document_number}</td>
-                      <td style={tableCellStyle}>
-                        {formatDate(entry.document_date)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {ACTION_LABELS[entry.action_type] || entry.action_type}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {entry.supplier_name ||
-                          entry.donor_name ||
-                          entry.external_party ||
-                          "—"}
-                        {entry.action_type === "RECEIPT" &&
-                          entry.supplier_document_type && (
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: muted,
-                                marginTop: 2,
-                              }}
-                            >
-                              {entry.supplier_document_type}
-                            </div>
-                          )}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {entry.source_warehouse_name || "—"}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {entry.target_warehouse_name || "—"}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {entry.total_quantity?.toLocaleString("he-IL") || "0"}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {formatCurrency(entry.total_value)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {entry.created_by_name || entry.created_by || "—"}
-                      </td>
-                      <td style={tableCellStyle}>
+          <Text className="font-semibold mb-2">תעודות אחרונות</Text>
+          {documentsLoading ? (
+            <div className="p-ds-spacing-4 text-center" style={{ color: cssVar.text.muted }}>
+              טוען נתונים...
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="p-ds-spacing-4 text-center" style={{ color: cssVar.text.muted }}>
+              עדיין לא נרשמו תעודות במערכת.
+            </div>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>תעודה</TableHeaderCell>
+                  <TableHeaderCell>תאריך</TableHeaderCell>
+                  <TableHeaderCell>סוג פעולה</TableHeaderCell>
+                  <TableHeaderCell>ספק / תורם</TableHeaderCell>
+                  <TableHeaderCell>מחסן שולח</TableHeaderCell>
+                  <TableHeaderCell>מחסן מקבל</TableHeaderCell>
+                  <TableHeaderCell>סה"כ כמות</TableHeaderCell>
+                  <TableHeaderCell>ערך כספי</TableHeaderCell>
+                  <TableHeaderCell>משתמש</TableHeaderCell>
+                  <TableHeaderCell>פעולות</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {documents.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{entry.document_number}</TableCell>
+                    <TableCell>
+                      {formatDate(entry.document_date)}
+                    </TableCell>
+                    <TableCell>
+                      {ACTION_LABELS[entry.action_type] || entry.action_type}
+                    </TableCell>
+                    <TableCell>
+                      {entry.supplier_name ||
+                        entry.donor_name ||
+                        entry.external_party ||
+                        "—"}
+                      {entry.action_type === "RECEIPT" &&
+                        entry.supplier_document_type && (
+                          <Text className="text-xs mt-0.5">
+                            {entry.supplier_document_type}
+                          </Text>
+                        )}
+                    </TableCell>
+                    <TableCell>
+                      {entry.source_warehouse_name || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {entry.target_warehouse_name || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {entry.total_quantity?.toLocaleString("he-IL") || "0"}
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(entry.total_value)}
+                    </TableCell>
+                    <TableCell>
+                      {entry.created_by_name || entry.created_by || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
                         <Button
                           variant="secondary"
+                          size="xs"
+                          icon={EyeIcon}
                           onClick={() => onViewDocument(entry.id)}
-                          aria-label="צפייה בתעודה"
-                        >
-                          👁️
-                        </Button>
+                        />
                         {canEdit && (
                           <Button
                             variant="secondary"
-                            style={{ marginInlineStart: spacing.xs }}
+                            size="xs"
+                            icon={PencilIcon}
                             onClick={() => onEditDocument(entry.id)}
-                            aria-label="עריכת תעודה"
-                          >
-                            ✏️
-                          </Button>
+                          />
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </Card>
-      <p style={{ color: muted, fontSize: 13, marginTop: spacing.md }}>
+      <Text className="text-sm mt-4" style={{ color: cssVar.text.muted }}>
         ניהול המחסנים מתבצע דרך &quot;הגדרות מחסנים&quot; בטאב "הגדרות מבנה".
-      </p>
+      </Text>
     </>
   );
 }

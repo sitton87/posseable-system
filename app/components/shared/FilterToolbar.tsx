@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { spacing } from "@/app/styles/foundations";
+import { numericValues } from "@/app/styles/design-system";
 
 type FilterToolbarProps = {
   children: ReactNode;
@@ -14,7 +14,7 @@ type FilterToolbarProps = {
 export function FilterToolbar({
   children,
   columns = "repeat(auto-fit, minmax(200px, 1fr))",
-  gap = spacing.md,
+  gap = numericValues.spacing[4],
   style,
   className,
 }: FilterToolbarProps) {
@@ -34,4 +34,3 @@ export function FilterToolbar({
     </div>
   );
 }
-

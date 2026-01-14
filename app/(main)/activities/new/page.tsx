@@ -2,10 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { colors, spacing } from "@/app/styles/foundations";
-import { Button, Input, Select } from "@/app/components/ui";
+import {
+  Card,
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Select,
+  SelectItem,
+  Button,
+} from "@tremor/react";
 import { PagePermissionGate } from "@/app/components/PagePermissionGate";
 import { Section, FormGrid } from "@/app/components/shared/layoutPrimitives";
+import { cssVar } from "@/app/styles/design-system";
 import { toast } from "sonner";
 
 export default function NewActivityPage() {
@@ -13,10 +22,10 @@ export default function NewActivityPage() {
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<any[]>([]);
   const [series, setSeries] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]); // Only staff/management
+  const [staff, setStaff] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
-    season_id: "", // Will be auto-filled from series
+    season_id: "",
     series_id: "",
     group_id: "",
     kind: "surf",
@@ -24,7 +33,7 @@ export default function NewActivityPage() {
     start_time: "08:00",
     end_time: "12:00",
     location: "חוף הים",
-    capacity: 20,
+    capacity: "20",
     status: "Planned",
     notes: "",
     activity_manager_id: "",
@@ -32,17 +41,15 @@ export default function NewActivityPage() {
   });
 
   useEffect(() => {
-    // Fetch necessary data (groups, series, volunteers filtered by role)
     async function fetchData() {
       try {
         const [groupsRes, seriesRes, staffRes] = await Promise.all([
           fetch("/api/groups"),
           fetch("/api/series"),
-          fetch("/api/volunteers?classification=staff"), // Fetch staff
-          // Note: In real app we might want to fetch management too or use a combined query
+          fetch("/api/volunteers?classification=staff"),
         ]);
 
-        const managementRes = await fetch("/api/volunteers?classification=management"); // Also fetch management
+        const managementRes = await fetch("/api/volunteers?classification=management");
         
         const groupsData = await groupsRes.json();
         const seriesData = await seriesRes.json();
@@ -52,12 +59,10 @@ export default function NewActivityPage() {
         if (groupsData.success) setGroups(groupsData.groups);
         if (seriesData.success) setSeries(seriesData.series);
         
-        // Combine staff and management
         const allStaff = [
             ...(staffData.success ? staffData.volunteers : []),
             ...(managementData.success ? managementData.volunteers : [])
         ];
-        // Remove duplicates if any (though classifications are usually mutually exclusive)
         const uniqueStaff = Array.from(new Map(allStaff.map(item => [item.national_id, item])).values());
         setStaff(uniqueStaff);
 
@@ -80,7 +85,10 @@ export default function NewActivityPage() {
       const res = await fetch("/api/activities/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          capacity: Number(formData.capacity),
+        }),
       });
 
       const data = await res.json();
@@ -97,135 +105,161 @@ export default function NewActivityPage() {
     }
   };
 
-  const staffOptions = [
-    { value: "", label: "בחר מהרשימה..." },
-    ...staff.map(v => ({ value: v.national_id, label: v.full_name }))
-  ];
-
   return (
     <PagePermissionGate>
-      <div style={{ padding: spacing.lg, maxWidth: 800, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: spacing.lg }}>יצירת פעילות חדשה</h1>
+      <div className="p-5 max-w-3xl mx-auto">
+        <Title className="text-2xl mb-5">יצירת פעילות חדשה</Title>
         
-        <Section>
-          <FormGrid>
-            <Select
-              label="סדרת פעילות"
-              value={formData.series_id}
-              onChange={(e) => {
-                const selectedSeries = series.find(s => s.id.toString() === e.target.value);
-                setFormData({ 
-                  ...formData, 
-                  series_id: e.target.value,
-                  season_id: selectedSeries?.season_id?.toString() || ""
-                });
-              }}
-              options={[
-                { value: "", label: "בחר סדרה..." },
-                ...series.map(s => ({ value: s.id, label: s.name }))
-              ]}
-              required
-            />
+        <Card>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                סדרת פעילות <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <Select
+                value={formData.series_id || undefined}
+                onValueChange={(val) => {
+                  const selectedSeries = series.find(s => s.id.toString() === val);
+                  setFormData({ 
+                    ...formData, 
+                    series_id: val || "",
+                    season_id: selectedSeries?.season_id?.toString() || ""
+                  });
+                }}
+                placeholder="בחר סדרה..."
+              >
+                {series.map(s => (
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                ))}
+              </Select>
+            </div>
             
-            <Select
-              label="קבוצה"
-              value={formData.group_id}
-              onChange={(e) => setFormData({ ...formData, group_id: e.target.value })}
-              options={[
-                { value: "", label: "ללא קבוצה / כללי" },
-                ...groups.map(g => ({ value: g.id, label: g.name }))
-              ]}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>קבוצה</Text>
+              <Select
+                value={formData.group_id || undefined}
+                onValueChange={(val) => setFormData({ ...formData, group_id: val || "" })}
+                placeholder="ללא קבוצה / כללי"
+              >
+                {groups.map(g => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+              </Select>
+            </div>
             
-            <Select
-              label="סוג פעילות"
-              value={formData.kind}
-              onChange={(e) => setFormData({ ...formData, kind: e.target.value })}
-              options={[
-                { value: "surf", label: "גלישה" },
-                { value: "social", label: "חברתי" },
-                { value: "lecture", label: "הדרכה/הרצאה" },
-                { value: "preparation", label: "הכנה" },
-                { value: "special", label: "אירוע מיוחד" },
-                { value: "other", label: "אחר" },
-              ]}
-              required
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                סוג פעילות <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <Select
+                value={formData.kind}
+                onValueChange={(val) => setFormData({ ...formData, kind: val })}
+              >
+                <SelectItem value="surf">גלישה</SelectItem>
+                <SelectItem value="social">חברתי</SelectItem>
+                <SelectItem value="lecture">הדרכה/הרצאה</SelectItem>
+                <SelectItem value="preparation">הכנה</SelectItem>
+                <SelectItem value="special">אירוע מיוחד</SelectItem>
+                <SelectItem value="other">אחר</SelectItem>
+              </Select>
+            </div>
             
-            <Input
-              type="date"
-              label="תאריך"
-              value={formData.activity_date}
-              onChange={(e) => setFormData({ ...formData, activity_date: e.target.value })}
-              required
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                תאריך <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <input
+                type="date"
+                className="w-full rounded-md border px-3 py-2"
+                style={{ borderColor: cssVar.border.primary }}
+                value={formData.activity_date}
+                onChange={(e) => setFormData({ ...formData, activity_date: e.target.value })}
+              />
+            </div>
             
-            <Input
-              type="time"
-              label="שעת התחלה"
-              value={formData.start_time}
-              onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>שעת התחלה</Text>
+              <input
+                type="time"
+                className="w-full rounded-md border px-3 py-2"
+                style={{ borderColor: cssVar.border.primary }}
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+              />
+            </div>
             
-            <Input
-              type="time"
-              label="שעת סיום"
-              value={formData.end_time}
-              onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>שעת סיום</Text>
+              <input
+                type="time"
+                className="w-full rounded-md border px-3 py-2"
+                style={{ borderColor: cssVar.border.primary }}
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+              />
+            </div>
             
-            <Input
-              label="מיקום"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מיקום</Text>
+              <TextInput
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              />
+            </div>
             
-            <Input
-              type="number"
-              label="קיבולת מקסימלית"
-              value={formData.capacity}
-              onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>קיבולת מקסימלית</Text>
+              <TextInput
+                type="number"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+              />
+            </div>
 
-            <Select 
-              label="מנהל פעילות"
-              value={formData.activity_manager_id}
-              onChange={(e) => setFormData({ ...formData, activity_manager_id: e.target.value })}
-              options={staffOptions}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מנהל פעילות</Text>
+              <Select 
+                value={formData.activity_manager_id || undefined}
+                onValueChange={(val) => setFormData({ ...formData, activity_manager_id: val || "" })}
+                placeholder="בחר מהרשימה..."
+              >
+                {staff.map(v => (
+                  <SelectItem key={v.national_id} value={v.national_id}>{v.full_name}</SelectItem>
+                ))}
+              </Select>
+            </div>
 
-            <Select 
-              label="מנהל בטיחות"
-              value={formData.safety_manager_id}
-              onChange={(e) => setFormData({ ...formData, safety_manager_id: e.target.value })}
-              options={staffOptions}
-            />
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מנהל בטיחות</Text>
+              <Select 
+                value={formData.safety_manager_id || undefined}
+                onValueChange={(val) => setFormData({ ...formData, safety_manager_id: val || "" })}
+                placeholder="בחר מהרשימה..."
+              >
+                {staff.map(v => (
+                  <SelectItem key={v.national_id} value={v.national_id}>{v.full_name}</SelectItem>
+                ))}
+              </Select>
+            </div>
 
-          </FormGrid>
+          </div>
           
-          <div style={{ marginTop: spacing.md }}>
-            <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>הערות</label>
-            <textarea
-              style={{ 
-                width: "100%", 
-                minHeight: 100, 
-                padding: 8, 
-                borderRadius: 4, 
-                border: `1px solid ${colors.border}`,
-                fontFamily: "inherit"
-              }}
+          <div className="mt-4">
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>הערות</Text>
+            <Textarea
+              rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             />
           </div>
           
-          <div style={{ display: "flex", gap: spacing.md, marginTop: spacing.xl, justifyContent: "flex-end" }}>
-            <Button variant="outline" onClick={() => router.back()}>ביטול</Button>
-            <Button variant="primary" onClick={handleSubmit} disabled={loading}>
+          <div className="flex gap-4 mt-6 justify-end">
+            <Button variant="secondary" onClick={() => router.back()}>ביטול</Button>
+            <Button onClick={handleSubmit} disabled={loading}>
               {loading ? "יוצר..." : "צור פעילות"}
             </Button>
           </div>
-        </Section>
+        </Card>
       </div>
     </PagePermissionGate>
   );

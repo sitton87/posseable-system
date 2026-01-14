@@ -1,11 +1,15 @@
 "use client";
 
-import { Button, Card } from "@/app/components/ui";
-import { inputStyle, labelStyle, withCenteredControl } from "@/app/styles/components";
-import { spacing } from "@/app/styles/foundations";
+import {
+  Card,
+  Text,
+  TextInput,
+  Select,
+  SelectItem,
+  Button,
+} from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { Activity, SeasonPlan } from "@/type";
-
-const filterControlStyle = withCenteredControl(inputStyle);
 
 type TransactionFiltersProps = {
   filterType: string;
@@ -38,96 +42,99 @@ export default function TransactionFilters({
   seasonActivities,
   onReset,
 }: TransactionFiltersProps) {
+  // Convert empty string to undefined for Tremor Select
+  const typeValue = filterType || undefined;
+  const seasonValue = filterSeasonId || undefined;
+  const activityValue = filterActivityId || undefined;
+
   return (
     <Card>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: spacing.md,
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <div>
-          <label style={labelStyle}>סוג תנועה</label>
-          <select
-            style={filterControlStyle}
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+            סוג תנועה
+          </Text>
+          <Select
+            value={typeValue}
+            onValueChange={(val) => setFilterType(val || "")}
+            placeholder="כל התנועות"
           >
-            <option value="">כל התנועות</option>
-            <option value="income">הכנסות בלבד</option>
-            <option value="expense">הוצאות בלבד</option>
-          </select>
+            <SelectItem value="income">הכנסות בלבד</SelectItem>
+            <SelectItem value="expense">הוצאות בלבד</SelectItem>
+          </Select>
         </div>
 
         <div>
-          <label style={labelStyle}>מתאריך</label>
-          <input
+          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+            מתאריך
+          </Text>
+          <TextInput
             type="date"
-            style={filterControlStyle}
             value={filterFromDate}
             onChange={(e) => setFilterFromDate(e.target.value)}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>עד תאריך</label>
-          <input
+          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+            עד תאריך
+          </Text>
+          <TextInput
             type="date"
-            style={filterControlStyle}
             value={filterToDate}
             onChange={(e) => setFilterToDate(e.target.value)}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>עונה</label>
-          <select
-            style={filterControlStyle}
-            value={filterSeasonId}
-            onChange={(e) => {
-              setFilterSeasonId(e.target.value);
+          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+            עונה
+          </Text>
+          <Select
+            value={seasonValue}
+            onValueChange={(val) => {
+              setFilterSeasonId(val || "");
               setFilterActivityId("");
             }}
+            placeholder="כל העונות"
           >
-            <option value="">כל העונות</option>
             {seasons.map((season) => (
-              <option key={season.id} value={season.id}>
+              <SelectItem key={season.id} value={season.id.toString()}>
                 {season.name} · {season.year}
-              </option>
+              </SelectItem>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div>
-          <label style={labelStyle}>פעילות</label>
-          <select
-            style={filterControlStyle}
-            value={filterActivityId}
-            onChange={(e) => setFilterActivityId(e.target.value)}
-            disabled={!filterSeasonId}
-          >
-            <option value="">
-              {!filterSeasonId
+          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+            פעילות
+          </Text>
+          <Select
+            value={activityValue}
+            onValueChange={(val) => setFilterActivityId(val || "")}
+            disabled={!filterSeasonId || seasonActivities.length === 0}
+            placeholder={
+              !filterSeasonId
                 ? "בחר עונה קודם"
                 : seasonActivities.length
-                ? "בחר פעילות..."
-                : "אין פעילויות לעונה"}
-            </option>
-            {filterSeasonId &&
-              seasonActivities.map((activity) => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.kind} ·{" "}
-                  {new Date(activity.activity_date).toLocaleDateString("he-IL")}
-                </option>
-              ))}
-          </select>
+                ? "כל הפעילויות"
+                : "אין פעילויות לעונה"
+            }
+          >
+            {seasonActivities.map((activity) => (
+              <SelectItem key={activity.id} value={activity.id.toString()}>
+                {activity.kind} ·{" "}
+                {new Date(activity.activity_date).toLocaleDateString("he-IL")}
+              </SelectItem>
+            ))}
+          </Select>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end" }}>
+        <div className="flex items-end">
           <Button
             variant="secondary"
-            style={{ width: "100%" }}
+            className="w-full"
             onClick={onReset}
           >
             איפוס סינונים
@@ -137,6 +144,3 @@ export default function TransactionFilters({
     </Card>
   );
 }
-
-
-

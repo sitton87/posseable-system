@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { colors, spacing } from "@/app/styles/foundations";
+import { tw, cssVar } from "@/app/styles/design-system";
 import { PagePermissionGate } from "@/app/components/PagePermissionGate";
 import { Activity } from "@/type";
 import { ActivityHeader, TabButton } from "./components";
@@ -86,15 +86,15 @@ export default function ActivityManagementPage() {
     }
   };
 
-  if (loading) return <div style={{ padding: spacing.lg }}>טוען נתוני פעילות...</div>;
-  if (!activity) return <div style={{ padding: spacing.lg }}>פעילות לא נמצאה</div>;
+  if (loading) return <div className={`p-ds-spacing-5 ${tw.text.muted}`}>טוען נתוני פעילות...</div>;
+  if (!activity) return <div className={`p-ds-spacing-5 ${tw.text.muted}`}>פעילות לא נמצאה</div>;
 
   return (
     <PagePermissionGate>
-      <div style={{ padding: spacing.lg, width: "100%" }}> {/* Full width container */}
+      <div className="p-ds-spacing-5 w-full">
         <ActivityHeader activity={activity} />
 
-        <div style={{ display: "flex", gap: spacing.xs, marginBottom: spacing.lg, background: "#f1f5f9", padding: 4, borderRadius: 50, width: "fit-content", flexWrap: "wrap" }}>
+        <div className={`flex gap-ds-spacing-1 mb-ds-spacing-5 ${tw.bg.secondary} p-ds-spacing-1 ${tw.rounded.full} w-fit flex-wrap`}>
           <TabButton active={activeTab === "overview"} onClick={() => updateTab("overview")}>
             מבט על
           </TabButton>
@@ -109,7 +109,7 @@ export default function ActivityManagementPage() {
           </TabButton>
         </div>
 
-        <div style={{ minHeight: 400 }}>
+        <div className="min-h-[400px]">
           {activeTab === "overview" && (
             <OverviewTab activity={activity} onUpdate={handleUpdateActivity} />
           )}

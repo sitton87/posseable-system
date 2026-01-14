@@ -1,19 +1,28 @@
 import { useState, useEffect } from "react";
-import { Card, Button, Modal } from "@/app/components/ui";
 import {
-  Section,
-  SmallActionButton,
-  StatusPill,
-} from "@/app/components/shared";
-import { colors, spacing, radii } from "@/app/styles/foundations";
-import {
-  tableStyle,
-  tableHeaderStyle,
-  tableCellStyle,
-  labelStyle,
-  inputStyle,
-} from "@/app/styles/components";
+  Card,
+  Title,
+  Text,
+  Button,
+  TextInput,
+  Textarea,
+  Switch,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  Badge,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { StaffCard } from "./StaffCard";
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 
 type Role = {
   id: number;
@@ -61,11 +70,6 @@ export function StaffSettings() {
   const fetchStaff = async () => {
     setStaffLoading(true);
     try {
-      // Fetch all volunteers but filter for staff/management in frontend or ask API to filter
-      // The API supports ?classification=staff etc. but we want both staff and management.
-      // Or we can just fetch all and filter client side if list isn't huge.
-      // Let's try fetching separately or adjusting API.
-      // For now, let's fetch all and filter.
       const res = await fetch("/api/volunteers?classification=all");
       const data = await res.json();
       if (data.success) {
@@ -103,16 +107,8 @@ export function StaffSettings() {
   }, [activeTab]);
 
   const PRESET_COLORS = [
-    "#ef4444", // Red
-    "#f97316", // Orange
-    "#f59e0b", // Amber
-    "#84cc16", // Lime
-    "#10b981", // Emerald
-    "#06b6d4", // Cyan
-    "#3b82f6", // Blue
-    "#6366f1", // Indigo
-    "#8b5cf6", // Violet
-    "#ec4899", // Pink
+    "#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981",
+    "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899",
   ];
 
   const handleOpenRoleModal = (role?: Role) => {
@@ -142,9 +138,7 @@ export function StaffSettings() {
 
   const handleSaveRole = async () => {
     try {
-      const endpoint = editingRole
-        ? "/api/volunteers/roles"
-        : "/api/volunteers/roles";
+      const endpoint = "/api/volunteers/roles";
       const method = editingRole ? "PUT" : "POST";
       const body = editingRole ? { ...roleForm, id: editingRole.id } : roleForm;
 
@@ -184,50 +178,32 @@ export function StaffSettings() {
   };
 
   return (
-    <Card style={{ padding: spacing.lg }}>
-      <div
-        style={{
-          display: "flex",
-          gap: spacing.md,
-          borderBottom: `1px solid ${colors.borderMuted}`,
-          paddingBottom: spacing.md,
-          marginBottom: spacing.lg,
-        }}
-      >
+    <Card className="p-ds-spacing-5">
+      <div className="flex gap-4 border-b pb-4 mb-5" style={{ borderColor: cssVar.border.primary }}>
         <button
           onClick={() => setActiveTab("staff")}
+          className={`bg-transparent border-none cursor-pointer text-base px-2 pb-1 ${
+            activeTab === "staff"
+              ? "border-b-2 font-bold"
+              : "border-b-2 border-transparent font-normal"
+          }`}
           style={{
-            background: "none",
-            border: "none",
-            borderBottom:
-              activeTab === "staff"
-                ? `2px solid ${colors.primary}`
-                : "2px solid transparent",
-            fontWeight: activeTab === "staff" ? 700 : 400,
-            cursor: "pointer",
-            fontSize: 16,
-            padding: `0 ${spacing.sm} ${spacing.xs} ${spacing.sm}`,
-            color:
-              activeTab === "staff" ? colors.textPrimary : colors.textMuted,
+            borderColor: activeTab === "staff" ? cssVar.brand.primary : "transparent",
+            color: activeTab === "staff" ? cssVar.text.primary : cssVar.text.muted,
           }}
         >
           ניהול צוות ומדריכים
         </button>
         <button
           onClick={() => setActiveTab("roles")}
+          className={`bg-transparent border-none cursor-pointer text-base px-2 pb-1 ${
+            activeTab === "roles"
+              ? "border-b-2 font-bold"
+              : "border-b-2 border-transparent font-normal"
+          }`}
           style={{
-            background: "none",
-            border: "none",
-            borderBottom:
-              activeTab === "roles"
-                ? `2px solid ${colors.primary}`
-                : "2px solid transparent",
-            fontWeight: activeTab === "roles" ? 700 : 400,
-            cursor: "pointer",
-            fontSize: 16,
-            padding: `0 ${spacing.sm} ${spacing.xs} ${spacing.sm}`,
-            color:
-              activeTab === "roles" ? colors.textPrimary : colors.textMuted,
+            borderColor: activeTab === "roles" ? cssVar.brand.primary : "transparent",
+            color: activeTab === "roles" ? cssVar.text.primary : cssVar.text.muted,
           }}
         >
           ניהול תפקידים והסמכות
@@ -236,146 +212,129 @@ export function StaffSettings() {
 
       {activeTab === "staff" && (
         <div>
-          <div style={{ marginBottom: spacing.md, color: colors.textMuted }}>
+          <Text className="mb-4">
             רשימת אנשי הצוות וההנהלה. לחץ על איש צוות לניהול הסמכות ותפקידים.
-          </div>
+          </Text>
           {staffLoading ? (
-            <div>טוען...</div>
+            <Text style={{ color: cssVar.text.muted }}>טוען...</Text>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>שם מלא</th>
-                    <th style={tableHeaderStyle}>תפקיד מערכת</th>
-                    <th style={tableHeaderStyle}>טלפון</th>
-                    <th style={tableHeaderStyle}>אימייל</th>
-                    <th style={tableHeaderStyle}>סטטוס</th>
-                    <th style={tableHeaderStyle}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffList.map((s) => (
-                    <tr key={s.national_id}>
-                      <td style={{ ...tableCellStyle, fontWeight: 600 }}>
-                        {s.full_name}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {s.classification === "management" ? "הנהלה" : "צוות"}
-                      </td>
-                      <td style={tableCellStyle}>{s.phone}</td>
-                      <td style={tableCellStyle}>{s.email}</td>
-                      <td style={tableCellStyle}>
-                        <StatusPill tone={s.active ? "active" : "inactive"}>
-                          {s.active ? "פעיל" : "לא פעיל"}
-                        </StatusPill>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setSelectedStaff(s)}
-                        >
-                          ניהול כרטיס
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                  {staffList.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        style={{ ...tableCellStyle, textAlign: "center" }}
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>שם מלא</TableHeaderCell>
+                  <TableHeaderCell>תפקיד מערכת</TableHeaderCell>
+                  <TableHeaderCell>טלפון</TableHeaderCell>
+                  <TableHeaderCell>אימייל</TableHeaderCell>
+                  <TableHeaderCell>סטטוס</TableHeaderCell>
+                  <TableHeaderCell></TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {staffList.map((s) => (
+                  <TableRow key={s.national_id}>
+                    <TableCell className="font-semibold">
+                      {s.full_name}
+                    </TableCell>
+                    <TableCell>
+                      {s.classification === "management" ? "הנהלה" : "צוות"}
+                    </TableCell>
+                    <TableCell>{s.phone}</TableCell>
+                    <TableCell>{s.email}</TableCell>
+                    <TableCell>
+                      <Badge color={s.active ? "emerald" : "gray"} size="sm">
+                        {s.active ? "פעיל" : "לא פעיל"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => setSelectedStaff(s)}
                       >
-                        לא נמצאו אנשי צוות.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        ניהול כרטיס
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {staffList.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <Text>לא נמצאו אנשי צוות.</Text>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
         </div>
       )}
 
       {activeTab === "roles" && (
         <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: spacing.md,
-            }}
-          >
-            <div style={{ color: colors.textMuted }}>
+          <div className="flex justify-between items-center mb-4">
+            <Text>
               הגדרת תפקידים אפשריים לפעילויות והסמכות נדרשות.
-            </div>
-            <Button onClick={() => handleOpenRoleModal()}>+ תפקיד חדש</Button>
+            </Text>
+            <Button icon={PlusIcon} onClick={() => handleOpenRoleModal()}>תפקיד חדש</Button>
           </div>
           {rolesLoading ? (
-            <div>טוען...</div>
+            <Text style={{ color: cssVar.text.muted }}>טוען...</Text>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>שם תפקיד</th>
-                    <th style={tableHeaderStyle}>תיאור</th>
-                    <th style={tableHeaderStyle}>דורש תעודה</th>
-                    <th style={tableHeaderStyle}>דורש חידוש</th>
-                    <th style={tableHeaderStyle}>דורש הדרכה</th>
-                    <th style={tableHeaderStyle}>צבע</th>
-                    <th style={tableHeaderStyle}>פעולות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roles.map((r) => (
-                    <tr key={r.id}>
-                      <td style={{ ...tableCellStyle, fontWeight: 600 }}>
-                        {r.name}
-                      </td>
-                      <td style={tableCellStyle}>{r.description}</td>
-                      <td style={tableCellStyle}>
-                        {r.requires_certification ? "כן" : "לא"}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {r.requires_renewal ? "כן" : "לא"}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {r.requires_training ? "כן" : "לא"}
-                      </td>
-                      <td style={tableCellStyle}>
-                        <div
-                          style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 4,
-                            background: r.color_hex,
-                            border: `1px solid ${colors.borderMuted}`,
-                          }}
-                        ></div>
-                      </td>
-                      <td style={tableCellStyle}>
-                        <SmallActionButton
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>שם תפקיד</TableHeaderCell>
+                  <TableHeaderCell>תיאור</TableHeaderCell>
+                  <TableHeaderCell>דורש תעודה</TableHeaderCell>
+                  <TableHeaderCell>דורש חידוש</TableHeaderCell>
+                  <TableHeaderCell>דורש הדרכה</TableHeaderCell>
+                  <TableHeaderCell>צבע</TableHeaderCell>
+                  <TableHeaderCell>פעולות</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {roles.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-semibold">
+                      {r.name}
+                    </TableCell>
+                    <TableCell>{r.description}</TableCell>
+                    <TableCell>
+                      {r.requires_certification ? "כן" : "לא"}
+                    </TableCell>
+                    <TableCell>
+                      {r.requires_renewal ? "כן" : "לא"}
+                    </TableCell>
+                    <TableCell>
+                      {r.requires_training ? "כן" : "לא"}
+                    </TableCell>
+                    <TableCell>
+                      <div
+                        className="w-5 h-5 rounded border"
+                        style={{ background: r.color_hex, borderColor: cssVar.border.primary }}
+                      ></div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
                           variant="secondary"
+                          size="xs"
+                          icon={PencilIcon}
                           onClick={() => handleOpenRoleModal(r)}
-                          style={{ marginInlineEnd: spacing.xs }}
-                        >
-                          ✏️
-                        </SmallActionButton>
-                        <SmallActionButton
+                        />
+                        <Button
                           variant="secondary"
+                          size="xs"
+                          color="rose"
+                          icon={TrashIcon}
                           onClick={() => handleDeleteRole(r.id)}
-                          style={{ color: colors.danger }}
-                        >
-                          🗑️
-                        </SmallActionButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
       )}
@@ -387,25 +346,17 @@ export function StaffSettings() {
         />
       )}
 
-      {showRoleModal && (
-        <Modal
-          open={true}
-          onClose={() => setShowRoleModal(false)}
-          width="500px"
-        >
-          <h3>{editingRole ? "עריכת תפקיד" : "תפקיד חדש"}</h3>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-              marginTop: spacing.md,
-            }}
-          >
+      <Dialog open={showRoleModal} onClose={() => setShowRoleModal(false)}>
+        <DialogPanel className="max-w-md">
+          <Title className="mb-6">
+            {editingRole ? "עריכת תפקיד" : "תפקיד חדש"}
+          </Title>
+          <div className="flex flex-col gap-4">
             <div>
-              <label style={labelStyle}>שם התפקיד</label>
-              <input
-                style={inputStyle}
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                שם התפקיד
+              </Text>
+              <TextInput
                 value={roleForm.name}
                 onChange={(e) =>
                   setRoleForm({ ...roleForm, name: e.target.value })
@@ -413,124 +364,82 @@ export function StaffSettings() {
               />
             </div>
             <div>
-              <label style={labelStyle}>תיאור</label>
-              <textarea
-                style={inputStyle}
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                תיאור
+              </Text>
+              <Textarea
                 value={roleForm.description}
                 onChange={(e) =>
                   setRoleForm({ ...roleForm, description: e.target.value })
                 }
               />
             </div>
-            <div style={{ display: "flex", gap: spacing.lg }}>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacing.sm,
-                }}
-              >
-                <input
-                  type="checkbox"
+            <div className="flex gap-5 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={roleForm.requires_certification}
-                  onChange={(e) =>
-                    setRoleForm({
-                      ...roleForm,
-                      requires_certification: e.target.checked,
-                    })
+                  onChange={(val) =>
+                    setRoleForm({ ...roleForm, requires_certification: val })
                   }
                 />
-                דורש תעודה
-              </label>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacing.sm,
-                }}
-              >
-                <input
-                  type="checkbox"
+                <Text className="text-sm">דורש תעודה</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={roleForm.requires_renewal}
-                  onChange={(e) =>
-                    setRoleForm({
-                      ...roleForm,
-                      requires_renewal: e.target.checked,
-                    })
+                  onChange={(val) =>
+                    setRoleForm({ ...roleForm, requires_renewal: val })
                   }
                 />
-                דורש חידוש שנתי
-              </label>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacing.sm,
-                }}
-              >
-                <input
-                  type="checkbox"
+                <Text className="text-sm">דורש חידוש שנתי</Text>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={roleForm.requires_training}
-                  onChange={(e) =>
-                    setRoleForm({
-                      ...roleForm,
-                      requires_training: e.target.checked,
-                    })
+                  onChange={(val) =>
+                    setRoleForm({ ...roleForm, requires_training: val })
                   }
                 />
-                דורש הדרכה
-              </label>
+                <Text className="text-sm">דורש הדרכה</Text>
+              </div>
             </div>
             <div>
-              <label style={labelStyle}>צבע מזהה</label>
-              <div
-                style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}
-              >
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                צבע מזהה
+              </Text>
+              <div className="flex gap-2 flex-wrap">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color}
                     onClick={() =>
                       setRoleForm({ ...roleForm, color_hex: color })
                     }
+                    className={`w-8 h-8 rounded-full cursor-pointer ${
+                      roleForm.color_hex === color
+                        ? "border-2 shadow-[inset_0_0_0_2px_white]"
+                        : "border-2 border-transparent"
+                    }`}
                     style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
                       background: color,
-                      border:
-                        roleForm.color_hex === color
-                          ? `2px solid ${colors.textPrimary}`
-                          : "2px solid transparent",
-                      cursor: "pointer",
-                      boxShadow:
-                        roleForm.color_hex === color
-                          ? "0 0 0 2px white inset"
-                          : "none",
+                      borderColor: roleForm.color_hex === color ? cssVar.text.primary : "transparent",
                     }}
                     aria-label={color}
                   />
                 ))}
               </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: spacing.sm,
-                marginTop: spacing.lg,
-              }}
-            >
-              <Button
-                variant="secondary"
-                onClick={() => setShowRoleModal(false)}
-              >
-                ביטול
-              </Button>
-              <Button onClick={handleSaveRole}>שמור</Button>
-            </div>
           </div>
-        </Modal>
-      )}
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowRoleModal(false)}
+            >
+              ביטול
+            </Button>
+            <Button onClick={handleSaveRole}>שמור</Button>
+          </div>
+        </DialogPanel>
+      </Dialog>
     </Card>
   );
 }

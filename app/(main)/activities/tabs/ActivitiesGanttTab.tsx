@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { colors, spacing } from "@/app/styles/foundations";
-import { Card, Button } from "@/app/components/ui";
+import { Card, Title, Text, Button } from "@tremor/react";
+import { cssVar, numericValues } from "@/app/styles/design-system";
 import { Activity } from "@/type";
 import {
   format,
@@ -21,16 +21,17 @@ import {
   endOfWeek,
   eachDayOfInterval,
   eachWeekOfInterval,
-  isSameMonth,
-  addDays,
-  isSameDay,
   isToday,
-  isWithinInterval,
   differenceInCalendarWeeks,
   differenceInCalendarDays,
 } from "date-fns";
 import { he } from "date-fns/locale";
-import { ChevronRight, ChevronLeft, Calendar, Grid } from "lucide-react";
+import {
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  CalendarIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
 
 type ViewMode = "quarter" | "month";
 
@@ -59,18 +60,15 @@ export default function ActivitiesGanttTab() {
     }
   }
 
-  // Calculate Range based on View Mode
   let viewStart, viewEnd, title;
 
   if (viewMode === "quarter") {
-    // In quarter view, we show full weeks that cover the quarter
     const quarterStart = startOfQuarter(currentDate);
     const quarterEnd = endOfQuarter(currentDate);
     viewStart = startOfWeek(quarterStart, { weekStartsOn: 0 });
     viewEnd = endOfWeek(quarterEnd, { weekStartsOn: 0 });
     title = `רבעון ${getQuarter(currentDate)}, ${getYear(currentDate)}`;
   } else {
-    // In month view, we show days of that month
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     viewStart = monthStart;
@@ -88,7 +86,6 @@ export default function ActivitiesGanttTab() {
     else setCurrentDate(addMonths(currentDate, 1));
   };
 
-  // Filter activities strict for view range
   const activitiesInView = activities.filter((a) => {
     const d = new Date(a.activity_date);
     return d >= viewStart && d <= viewEnd;
@@ -100,133 +97,82 @@ export default function ActivitiesGanttTab() {
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: spacing.lg,
-        height: "calc(100vh - 200px)",
-      }}
+      className="flex flex-col gap-5"
+      style={{ height: "calc(100vh - 200px)" }}
     >
-      <Card style={{ padding: spacing.md, flexShrink: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: spacing.md,
-          }}
-        >
-          <div
-            style={{ display: "flex", alignItems: "center", gap: spacing.md }}
-          >
-            <div style={{ display: "flex", gap: spacing.xs }}>
+      <Card className="p-4 flex-shrink-0">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex gap-1">
               <Button
                 variant="secondary"
+                size="xs"
+                icon={ChevronRightIcon}
                 onClick={prevPeriod}
-                style={{ width: 32, height: 32, padding: 0 }}
-              >
-                <ChevronRight size={16} />
-              </Button>
+              />
               <Button
                 variant="secondary"
+                size="xs"
+                icon={ChevronLeftIcon}
                 onClick={nextPeriod}
-                style={{ width: 32, height: 32, padding: 0 }}
-              >
-                <ChevronLeft size={16} />
-              </Button>
+              />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{title}</h2>
+            <Title>{title}</Title>
           </div>
 
-          <div
-            style={{ display: "flex", gap: spacing.sm, alignItems: "center" }}
-          >
+          <div className="flex gap-3 items-center">
             <div
-              style={{
-                display: "flex",
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: 6,
-                padding: 2,
-              }}
+              className="flex rounded-md p-0.5"
+              style={{ backgroundColor: cssVar.bg.surfaceAlt }}
             >
               <button
                 onClick={() => setViewMode("month")}
+                className="px-3 py-1 rounded text-sm flex items-center gap-1.5 border-0 cursor-pointer"
                 style={{
-                  padding: "4px 12px",
-                  borderRadius: 4,
-                  border: "none",
                   background: viewMode === "month" ? "white" : "transparent",
                   boxShadow:
                     viewMode === "month" ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
                   fontWeight: viewMode === "month" ? 600 : 400,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
                 }}
               >
-                <Calendar size={14} /> חודשי
+                <CalendarIcon className="w-3.5 h-3.5" /> חודשי
               </button>
               <button
                 onClick={() => setViewMode("quarter")}
+                className="px-3 py-1 rounded text-sm flex items-center gap-1.5 border-0 cursor-pointer"
                 style={{
-                  padding: "4px 12px",
-                  borderRadius: 4,
-                  border: "none",
                   background: viewMode === "quarter" ? "white" : "transparent",
                   boxShadow:
                     viewMode === "quarter"
                       ? "0 1px 2px rgba(0,0,0,0.1)"
                       : "none",
                   fontWeight: viewMode === "quarter" ? 600 : 400,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
                 }}
               >
-                <Grid size={14} /> רבעוני
+                <Squares2X2Icon className="w-3.5 h-3.5" /> רבעוני
               </button>
             </div>
-            <div
+            <Text
+              className="text-sm pr-3"
               style={{
-                fontSize: 14,
-                color: colors.textMuted,
-                borderRight: `1px solid ${colors.borderMuted}`,
-                paddingRight: spacing.sm,
+                color: cssVar.text.muted,
+                borderRight: `1px solid ${cssVar.border.secondary}`,
               }}
             >
               {format(viewStart, "dd/MM")} - {format(viewEnd, "dd/MM")}
-            </div>
+            </Text>
           </div>
         </div>
       </Card>
 
-      <Card
-        style={{
-          padding: 0,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-        }}
-      >
+      <Card className="p-0 overflow-hidden flex flex-col flex-1">
         {loading ? (
-          <div style={{ textAlign: "center", padding: spacing.xl }}>
-            טוען...
+          <div className="text-center p-8">
+            <Text>טוען...</Text>
           </div>
         ) : groups.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: spacing.xl,
-              color: colors.textMuted,
-            }}
-          >
-            אין פעילויות בתקופה זו
+          <div className="text-center p-8">
+            <Text style={{ color: cssVar.text.muted }}>אין פעילויות בתקופה זו</Text>
           </div>
         ) : (
           <GanttView
@@ -260,18 +206,15 @@ function GanttView({
   const ROW_HEIGHT = 48;
   const router = useRouter();
 
-  // Generate columns based on mode
   let columns: Date[] = [];
   let columnLabelFormat = "";
   let subLabelFormat = "";
 
   if (viewMode === "month") {
-    // Daily columns for month view
     columns = eachDayOfInterval({ start: viewStart, end: viewEnd });
     columnLabelFormat = "dd";
     subLabelFormat = "EE";
   } else {
-    // Weekly columns for quarter view
     columns = eachWeekOfInterval(
       { start: viewStart, end: viewEnd },
       { weekStartsOn: 0 }
@@ -280,38 +223,31 @@ function GanttView({
   }
 
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+    <div className="flex h-full overflow-hidden">
       {/* Sidebar (Fixed) */}
       <div
+        className="flex-shrink-0 flex flex-col z-10"
         style={{
           width: SIDEBAR_WIDTH,
-          flexShrink: 0,
-          borderLeft: `1px solid ${colors.border}`, // Border on left side for RTL separation
+          borderLeft: `1px solid ${cssVar.border.primary}`,
           backgroundColor: "white",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "-2px 0 5px rgba(0,0,0,0.05)", // Shadow to the left
+          boxShadow: "-2px 0 5px rgba(0,0,0,0.05)",
         }}
       >
         {/* Sidebar Header */}
         <div
+          className="flex items-center px-3 font-bold text-sm"
           style={{
             height: HEADER_HEIGHT,
-            borderBottom: `1px solid ${colors.border}`,
-            display: "flex",
-            alignItems: "center",
-            padding: spacing.sm,
-            fontWeight: "bold",
-            fontSize: 13,
-            backgroundColor: colors.surfaceAlt,
+            borderBottom: `1px solid ${cssVar.border.primary}`,
+            backgroundColor: cssVar.bg.surfaceAlt,
           }}
         >
           קבוצה / סדרה
         </div>
 
         {/* Sidebar Rows */}
-        <div style={{ overflowY: "hidden" }}>
+        <div className="overflow-y-hidden">
           {groups.map((group) => (
             <div
               key={group}
@@ -319,20 +255,11 @@ function GanttView({
                 router.push("/activities?tab=planning&subtab=series")
               }
               title="לחץ למעבר לניהול סדרות"
+              className="flex items-center px-3 text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer underline"
               style={{
                 height: ROW_HEIGHT,
-                borderBottom: `1px solid ${colors.borderMuted}`,
-                padding: `0 ${spacing.sm}`,
-                display: "flex",
-                alignItems: "center",
-                fontSize: 13,
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                cursor: "pointer",
-                color: colors.primary,
-                textDecoration: "underline",
+                borderBottom: `1px solid ${cssVar.border.secondary}`,
+                color: cssVar.brand.primary,
               }}
             >
               {group}
@@ -341,22 +268,15 @@ function GanttView({
         </div>
       </div>
 
-      {/* Main Area - Flex columns to fit screen */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
+      {/* Main Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Columns */}
         <div
+          className="flex"
           style={{
-            display: "flex",
             height: HEADER_HEIGHT,
-            borderBottom: `1px solid ${colors.border}`,
-            backgroundColor: colors.surfaceAlt,
+            borderBottom: `1px solid ${cssVar.border.primary}`,
+            backgroundColor: cssVar.bg.surfaceAlt,
           }}
         >
           {columns.map((colDate, i) => {
@@ -367,45 +287,31 @@ function GanttView({
             return (
               <div
                 key={i}
+                className="flex-1 flex flex-col justify-center text-center text-xs relative min-w-0"
                 style={{
-                  flex: 1,
-                  borderLeft: `1px solid ${colors.borderMuted}`,
-                  fontSize: 11,
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
+                  borderLeft: `1px solid ${cssVar.border.secondary}`,
                   backgroundColor: isTodayDate
                     ? "rgba(59, 130, 246, 0.1)"
                     : undefined,
-                  position: "relative",
-                  minWidth: 0, // Allow shrinking
                 }}
               >
                 <div
+                  className="font-semibold"
                   style={{
-                    fontWeight: 600,
-                    color: isTodayDate ? colors.primary : undefined,
+                    color: isTodayDate ? cssVar.brand.primary : undefined,
                   }}
                 >
                   {format(colDate, columnLabelFormat)}
                 </div>
                 {subLabelFormat && (
-                  <div style={{ fontSize: 10, color: colors.textMuted }}>
+                  <div style={{ fontSize: 10, color: cssVar.text.muted }}>
                     {format(colDate, subLabelFormat, { locale: he })}
                   </div>
                 )}
                 {showMonthLabel && (
                   <div
-                    style={{
-                      position: "absolute",
-                      top: 2,
-                      right: 2,
-                      fontSize: 9,
-                      fontWeight: "bold",
-                      color: colors.primary,
-                      whiteSpace: "nowrap",
-                    }}
+                    className="absolute top-0.5 right-0.5 text-[9px] font-bold whitespace-nowrap"
+                    style={{ color: cssVar.brand.primary }}
                   >
                     {format(colDate, "MMM", { locale: he })}
                   </div>
@@ -416,7 +322,7 @@ function GanttView({
         </div>
 
         {/* Grid Rows */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div className="flex-1 overflow-y-auto">
           {groups.map((group) => {
             const groupActivities = activities.filter(
               (a) => (a.group_name || "כללי") === group
@@ -425,22 +331,19 @@ function GanttView({
             return (
               <div
                 key={group}
+                className="relative flex"
                 style={{
                   height: ROW_HEIGHT,
-                  borderBottom: `1px solid ${colors.borderMuted}`,
-                  position: "relative",
-                  display: "flex",
+                  borderBottom: `1px solid ${cssVar.border.secondary}`,
                 }}
               >
-                {/* Vertical Grid Lines - Using Flex to match header */}
+                {/* Vertical Grid Lines */}
                 {columns.map((_, i) => (
                   <div
                     key={i}
+                    className="flex-1 h-full opacity-50"
                     style={{
-                      flex: 1,
-                      borderLeft: `1px solid ${colors.borderMuted}`,
-                      height: "100%",
-                      opacity: 0.5,
+                      borderLeft: `1px solid ${cssVar.border.secondary}`,
                     }}
                   />
                 ))}
@@ -448,24 +351,19 @@ function GanttView({
                 {/* Activity Markers */}
                 {groupActivities.map((activity) => {
                   const actDate = new Date(activity.activity_date);
-                  let leftPercent = 0;
                   const totalColumns = columns.length;
                   let colIndex = 0;
 
-                  // Use exact column index matching for precision
                   if (viewMode === "month") {
                     colIndex = differenceInCalendarDays(actDate, viewStart);
                   } else {
-                    // Quarter view (Weeks) - Ensure we match the exact week column
                     colIndex = differenceInCalendarWeeks(actDate, viewStart, {
                       weekStartsOn: 0,
                     });
                   }
 
-                  // Center in the column
                   const percent = ((colIndex + 0.5) / totalColumns) * 100;
 
-                  // Safety bounds
                   if (percent < 0 || percent > 100) return null;
 
                   return (
@@ -477,19 +375,17 @@ function GanttView({
                       )}\n${activity.start_time || ""} - ${
                         activity.end_time || ""
                       }\n${activity.location || ""}`}
+                      className="absolute cursor-pointer z-[2]"
                       style={{
-                        position: "absolute",
-                        right: `${percent}%`, // Changed from left to right for RTL
+                        right: `${percent}%`,
                         top: "50%",
-                        transform: "translate(50%, -50%)", // Adjust translate direction
+                        transform: "translate(50%, -50%)",
                         width: viewMode === "month" ? 16 : 12,
                         height: viewMode === "month" ? 16 : 12,
                         borderRadius: "50%",
                         background: getActivityColor(activity.kind),
                         border: "2px solid white",
                         boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                        cursor: "pointer",
-                        zIndex: 2,
                       }}
                     />
                   );
@@ -502,61 +398,37 @@ function GanttView({
 
       {/* Legend Footer */}
       <div
+        className="absolute bottom-0 left-0 right-0 flex gap-6 text-xs z-20 p-4"
         style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
           backgroundColor: "white",
-          borderTop: `1px solid ${colors.border}`,
-          padding: spacing.md,
-          display: "flex",
-          gap: spacing.lg,
-          fontSize: 12,
-          zIndex: 20,
+          borderTop: `1px solid ${cssVar.border.primary}`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: colors.primary,
-            }}
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ background: cssVar.brand.primary }}
           ></div>{" "}
           גלישה
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: "#10b981",
-            }}
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ background: "#10b981" }}
           ></div>{" "}
           חברתי
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: "#8b5cf6",
-            }}
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ background: "#8b5cf6" }}
           ></div>{" "}
           אירוע מיוחד
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: "#f59e0b",
-            }}
+            className="w-2.5 h-2.5 rounded-full"
+            style={{ background: "#f59e0b" }}
           ></div>{" "}
           הכשרה והדרכה
         </div>
@@ -566,9 +438,9 @@ function GanttView({
 }
 
 function getActivityColor(kind: string) {
-  if (kind === "גלישה" || kind === "surf") return colors.primary;
-  if (kind === "חברתי" || kind === "social") return "#10b981"; // Emerald
-  if (kind === "special") return "#8b5cf6"; // Violet
-  if (kind === "training" || kind === "lecture") return "#f59e0b"; // Amber
-  return "#6b7280"; // Gray for other/unknown
+  if (kind === "גלישה" || kind === "surf") return cssVar.brand.primary;
+  if (kind === "חברתי" || kind === "social") return "#10b981";
+  if (kind === "special") return "#8b5cf6";
+  if (kind === "training" || kind === "lecture") return "#f59e0b";
+  return "#6b7280";
 }

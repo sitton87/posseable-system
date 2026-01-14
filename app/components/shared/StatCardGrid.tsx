@@ -2,9 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Card } from "@/app/components/ui";
-import { colors, radii, shadows, spacing } from "@/app/styles/foundations";
-
-const px = (value: number) => `${value}px`;
+import { cssVar, numericValues, card as cardPresets } from "@/app/styles/design-system";
 
 export type StatCard = {
   label: string;
@@ -29,21 +27,18 @@ export function StatCardGrid({
       style={{
         display: "grid",
         gridTemplateColumns: columns,
-        gap: spacing.md,
+        gap: numericValues.spacing[4],
       }}
     >
       {stats.map((stat) => (
         <Card
           key={stat.label}
           style={{
-            padding: px(spacing.md),
-            borderRadius: radii.card,
-            boxShadow: shadows.card,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            gap: spacing.xs,
+            gap: numericValues.spacing[2],
           }}
         >
           <div
@@ -51,26 +46,29 @@ export function StatCardGrid({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: spacing.xs,
+              gap: numericValues.spacing[2],
               width: "100%",
             }}
           >
-            {stat.icon}
-            <div style={{ fontSize: 12, color: colors.textMuted }}>{stat.label}</div>
+            {stat.icon && (
+              <span className="text-ds-text-muted">{stat.icon}</span>
+            )}
+            <div className="text-xs text-ds-text-muted">{stat.label}</div>
           </div>
           <div
             style={{
-              fontSize: 32,
-              fontWeight: 700,
-              margin: `${spacing.xs}px 0`,
+              fontSize: numericValues.fontSize["3xl"],
+              fontWeight: numericValues.fontWeight.bold,
+              margin: `${numericValues.spacing[2]}px 0`,
               lineHeight: 1.1,
               width: "100%",
             }}
+            className="text-ds-text-primary"
           >
             {stat.value}
           </div>
           {stat.hint && (
-            <div style={{ fontSize: 12, color: colors.textMuted, width: "100%" }}>
+            <div className="text-xs text-ds-text-muted w-full">
               {stat.hint}
             </div>
           )}
@@ -79,4 +77,3 @@ export function StatCardGrid({
     </div>
   );
 }
-

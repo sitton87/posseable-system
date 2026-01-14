@@ -1,18 +1,26 @@
 import { useState, useEffect, useCallback } from "react";
-import { Modal, Button } from "@/app/components/ui";
 import {
-  Section,
-  SmallActionButton,
-  StatusPill,
-} from "@/app/components/shared";
-import { colors, spacing, radii } from "@/app/styles/foundations";
+  Title,
+  Text,
+  Button,
+  TextInput,
+  Textarea,
+  Select,
+  SelectItem,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  Callout,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import {
-  tableStyle,
-  tableHeaderStyle,
-  tableCellStyle,
-  labelStyle,
-  inputStyle,
-} from "@/app/styles/components";
+  PlusIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 
 type Role = {
   id: number;
@@ -72,7 +80,6 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      // Fetch assigned roles
       const resAssigned = await fetch(
         `/api/volunteers/${volunteer.national_id}/roles`
       );
@@ -81,14 +88,12 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
         setAssignedRoles(dataAssigned.roles);
       }
 
-      // Fetch all roles for the dropdown
       const resAll = await fetch(`/api/volunteers/roles`);
       const dataAll = await resAll.json();
       if (dataAll.success) {
         setAvailableRoles(dataAll.roles);
       }
 
-      // Fetch activity history
       const resDetails = await fetch(
         `/api/volunteers/${volunteer.national_id}`
       );
@@ -123,7 +128,7 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
     setValidUntil(role.valid_until ? role.valid_until.split("T")[0] : "");
     setTrainingDate(role.training_date ? role.training_date.split("T")[0] : "");
     setNotes(role.notes || "");
-    setCertFile(null); // Reset file input, will only update if new file selected
+    setCertFile(null);
     setShowAssignModal(true);
   };
 
@@ -152,7 +157,6 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
       if (data.success) {
         setShowAssignModal(false);
         fetchData();
-        // Reset form
         setEditingRoleId(null);
         setSelectedRoleId("");
         setValidUntil("");
@@ -173,7 +177,6 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      // get base64 part only
       const result = reader.result as string;
       const base64 = result.split(",")[1];
       setCertFile({
@@ -211,388 +214,283 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
   };
 
   return (
-    <Modal
-      open={true}
-      onClose={onClose}
-      width="min(800px, 95vw)"
-      style={{ padding: 0, overflow: "hidden" }}
-    >
-      <div style={{ display: "flex", height: "80vh" }}>
-        {/* Sidebar / Header Info */}
-        <div
-          style={{
-            width: 250,
-            background: colors.surface,
-            borderRight: `1px solid ${colors.borderMuted}`,
-            padding: spacing.lg,
-          }}
-        >
-          <div style={{ marginBottom: spacing.lg }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: "50%",
-                background: colors.primary,
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 24,
-                fontWeight: "bold",
-                marginBottom: spacing.md,
-              }}
-            >
-              {volunteer.full_name.charAt(0)}
-            </div>
-            <h3 style={{ margin: 0 }}>{volunteer.full_name}</h3>
-            <div style={{ color: colors.textMuted, fontSize: 14 }}>
-              {volunteer.classification}
-            </div>
-          </div>
-
+    <Dialog open={true} onClose={onClose}>
+      <DialogPanel className="max-w-4xl p-0">
+        <div className="flex h-[80vh]">
+          {/* Sidebar */}
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.xs,
-            }}
+            className="w-[250px] border-r p-5"
+            style={{ backgroundColor: cssVar.bg.secondary, borderColor: cssVar.border.primary }}
           >
-            <button
-              onClick={() => setActiveTab("roles")}
-              style={{
-                textAlign: "right",
-                padding: spacing.sm,
-                borderRadius: radii.button,
-                background:
-                  activeTab === "roles" ? colors.background : "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: activeTab === "roles" ? 600 : 400,
-              }}
-            >
-              הסמכות ותפקידים
-            </button>
-            <button
-              onClick={() => setActiveTab("history")}
-              style={{
-                textAlign: "right",
-                padding: spacing.sm,
-                borderRadius: radii.button,
-                background:
-                  activeTab === "history" ? colors.background : "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: activeTab === "history" ? 600 : 400,
-              }}
-            >
-              היסטוריית פעילות
-            </button>
-          </div>
-        </div>
-
-        {/* Content Area */}
-        <div style={{ flex: 1, padding: spacing.xl, overflowY: "auto" }}>
-          {activeTab === "roles" && (
-            <div>
+            <div className="mb-5">
               <div
+                className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-4 text-white"
+                style={{ backgroundColor: cssVar.brand.primary }}
+              >
+                {volunteer.full_name.charAt(0)}
+              </div>
+              <Title>{volunteer.full_name}</Title>
+              <Text className="text-sm">{volunteer.classification}</Text>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => setActiveTab("roles")}
+                className={`text-right p-2 rounded border-none cursor-pointer ${
+                  activeTab === "roles" ? "font-semibold" : "font-normal"
+                }`}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: spacing.lg,
+                  backgroundColor: activeTab === "roles" ? cssVar.bg.primary : "transparent",
+                  color: cssVar.text.primary,
                 }}
               >
-                <h2 style={{ margin: 0 }}>הסמכות ותפקידים</h2>
-                <Button onClick={handleOpenAssignModal}>+ הוסף תפקיד</Button>
-              </div>
-
-              {loading ? (
-                <div>טוען...</div>
-              ) : assignedRoles.length === 0 ? (
-                <div style={{ color: colors.textMuted }}>
-                  אין תפקידים משויכים.
-                </div>
-              ) : (
-                <div style={{ display: "grid", gap: spacing.md }}>
-                  {assignedRoles.map((role) => (
-                    <div
-                      key={role.role_id}
-                      style={{
-                        border: `1px solid ${colors.borderMuted}`,
-                        borderRadius: radii.card,
-                        padding: spacing.md,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: spacing.sm,
-                            marginBottom: spacing.xs,
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 12,
-                              height: 12,
-                              borderRadius: "50%",
-                              background: role.color_hex,
-                            }}
-                          ></div>
-                          <span style={{ fontWeight: 600, fontSize: 16 }}>
-                            {role.role_name}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 13, color: colors.textMuted }}>
-                          הוקצה ב:{" "}
-                          {new Date(role.assigned_at).toLocaleDateString(
-                            "he-IL"
-                          )}
-                          {role.training_date && (
-                            <span style={{ marginRight: 4 }}>
-                              • עבר הדרכה:{" "}
-                              {new Date(role.training_date).toLocaleDateString(
-                                "he-IL"
-                              )}
-                            </span>
-                          )}
-                          {role.valid_until && (
-                            <span
-                              style={{
-                                color:
-                                  new Date(role.valid_until) < new Date()
-                                    ? colors.danger
-                                    : colors.textMuted,
-                                fontWeight:
-                                  new Date(role.valid_until) < new Date()
-                                    ? "bold"
-                                    : "normal",
-                                marginRight: 4,
-                              }}
-                            >
-                              • בתוקף עד:{" "}
-                              {new Date(role.valid_until).toLocaleDateString(
-                                "he-IL"
-                              )}
-                              {new Date(role.valid_until) < new Date() &&
-                                " (פג תוקף!)"}
-                            </span>
-                          )}
-                        </div>
-                        {role.notes && (
-                          <div style={{ marginTop: spacing.xs, fontSize: 14 }}>
-                            {role.notes}
-                          </div>
-                        )}
-                        {role.certificate_url && ( // Assuming certificate_url might still be used for legacy or if we generate a download link
-                          <div style={{ marginTop: spacing.xs }}>
-                            <a
-                              href={role.certificate_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ fontSize: 13, color: colors.primary }}
-                            >
-                              📄 צפה בתעודה
-                            </a>
-                          </div>
-                        )}
-                        {/* If we have direct file data logic, we might need a download button instead if url is not present, 
-                             but for now we assume API returns a usable URL or we handle it in API to return a stream URL */}
-                      </div>
-                      <div style={{ display: "flex", gap: spacing.xs }}>
-                        <SmallActionButton
-                          variant="secondary"
-                          onClick={() => handleEditRole(role)}
-                        >
-                          ערוך
-                        </SmallActionButton>
-                        <SmallActionButton
-                          variant="secondary"
-                          style={{ color: colors.danger }}
-                          onClick={() => handleRemoveRole(role.role_id)}
-                        >
-                          הסר
-                        </SmallActionButton>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                הסמכות ותפקידים
+              </button>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`text-right p-2 rounded border-none cursor-pointer ${
+                  activeTab === "history" ? "font-semibold" : "font-normal"
+                }`}
+                style={{
+                  backgroundColor: activeTab === "history" ? cssVar.bg.primary : "transparent",
+                  color: cssVar.text.primary,
+                }}
+              >
+                היסטוריית פעילות
+              </button>
             </div>
-          )}
+          </div>
 
-          {activeTab === "history" && (
-            <div>
-              <h2 style={{ marginBottom: spacing.lg }}>היסטוריית פעילות</h2>
-              {loading ? (
-                <div>טוען...</div>
-              ) : activities.length === 0 ? (
-                <div style={{ color: colors.textMuted }}>
-                  אין פעילות מתועדת.
+          {/* Content Area */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            {activeTab === "roles" && (
+              <div>
+                <div className="flex justify-between items-center mb-5">
+                  <Title>הסמכות ותפקידים</Title>
+                  <Button icon={PlusIcon} onClick={handleOpenAssignModal}>הוסף תפקיד</Button>
                 </div>
-              ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ ...tableStyle, minWidth: "100%" }}>
-                    <thead>
-                      <tr>
-                        <th style={tableHeaderStyle}>תאריך</th>
-                        <th style={tableHeaderStyle}>סוג פעילות</th>
-                        <th style={tableHeaderStyle}>גולש</th>
-                        {/* <th style={tableHeaderStyle}>תפקיד בפעילות</th> -- If we had this data */}
-                      </tr>
-                    </thead>
-                    <tbody>
+
+                {loading ? (
+                  <Text style={{ color: cssVar.text.muted }}>טוען...</Text>
+                ) : assignedRoles.length === 0 ? (
+                  <Text style={{ color: cssVar.text.muted }}>
+                    אין תפקידים משויכים.
+                  </Text>
+                ) : (
+                  <div className="grid gap-4">
+                    {assignedRoles.map((role) => (
+                      <div
+                        key={role.role_id}
+                        className="border rounded-lg p-4 flex justify-between items-start"
+                        style={{ borderColor: cssVar.border.primary }}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ background: role.color_hex }}
+                            ></div>
+                            <Text className="font-semibold">
+                              {role.role_name}
+                            </Text>
+                          </div>
+                          <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+                            הוקצה ב:{" "}
+                            {new Date(role.assigned_at).toLocaleDateString("he-IL")}
+                            {role.training_date && (
+                              <span className="mr-1">
+                                • עבר הדרכה:{" "}
+                                {new Date(role.training_date).toLocaleDateString("he-IL")}
+                              </span>
+                            )}
+                            {role.valid_until && (
+                              <span
+                                className="mr-1"
+                                style={{
+                                  color: new Date(role.valid_until) < new Date()
+                                    ? cssVar.status.danger
+                                    : cssVar.text.muted,
+                                  fontWeight: new Date(role.valid_until) < new Date() ? "bold" : "normal",
+                                }}
+                              >
+                                • בתוקף עד:{" "}
+                                {new Date(role.valid_until).toLocaleDateString("he-IL")}
+                                {new Date(role.valid_until) < new Date() && " (פג תוקף!)"}
+                              </span>
+                            )}
+                          </Text>
+                          {role.notes && (
+                            <Text className="mt-1 text-sm">
+                              {role.notes}
+                            </Text>
+                          )}
+                          {role.certificate_url && (
+                            <div className="mt-1">
+                              <a
+                                href={role.certificate_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs hover:underline"
+                                style={{ color: cssVar.brand.primary }}
+                              >
+                                📄 צפה בתעודה
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="secondary"
+                            size="xs"
+                            onClick={() => handleEditRole(role)}
+                          >
+                            ערוך
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="xs"
+                            color="rose"
+                            onClick={() => handleRemoveRole(role.role_id)}
+                          >
+                            הסר
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "history" && (
+              <div>
+                <Title className="mb-5">היסטוריית פעילות</Title>
+                {loading ? (
+                  <Text style={{ color: cssVar.text.muted }}>טוען...</Text>
+                ) : activities.length === 0 ? (
+                  <Text style={{ color: cssVar.text.muted }}>
+                    אין פעילות מתועדת.
+                  </Text>
+                ) : (
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>תאריך</TableHeaderCell>
+                        <TableHeaderCell>סוג פעילות</TableHeaderCell>
+                        <TableHeaderCell>גולש</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
                       {activities.map((a) => (
-                        <tr key={a.activity_id}>
-                          <td style={tableCellStyle}>
+                        <TableRow key={a.activity_id}>
+                          <TableCell>
                             {a.activity_date
-                              ? new Date(a.activity_date).toLocaleDateString(
-                                  "he-IL"
-                                )
+                              ? new Date(a.activity_date).toLocaleDateString("he-IL")
                               : "—"}
-                          </td>
-                          <td style={tableCellStyle}>{a.kind || "—"}</td>
-                          <td style={tableCellStyle}>{a.surfer_name || "—"}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>{a.kind || "—"}</TableCell>
+                          <TableCell>{a.surfer_name || "—"}</TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Assign Role Modal */}
-      {showAssignModal && (
-        <Modal
-          open={true}
-          onClose={() => setShowAssignModal(false)}
-          width="400px"
-        >
-          <h3>
-            {editingRoleId
-              ? "עריכת תפקיד"
-              : `הוספת תפקיד ל${volunteer.full_name}`}
-          </h3>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.md,
-              marginTop: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>תפקיד</label>
-              <select
-                style={inputStyle}
-                value={selectedRoleId}
-                onChange={(e) => setSelectedRoleId(e.target.value)}
-                disabled={!!editingRoleId} // Disable changing role type during edit
-              >
-                <option value="">בחר תפקיד...</option>
-                {availableRoles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedRoleObj?.requires_training && (
-              <div
-                style={{
-                  background: "#fef3c7",
-                  padding: spacing.sm,
-                  borderRadius: radii.button,
-                  fontSize: 13,
-                  color: "#92400e",
-                  marginBottom: spacing.xs,
-                }}
-              >
-                ⚠️ תפקיד זה דורש הדרכה פנים ארגונית. נא להזין תאריך הדרכה.
-              </div>
-            )}
-
-            {(selectedRoleObj?.requires_training || trainingDate) && (
+        {/* Assign Role Modal */}
+        <Dialog open={showAssignModal} onClose={() => setShowAssignModal(false)}>
+          <DialogPanel className="max-w-md">
+            <Title className="mb-6">
+              {editingRoleId ? "עריכת תפקיד" : `הוספת תפקיד ל${volunteer.full_name}`}
+            </Title>
+            <div className="flex flex-col gap-4">
               <div>
-                <label style={labelStyle}>
-                  תאריך הדרכה {selectedRoleObj?.requires_training && "*"}
-                </label>
-                <input
-                  type="date"
-                  style={inputStyle}
-                  value={trainingDate}
-                  onChange={(e) => setTrainingDate(e.target.value)}
-                />
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  תפקיד
+                </Text>
+                <Select
+                  value={selectedRoleId || undefined}
+                  onValueChange={setSelectedRoleId}
+                  disabled={!!editingRoleId}
+                  placeholder="בחר תפקיד..."
+                >
+                  {availableRoles.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </Select>
               </div>
-            )}
 
-            {selectedRoleObj?.requires_renewal && (
-              <div
-                style={{
-                  background: "#fef3c7",
-                  padding: spacing.sm,
-                  borderRadius: radii.button,
-                  fontSize: 13,
-                  color: "#92400e",
-                }}
-              >
-                ⚠️ תפקיד זה דורש חידוש שנתי. נא להזין תאריך תוקף.
-              </div>
-            )}
+              {selectedRoleObj?.requires_training && (
+                <Callout title="שים לב" icon={ExclamationTriangleIcon} color="amber">
+                  תפקיד זה דורש הדרכה פנים ארגונית. נא להזין תאריך הדרכה.
+                </Callout>
+              )}
 
-            {(selectedRoleObj?.requires_renewal || validUntil) && (
-              <div>
-                <label style={labelStyle}>
-                  תוקף עד {selectedRoleObj?.requires_renewal && "*"}
-                </label>
-                <input
-                  type="date"
-                  style={inputStyle}
-                  value={validUntil}
-                  onChange={(e) => setValidUntil(e.target.value)}
-                />
-              </div>
-            )}
-
-            <div>
-              <label style={labelStyle}>קובץ תעודה (PDF/תמונה)</label>
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                style={inputStyle}
-                onChange={handleFileChange}
-              />
-              {certFile && (
-                <div style={{ fontSize: 12, marginTop: 4 }}>
-                  קובץ נבחר: {certFile.name}
+              {(selectedRoleObj?.requires_training || trainingDate) && (
+                <div>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                    תאריך הדרכה {selectedRoleObj?.requires_training && <span style={{ color: cssVar.status.danger }}>*</span>}
+                  </Text>
+                  <TextInput
+                    type="date"
+                    value={trainingDate}
+                    onChange={(e) => setTrainingDate(e.target.value)}
+                  />
                 </div>
               )}
+
+              {selectedRoleObj?.requires_renewal && (
+                <Callout title="שים לב" icon={ExclamationTriangleIcon} color="amber">
+                  תפקיד זה דורש חידוש שנתי. נא להזין תאריך תוקף.
+                </Callout>
+              )}
+
+              {(selectedRoleObj?.requires_renewal || validUntil) && (
+                <div>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                    תוקף עד {selectedRoleObj?.requires_renewal && <span style={{ color: cssVar.status.danger }}>*</span>}
+                  </Text>
+                  <TextInput
+                    type="date"
+                    value={validUntil}
+                    onChange={(e) => setValidUntil(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  קובץ תעודה (PDF/תמונה)
+                </Text>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  className="text-sm"
+                  onChange={handleFileChange}
+                />
+                {certFile && (
+                  <Text className="text-xs mt-1" style={{ color: cssVar.text.muted }}>
+                    קובץ נבחר: {certFile.name}
+                  </Text>
+                )}
+              </div>
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  הערות
+                </Text>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}>הערות</label>
-              <textarea
-                style={{ ...inputStyle, minHeight: 60 }}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: spacing.sm,
-                marginTop: spacing.sm,
-              }}
-            >
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
               <Button
                 variant="secondary"
                 onClick={() => setShowAssignModal(false)}
@@ -601,9 +499,9 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
               </Button>
               <Button onClick={handleSaveRole}>שמור</Button>
             </div>
-          </div>
-        </Modal>
-      )}
-    </Modal>
+          </DialogPanel>
+        </Dialog>
+      </DialogPanel>
+    </Dialog>
   );
 }

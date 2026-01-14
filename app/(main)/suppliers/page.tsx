@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Supplier, NoteStatus } from "@/type";
-import { spacing } from "@/app/styles/foundations";
 import { useDraftManager } from "@/app/hooks/useDraftManager";
 import {
   createEmptyFormState,
@@ -189,28 +188,28 @@ export default function SuppliersPage() {
 
   const filteredSuppliers = suppliers.filter((supplier) => {
     const term = filters.search.trim().toLowerCase();
-      if (filters.status === "active" && !supplier.is_active) return false;
-      if (filters.status === "inactive" && supplier.is_active) return false;
-      if (filters.type !== "all") {
-        const currentType = (supplier.supplier_type || "goods") as SupplierType;
-        if (currentType !== filters.type) return false;
-      }
-      if (term) {
-        const haystack = [
-          supplier.name,
-          supplier.supplier_identifier,
-          supplier.contact_name,
-          supplier.email,
-          supplier.phone,
-          supplier.services_offered,
-        ]
-          .filter(Boolean)
-          .map((value) => String(value).toLowerCase());
-        const matches = haystack.some((value) => value.includes(term));
-        if (!matches) return false;
-      }
-      return true;
-    });
+    if (filters.status === "active" && !supplier.is_active) return false;
+    if (filters.status === "inactive" && supplier.is_active) return false;
+    if (filters.type !== "all") {
+      const currentType = (supplier.supplier_type || "goods") as SupplierType;
+      if (currentType !== filters.type) return false;
+    }
+    if (term) {
+      const haystack = [
+        supplier.name,
+        supplier.supplier_identifier,
+        supplier.contact_name,
+        supplier.email,
+        supplier.phone,
+        supplier.services_offered,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase());
+      const matches = haystack.some((value) => value.includes(term));
+      if (!matches) return false;
+    }
+    return true;
+  });
 
   const handleFilterChange = <K extends keyof SupplierFilters>(
     key: K,
@@ -339,14 +338,7 @@ export default function SuppliersPage() {
 
   return (
     <>
-      <div
-        style={{
-          padding: spacing.xl,
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.lg,
-        }}
-      >
+      <div className="p-6 sm:p-10 flex flex-col gap-6">
         {activeTab === "home" && (
           <SupplierHomeTab
             suppliers={suppliers}

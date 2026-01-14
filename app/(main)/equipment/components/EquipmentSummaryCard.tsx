@@ -1,10 +1,9 @@
 "use client";
 
-import { Card, Button } from "@/app/components/ui";
+import { Card, Title, Text, Button } from "@tremor/react";
 import { StatCardGrid } from "@/app/components/shared";
-import { colors, spacing } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 import type { StatSummary } from "../types";
-import { px } from "../utils";
 
 type EquipmentSummaryCardProps = {
   statSummary: StatSummary;
@@ -42,24 +41,14 @@ export function EquipmentSummaryCard({
 
   return (
     <Card>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: spacing.md,
-        }}
-      >
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800 }}>
-            🛠️ קטלוג ציוד
-          </h2>
-          <p style={{ margin: 0, color: colors.textMuted, fontSize: 14 }}>
+          <Title>🛠️ קטלוג ציוד</Title>
+          <Text style={{ color: cssVar.text.muted }}>
             ניהול מרוכז של משפחות, קטגוריות, מלאי ומחסנים
-          </p>
+          </Text>
         </div>
-        <div style={{ display: "flex", gap: spacing.sm }}>
+        <div className="flex gap-2">
           <Button variant="secondary" onClick={onRefresh}>
             רענן נתונים
           </Button>
@@ -70,18 +59,16 @@ export function EquipmentSummaryCard({
       </div>
       {error && (
         <div
+          className="mt-4 p-4 rounded-lg"
           style={{
-            marginTop: spacing.md,
-            padding: px(spacing.md),
-            borderRadius: spacing.sm,
-            background: colors.dangerSoft,
-            color: colors.danger,
+            backgroundColor: cssVar.status.dangerSoft,
+            color: cssVar.status.danger,
           }}
         >
           {error}
         </div>
       )}
-      <div style={{ marginTop: spacing.lg }}>
+      <div className="mt-5">
         <StatCardGrid stats={statCards} />
       </div>
     </Card>

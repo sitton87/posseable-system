@@ -1,7 +1,13 @@
-import { Button, Modal } from "@/app/components/ui";
-import { spacing, colors } from "@/app/styles/foundations";
+"use client";
 
-const muted = colors.textMuted;
+import {
+  Title,
+  Text,
+  Button,
+  Flex,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 type Props = {
   open: boolean;
@@ -17,33 +23,30 @@ export default function DraftPromptModal({
   onDiscard,
 }: Props) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width={400}
-      style={{ padding: spacing.lg }}
-    >
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-      >
-        <h4 style={{ margin: 0 }}>לשמור כטיוטה?</h4>
-        <div style={{ color: muted, fontSize: 14 }}>
-          זיהינו שינויים שלא נשמרו. האם לשמור כטיוטה לפני סגירה?
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-          }}
-        >
-          <Button variant="secondary" onClick={onDiscard}>
-            סגור בלי לשמור
+    <Dialog open={open} onClose={onClose} className="z-[200]">
+      <DialogPanel className="max-w-sm" dir="rtl">
+        <Flex justifyContent="start" alignItems="center" className="gap-3 mb-4">
+          <Title style={{ color: cssVar.text.primary }}>לשמור כטיוטה?</Title>
+          <span className="text-xl font-light" style={{ color: cssVar.border.primary }}>|</span>
+          <Text style={{ color: cssVar.text.muted }}>שמירת נתונים לפני סגירה</Text>
+        </Flex>
+        
+        <Text className="mb-6" style={{ color: cssVar.text.secondary }}>
+          ניתן לשמור את הנתונים כטיוטה אישית ולהמשיך מאוחר יותר או לסגור ללא שמירה.
+        </Text>
+
+        <div className="flex justify-start gap-3 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
+          <Button onClick={onSaveDraft}>
+            שמור כטיוטה
           </Button>
-          <Button onClick={onSaveDraft}>שמור טיוטה וסגור</Button>
+          <Button variant="secondary" onClick={onDiscard}>
+            בטל וסגור
+          </Button>
+          <Button variant="light" onClick={onClose}>
+            חזרה לעריכה
+          </Button>
         </div>
-      </div>
-    </Modal>
+      </DialogPanel>
+    </Dialog>
   );
 }
-

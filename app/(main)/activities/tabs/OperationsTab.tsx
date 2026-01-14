@@ -3,8 +3,7 @@
 import { useState } from "react";
 import ActivitiesListTab from "@/app/(main)/activities/tabs/ActivitiesListTab";
 import ActivitiesGanttTab from "@/app/(main)/activities/tabs/ActivitiesGanttTab";
-import { Button, Card } from "@/app/components/ui";
-import { colors, spacing } from "@/app/styles/foundations";
+import { tw, cssVar } from "@/app/styles/design-system";
 import { List, Calendar } from "lucide-react";
 
 type View = "list" | "gantt";
@@ -13,9 +12,9 @@ export default function OperationsTab() {
   const [view, setView] = useState<View>("list");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-ds-spacing-5">
       {/* Sub-Navigation */}
-      <div style={{ display: "flex", gap: spacing.sm, borderBottom: `1px solid ${colors.borderMuted}`, paddingBottom: spacing.sm }}>
+      <div className={`flex gap-ds-spacing-2 border-b ${tw.border.primary} pb-ds-spacing-2`}>
         <SubTabButton 
             active={view === "list"} 
             onClick={() => setView("list")} 
@@ -40,20 +39,11 @@ function SubTabButton({ active, onClick, label, icon }: { active: boolean, onCli
     return (
         <button
             onClick={onClick}
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 16px",
-                background: active ? colors.primary + "15" : "transparent",
-                color: active ? colors.primary : colors.textMuted,
-                border: "none",
-                borderRadius: 6,
-                fontWeight: active ? 600 : 500,
-                fontSize: 13,
-                cursor: "pointer",
-                transition: "all 0.2s"
-            }}
+            className={`flex items-center gap-ds-spacing-2 px-ds-spacing-4 py-ds-spacing-2 border-none ${tw.rounded.md} text-ds-font-size-sm cursor-pointer transition-all ${
+              active 
+                ? `bg-ds-brand-light ${tw.text.brand} font-ds-font-weight-semibold` 
+                : `bg-transparent ${tw.text.muted} font-ds-font-weight-medium`
+            }`}
         >
             {icon}
             {label}

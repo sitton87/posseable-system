@@ -1,12 +1,18 @@
 "use client";
 
-import { Button, Card } from "@/app/components/ui";
 import {
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+  Card,
+  Title,
+  Text,
+  Button,
+  Table,
+  TableHead,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 type StructureSummary = {
   code: string;
@@ -30,96 +36,67 @@ export function StructureManagementCard({
 }: StructureManagementCardProps) {
   return (
     <Card>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: spacing.sm,
-          marginBottom: spacing.md,
-        }}
-      >
+      <div className="flex justify-between items-center flex-wrap gap-2 mb-4">
         <div>
-          <h3 style={{ margin: 0 }}>ניהול משפחות וקטגוריות</h3>
-          <p style={{ margin: 0, color: colors.textMuted, fontSize: 13 }}>
+          <Title>ניהול משפחות וקטגוריות</Title>
+          <Text style={{ color: cssVar.text.muted }}>
             לא ניתן למחוק או לעדכן מבנים אליהם מקושרים פריטים פעילים
-          </p>
+          </Text>
         </div>
-        <div style={{ display: "flex", gap: spacing.sm }}>
+        <div className="flex gap-2">
           <Button variant="secondary" onClick={onCreateFamily}>
             משפחה חדשה
           </Button>
           <Button onClick={onCreateCategory}>קטגוריה חדשה</Button>
         </div>
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: spacing.md,
-        }}
-      >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 style={{ margin: "0 0 8px 0" }}>משפחות קיימות</h4>
-          <div
-            style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: spacing.sm,
-              maxHeight: 260,
-              overflowY: "auto",
-            }}
-          >
-            <table style={{ ...tableStyle }}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>קוד</th>
-                  <th style={tableHeaderStyle}>שם</th>
-                  <th style={tableHeaderStyle}>פריטים</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Text className="font-semibold mb-2">משפחות קיימות</Text>
+          <div className="border rounded-lg max-h-64 overflow-y-auto" style={{ borderColor: cssVar.border.primary }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>קוד</TableHeaderCell>
+                  <TableHeaderCell>שם</TableHeaderCell>
+                  <TableHeaderCell>פריטים</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {families.map((family) => (
-                  <tr key={family.code}>
-                    <td style={tableCellStyle}>{family.code}</td>
-                    <td style={tableCellStyle}>{family.name}</td>
-                    <td style={tableCellStyle}>{family.itemCount}</td>
-                  </tr>
+                  <TableRow key={family.code}>
+                    <TableCell>{family.code}</TableCell>
+                    <TableCell>{family.name}</TableCell>
+                    <TableCell>{family.itemCount}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
         <div>
-          <h4 style={{ margin: "0 0 8px 0" }}>קטגוריות קיימות</h4>
-          <div
-            style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: spacing.sm,
-              maxHeight: 260,
-              overflowY: "auto",
-            }}
-          >
-            <table style={{ ...tableStyle }}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>משפחה</th>
-                  <th style={tableHeaderStyle}>קוד</th>
-                  <th style={tableHeaderStyle}>שם</th>
-                  <th style={tableHeaderStyle}>פריטים</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Text className="font-semibold mb-2">קטגוריות קיימות</Text>
+          <div className="border rounded-lg max-h-64 overflow-y-auto" style={{ borderColor: cssVar.border.primary }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>משפחה</TableHeaderCell>
+                  <TableHeaderCell>קוד</TableHeaderCell>
+                  <TableHeaderCell>שם</TableHeaderCell>
+                  <TableHeaderCell>פריטים</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {categories.map((category) => (
-                  <tr key={`${category.family_code}-${category.code}`}>
-                    <td style={tableCellStyle}>{category.family_code}</td>
-                    <td style={tableCellStyle}>{category.code}</td>
-                    <td style={tableCellStyle}>{category.name}</td>
-                    <td style={tableCellStyle}>{category.itemCount}</td>
-                  </tr>
+                  <TableRow key={`${category.family_code}-${category.code}`}>
+                    <TableCell>{category.family_code}</TableCell>
+                    <TableCell>{category.code}</TableCell>
+                    <TableCell>{category.name}</TableCell>
+                    <TableCell>{category.itemCount}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       </div>

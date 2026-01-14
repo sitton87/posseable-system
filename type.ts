@@ -143,6 +143,13 @@ export type ActivitySeries = {
   season_name?: string;
   season_year?: number;
   activities_count?: number;
+  // Additional fields used in UI
+  group_id?: string | null;
+  group_name?: string | null;
+  schedule_type?: string | null;
+  frequency?: string | null;
+  occurrences_count?: number;
+  default_activity_kind?: string | null;
 };
 
 export type Activity = {

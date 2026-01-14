@@ -1,23 +1,31 @@
 "use client";
 
-import { Button, Modal } from "@/app/components/ui";
-import { StatusPill, sectionCardStyle } from "@/app/components/shared";
-import { colors, spacing } from "@/app/styles/foundations";
+import {
+  Card,
+  Title,
+  Text,
+  Badge,
+  Button,
+  Flex,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import type { Donor } from "@/type";
 import { DonationRecord } from "../types";
-import { formatCurrency, formatDate, muted } from "../utils";
+import { formatCurrency, formatDate } from "../utils";
 
 type DonorViewModalProps = {
   donor: Donor | null;
   onClose: () => void;
   donationHistory: DonationRecord[];
   historyLoading: boolean;
-};
-
-const sectionBoxStyle = {
-  ...sectionCardStyle,
-  marginBottom: spacing.lg,
 };
 
 export default function DonorViewModal({
@@ -29,104 +37,95 @@ export default function DonorViewModal({
   if (!donor) return null;
 
   return (
-    <Modal
-      open={Boolean(donor)}
-      onClose={onClose}
-      width="min(680px, 96vw)"
-      style={{ padding: spacing.xxl }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: spacing.lg,
-        }}
-      >
-        <div>
-          <h3 style={{ margin: 0 }}>{donor.full_name}</h3>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            תעודת זהות: {donor.national_id}
-          </p>
-        </div>
-        <Button variant="secondary" onClick={onClose}>
-          ✕ סגור
-        </Button>
-      </div>
+    <Dialog open={Boolean(donor)} onClose={onClose}>
+      <DialogPanel className="max-w-2xl">
+        {/* Header */}
+        <Flex justifyContent="between" alignItems="start" className="mb-6">
+          <div>
+            <Title>{donor.full_name}</Title>
+            <Text style={{ color: cssVar.text.muted }}>
+              תעודת זהות: {donor.national_id}
+            </Text>
+          </div>
+          <Button variant="secondary" onClick={onClose}>
+            ✕ סגור
+          </Button>
+        </Flex>
 
-      <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-        <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>פרטים כלליים</h4>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>ארגון</div>
-            <div>{donor.organization || "—"}</div>
+        {/* פרטים כלליים */}
+        <Card className="mb-4">
+          <Text className="font-semibold mb-3" style={{ color: cssVar.text.primary }}>
+            פרטים כלליים
+          </Text>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>ארגון</Text>
+              <Text style={{ color: cssVar.text.primary }}>{donor.organization || "—"}</Text>
+            </div>
+            <div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>סטטוס</Text>
+              <Badge color={donor.is_active ? "emerald" : "slate"} size="sm">
+                {donor.is_active ? "פעיל" : "לא פעיל"}
+              </Badge>
+            </div>
+            <div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>טלפון</Text>
+              <Text style={{ color: cssVar.text.primary }}>{formatPhoneNumber(donor.phone)}</Text>
+            </div>
+            <div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>אימייל</Text>
+              <Text style={{ color: cssVar.text.primary }}>{donor.email || "—"}</Text>
+            </div>
           </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>סטטוס</div>
-            <StatusPill tone={donor.is_active ? "active" : "inactive"}>
-              {donor.is_active ? "פעיל" : "לא פעיל"}
-            </StatusPill>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>טלפון</div>
-            <div>{formatPhoneNumber(donor.phone)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>אימייל</div>
-            <div>{donor.email || "—"}</div>
-          </div>
-        </div>
-      </div>
+        </Card>
 
-      <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-        <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>הערות</h4>
-        <div style={{ whiteSpace: "pre-wrap", minHeight: 40 }}>
-          {donor.notes || "—"}
-        </div>
-      </div>
+        {/* הערות */}
+        <Card className="mb-4">
+          <Text className="font-semibold mb-3" style={{ color: cssVar.text.primary }}>
+            הערות
+          </Text>
+          <Text className="whitespace-pre-wrap" style={{ color: cssVar.text.secondary }}>
+            {donor.notes || "—"}
+          </Text>
+        </Card>
 
-      <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-        <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>היסטוריית תרומות</h4>
-        {historyLoading ? (
-          <div style={{ textAlign: "center", color: muted }}>
-            טוען היסטוריה...
-          </div>
-        ) : donationHistory.length === 0 ? (
-          <div style={{ textAlign: "center", color: muted }}>
-            לא נמצאו תרומות קודמות.
-          </div>
-        ) : (
-          <div style={{ maxHeight: 320, overflowY: "auto" }}>
-            <table style={{ width: "100%", fontSize: 13 }}>
-              <thead>
-                <tr style={{ textAlign: "right", color: muted }}>
-                  <th>תאריך</th>
-                  <th>תיאור</th>
-                  <th>סכום</th>
-                </tr>
-              </thead>
-              <tbody>
-                {donationHistory.map((record) => (
-                  <tr key={record.id}>
-                    <td>{formatDate(record.transaction_date)}</td>
-                    <td>{record.description || "—"}</td>
-                    <td>{formatCurrency(record.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </Modal>
+        {/* היסטוריית תרומות */}
+        <Card>
+          <Text className="font-semibold mb-3" style={{ color: cssVar.text.primary }}>
+            היסטוריית תרומות
+          </Text>
+          {historyLoading ? (
+            <div className="text-center py-4" style={{ color: cssVar.text.muted }}>
+              טוען היסטוריה...
+            </div>
+          ) : donationHistory.length === 0 ? (
+            <div className="text-center py-4" style={{ color: cssVar.text.muted }}>
+              לא נמצאו תרומות קודמות.
+            </div>
+          ) : (
+            <div className="max-h-80 overflow-y-auto">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>תאריך</TableHeaderCell>
+                    <TableHeaderCell>תיאור</TableHeaderCell>
+                    <TableHeaderCell>סכום</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {donationHistory.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell>{formatDate(record.transaction_date)}</TableCell>
+                      <TableCell>{record.description || "—"}</TableCell>
+                      <TableCell>{formatCurrency(record.amount)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </Card>
+      </DialogPanel>
+    </Dialog>
   );
 }
-
-
-

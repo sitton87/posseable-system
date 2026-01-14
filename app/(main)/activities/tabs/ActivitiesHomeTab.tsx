@@ -1,18 +1,21 @@
 "use client";
 
-import { colors, spacing, radii } from "@/app/styles/foundations";
 import { useEffect, useState } from "react";
 import { Activity, Volunteer } from "@/type";
-import { Card } from "@/app/components/ui";
 import {
-  SmallActionButton,
+  Card,
+  Title,
+  Text,
+  Button,
+} from "@tremor/react";
+import {
   StatCardGrid,
   TasksBoard,
   TaskEntityOption,
   TaskAssigneeOption,
 } from "@/app/components/shared";
-
-const muted = colors.textMuted;
+import { cssVar } from "@/app/styles/design-system";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 export default function ActivitiesHomeTab() {
   const [loading, setLoading] = useState(true);
@@ -33,7 +36,7 @@ export default function ActivitiesHomeTab() {
 
   async function fetchVolunteers() {
     try {
-      const res = await fetch("/api/volunteers?limit=1000"); // Basic list of volunteers
+      const res = await fetch("/api/volunteers?limit=1000");
       const data = await res.json();
       if (data.success) {
         setVolunteers(data.volunteers);
@@ -46,14 +49,12 @@ export default function ActivitiesHomeTab() {
   async function fetchStats() {
     try {
       setLoading(true);
-      // Fetch stats
       const statsRes = await fetch("/api/activities/stats");
       const statsData = await statsRes.json();
       if (statsData.success) {
         setStats(statsData.stats);
       }
 
-      // Fetch recent activities separately (only 5 items)
       const res = await fetch("/api/activities?sort=date_desc&limit=5");
       const data = await res.json();
       if (data.success) {
@@ -73,13 +74,11 @@ export default function ActivitiesHomeTab() {
     { label: "בוטלו", value: stats.cancelled },
   ];
 
-  // Map volunteers to assignees
   const assignees: TaskAssigneeOption[] = volunteers.map((v) => ({
     id: v.national_id,
     name: v.full_name,
   }));
 
-  // Map activities to "task entities" if we want to attach tasks to activities
   const activityEntities: TaskEntityOption[] = recentActivities.map((a) => ({
     id: a.id.toString(),
     name: a.group_name || "פעילות ללא שם",
@@ -89,44 +88,29 @@ export default function ActivitiesHomeTab() {
   }));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-5">
       <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: spacing.sm,
-            marginBottom: spacing.sm,
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="flex justify-between items-center gap-2 mb-2 flex-wrap">
           <div>
-            <h3 style={{ margin: 0 }}>מבט כללי · פעילויות</h3>
-            <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            <Title>מבט כללי · פעילויות</Title>
+            <Text style={{ color: cssVar.text.muted }}>
               סטטוסים ומדדים מרכזיים של הפעילויות
-            </p>
+            </Text>
           </div>
-          <SmallActionButton variant="secondary" onClick={fetchStats}>
+          <Button variant="secondary" size="sm" icon={ArrowPathIcon} onClick={fetchStats}>
             רענן
-          </SmallActionButton>
+          </Button>
         </div>
         {loading ? (
-          <div style={{ padding: spacing.lg, textAlign: "center" }}>
-            טוען נתונים...
+          <div className="p-5 text-center">
+            <Text style={{ color: cssVar.text.muted }}>טוען נתונים...</Text>
           </div>
         ) : (
           <StatCardGrid stats={statCards} />
         )}
       </Card>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: spacing.lg,
-        }}
-      >
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-5">
         <TasksBoard
           entityType="activity"
           entities={activityEntities}
@@ -135,47 +119,36 @@ export default function ActivitiesHomeTab() {
           fixedEntityId="general"
         />
 
-        <Card style={{ padding: spacing.lg }}>
-          <h4 style={{ margin: "0 0 12px 0" }}>פעילויות קרובות</h4>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
+        <Card className="p-5">
+          <Title className="mb-3">פעילויות קרובות</Title>
+          <div className="flex flex-col gap-2">
             {recentActivities.length === 0 && (
-              <div style={{ color: muted, fontSize: 13 }}>
+              <Text style={{ color: cssVar.text.muted }}>
                 לא נמצאו פעילויות קרובות.
-              </div>
+              </Text>
             )}
             {recentActivities.map((item) => (
               <div
                 key={item.id}
-                style={{
-                  border: `1px solid ${colors.borderMuted}`,
-                  borderRadius: radii.card,
-                  padding: spacing.sm,
-                }}
+                className="border rounded-lg p-2"
+                style={{ borderColor: cssVar.border.primary }}
               >
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <div style={{ fontWeight: 700 }}>
+                <div className="flex justify-between">
+                  <Text className="font-bold">
                     {item.group_name || "ללא קבוצה"}
-                  </div>
-                  <div style={{ color: muted, fontSize: 12 }}>
+                  </Text>
+                  <Text className="text-xs" style={{ color: cssVar.text.muted }}>
                     {item.activity_date
                       ? new Date(item.activity_date).toLocaleDateString("he-IL")
                       : "—"}
-                  </div>
+                  </Text>
                 </div>
-                <div style={{ color: muted, fontSize: 13 }}>
+                <Text style={{ color: cssVar.text.muted }}>
                   {item.kind} · {item.location || "—"}
-                </div>
-                <div style={{ fontSize: 12, color: muted }}>
+                </Text>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>
                   מנהל: {item.activity_manager_name || item.lead_name || "—"}
-                </div>
+                </Text>
               </div>
             ))}
           </div>

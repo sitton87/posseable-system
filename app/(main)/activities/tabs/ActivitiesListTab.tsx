@@ -2,22 +2,34 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { colors, spacing } from "@/app/styles/foundations";
-import { Button, Card } from "@/app/components/ui";
-import { Activity } from "@/type";
-import { SmallActionButton, FilterToolbar, StatusPill } from "@/app/components/shared";
 import {
-  filterControlStyle,
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
+  Card,
+  Title,
+  Text,
+  Button,
+  TextInput,
+  Select,
+  SelectItem,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  Badge,
+} from "@tremor/react";
+import { Activity } from "@/type";
+import { FilterToolbar } from "@/app/components/shared";
+import { cssVar } from "@/app/styles/design-system";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import {
+  PlusIcon,
+  ArrowPathIcon,
+  XMarkIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 
-const muted = colors.textMuted;
-
-// Helper to format time strings (HH:mm:ss -> HH:mm)
 const formatTime = (timeStr?: string) => {
   if (!timeStr) return "-";
   return timeStr.slice(0, 5);
@@ -42,20 +54,9 @@ export default function ActivitiesListTab() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      // Only set status if it's not empty, default empty is fetching all which is fine with the new route optimizations
       if (filters.status) params.set("status", filters.status);
       if (filters.kind) params.set("kind", filters.kind);
-      // Default to "date_desc" if not set, or pass it explicitly
       params.set("sort", filters.sort || "date_desc");
-      
-      // Add a limit to initial fetch if not filtering to prevent loading too much history immediately?
-      // For now, let's keep it but just ensure the route is fast.
-      // The user complained about return navigation. This might be due to full re-fetch.
-      // We can add a simple caching mechanism or just rely on the fast API.
-      // The API is fast now (under 100ms). The delay might be rendering or network latency if the list is HUGE.
-      
-      // Let's assume the list is reasonably sized or paging is needed later. 
-      // For now, ensuring the API is efficient (which we did) is key.
       
       const res = await fetch(`/api/activities?${params.toString()}`);
       const data = await res.json();
@@ -70,7 +71,7 @@ export default function ActivitiesListTab() {
   }
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
+    e.stopPropagation();
     if (!confirm("האם אתה בטוח שברצונך למחוק פעילות זו?")) return;
 
     try {
@@ -97,16 +98,16 @@ export default function ActivitiesListTab() {
     );
   });
 
-  const getStatusTone = (status: string): "success" | "warning" | "error" | "info" | "neutral" => {
+  const getStatusColor = (status: string): "emerald" | "amber" | "rose" | "blue" | "gray" => {
     switch (status) {
       case "Completed":
-        return "success";
+        return "emerald";
       case "Cancelled":
-        return "error";
+        return "rose";
       case "In Progress":
-        return "info";
+        return "blue";
       default:
-        return "neutral";
+        return "gray";
     }
   };
 
@@ -121,171 +122,151 @@ export default function ActivitiesListTab() {
   };
 
   return (
-    <Card
-      style={{
-        padding: spacing.lg,
-        display: "flex",
-        flexDirection: "column",
-        gap: spacing.md,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: spacing.sm,
-          flexWrap: "wrap",
-        }}
-      >
+    <Card className="p-5 flex flex-col gap-4">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
         <div>
-          <h2 style={{ margin: 0 }}>רשימת פעילויות</h2>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+          <Title>רשימת פעילויות</Title>
+          <Text style={{ color: cssVar.text.muted }}>
             ניהול ומעקב אחר פעילויות העמותה
-          </p>
+          </Text>
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: spacing.sm,
-            alignItems: "center",
-            flexWrap: "wrap",
-            justifyContent: "flex-end",
-          }}
-        >
-          <SmallActionButton variant="secondary" onClick={fetchActivities}>
+        <div className="flex gap-2 items-center flex-wrap justify-end">
+          <Button variant="secondary" size="sm" icon={ArrowPathIcon} onClick={fetchActivities}>
             רענן
-          </SmallActionButton>
-          <SmallActionButton 
+          </Button>
+          <Button 
             variant="secondary" 
+            size="sm"
+            icon={XMarkIcon}
             onClick={() => setFilters({ status: "", kind: "", search: "", sort: "date_desc" })}
           >
             ניקוי פילטרים
-          </SmallActionButton>
-          <Button onClick={() => router.push("/activities/new")}>+ פעילות חדשה</Button>
+          </Button>
+          <Button icon={PlusIcon} onClick={() => router.push("/activities/new")}>
+            פעילות חדשה
+          </Button>
         </div>
       </div>
 
       <FilterToolbar columns="repeat(auto-fit, minmax(200px, 1fr))">
-        <input
-          style={filterControlStyle}
+        <TextInput
           placeholder="חיפוש לפי קבוצה, מיקום או מנהל..."
           value={filters.search}
           onChange={(e) => setFilters({ ...filters, search: e.target.value })}
         />
-        <select
-          style={filterControlStyle}
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+        <Select
+          value={filters.status || undefined}
+          onValueChange={(val) => setFilters({ ...filters, status: val || "" })}
+          placeholder="כל הסטטוסים"
         >
-          <option value="">כל הסטטוסים</option>
-          <option value="Planned">מתוכנן</option>
-          <option value="Completed">הושלם</option>
-          <option value="Cancelled">בוטל</option>
-        </select>
-        <select
-          style={filterControlStyle}
-          value={filters.kind}
-          onChange={(e) => setFilters({ ...filters, kind: e.target.value })}
+          <SelectItem value="Planned">מתוכנן</SelectItem>
+          <SelectItem value="Completed">הושלם</SelectItem>
+          <SelectItem value="Cancelled">בוטל</SelectItem>
+        </Select>
+        <Select
+          value={filters.kind || undefined}
+          onValueChange={(val) => setFilters({ ...filters, kind: val || "" })}
+          placeholder="כל הסוגים"
         >
-          <option value="">כל הסוגים</option>
-          <option value="surf">גלישה</option>
-          <option value="social">חברתי</option>
-          <option value="special">אירוע מיוחד</option>
-          <option value="training">הכשרה והדרכה</option>
-        </select>
-        <select
-          style={filterControlStyle}
+          <SelectItem value="surf">גלישה</SelectItem>
+          <SelectItem value="social">חברתי</SelectItem>
+          <SelectItem value="special">אירוע מיוחד</SelectItem>
+          <SelectItem value="training">הכשרה והדרכה</SelectItem>
+        </Select>
+        <Select
           value={filters.sort}
-          onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+          onValueChange={(val) => setFilters({ ...filters, sort: val })}
         >
-          <option value="date_desc">תאריך (מהחדש לישן)</option>
-          <option value="date_asc">תאריך (מהישן לחדש)</option>
-        </select>
+          <SelectItem value="date_desc">תאריך (מהחדש לישן)</SelectItem>
+          <SelectItem value="date_asc">תאריך (מהישן לחדש)</SelectItem>
+        </Select>
       </FilterToolbar>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: spacing.xl, color: colors.textMuted }}>טוען פעילויות...</div>
+        <div className="text-center p-6">
+          <Text style={{ color: cssVar.text.muted }}>טוען פעילויות...</Text>
+        </div>
       ) : filteredActivities.length === 0 ? (
-        <div style={{ textAlign: "center", padding: spacing.xl, color: colors.textMuted }}>לא נמצאו פעילויות</div>
+        <div className="text-center p-6">
+          <Text style={{ color: cssVar.text.muted }}>לא נמצאו פעילויות</Text>
+        </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={tableHeaderStyle}>תאריך</th>
-                <th style={tableHeaderStyle}>שעה</th>
-                <th style={tableHeaderStyle}>קבוצה</th>
-                <th style={tableHeaderStyle}>סדרה</th>
-                <th style={tableHeaderStyle}>סוג</th>
-                <th style={tableHeaderStyle}>מיקום</th>
-                <th style={tableHeaderStyle}>מנהל</th>
-                <th style={tableHeaderStyle}>משתתפים</th>
-                <th style={tableHeaderStyle}>סטטוס</th>
-                <th style={tableHeaderStyle}>פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>תאריך</TableHeaderCell>
+                <TableHeaderCell>שעה</TableHeaderCell>
+                <TableHeaderCell>קבוצה</TableHeaderCell>
+                <TableHeaderCell>סדרה</TableHeaderCell>
+                <TableHeaderCell>סוג</TableHeaderCell>
+                <TableHeaderCell>מיקום</TableHeaderCell>
+                <TableHeaderCell>מנהל</TableHeaderCell>
+                <TableHeaderCell>משתתפים</TableHeaderCell>
+                <TableHeaderCell>סטטוס</TableHeaderCell>
+                <TableHeaderCell>פעולות</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {filteredActivities.map((activity) => (
-                <tr 
+                <TableRow 
                     key={activity.id} 
                     onClick={() => router.push(`/activities/${activity.id}`)}
-                    style={{ cursor: "pointer", transition: "background-color 0.2s" }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.surfaceAlt}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                    className="cursor-pointer transition-colors hover:bg-tremor-background-subtle"
                 >
-                  <td style={tableCellStyle}>
+                  <TableCell>
                     {format(new Date(activity.activity_date), "dd/MM/yyyy")}
-                  </td>
-                  <td style={tableCellStyle}>
+                  </TableCell>
+                  <TableCell>
                     {formatTime(activity.start_time)}
-                  </td>
-                  <td style={{ ...tableCellStyle, fontWeight: 700 }}>
+                  </TableCell>
+                  <TableCell className="font-bold">
                     {activity.group_name || "-"}
-                  </td>
-                  <td style={tableCellStyle}>
+                  </TableCell>
+                  <TableCell>
                     {activity.series_name || "-"}
-                  </td>
-                  <td style={tableCellStyle}>{
+                  </TableCell>
+                  <TableCell>{
                     activity.kind === "surf" ? "גלישה" :
                     activity.kind === "social" ? "חברתי" :
                     activity.kind === "special" ? "אירוע מיוחד" :
                     activity.kind === "training" ? "הכשרה והדרכה" :
-                    activity.kind === "lecture" ? "הכשרה והדרכה" : // Legacy support
-                    activity.kind === "preparation" ? "הכנה" : // Legacy
+                    activity.kind === "lecture" ? "הכשרה והדרכה" :
+                    activity.kind === "preparation" ? "הכנה" :
                     activity.kind
-                  }</td>
-                  <td style={tableCellStyle}>{activity.location || "-"}</td>
-                  <td style={tableCellStyle}>
+                  }</TableCell>
+                  <TableCell>{activity.location || "-"}</TableCell>
+                  <TableCell>
                     {activity.activity_manager_name || activity.lead_name || "-"}
-                  </td>
-                  <td style={tableCellStyle}>{activity.participant_count || 0}</td>
-                  <td style={tableCellStyle}>
-                    <StatusPill tone={getStatusTone(activity.status)}>
+                  </TableCell>
+                  <TableCell>{activity.participant_count || 0}</TableCell>
+                  <TableCell>
+                    <Badge color={getStatusColor(activity.status)}>
                       {getStatusLabel(activity.status)}
-                    </StatusPill>
-                  </td>
-                  <td style={tableCellStyle}>
-                    <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
-                      <SmallActionButton
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-center gap-1">
+                      <Button
                         variant="secondary"
+                        size="xs"
                         onClick={(e) => { e.stopPropagation(); router.push(`/activities/${activity.id}`); }}
                       >
                         ניהול
-                      </SmallActionButton>
-                      <SmallActionButton
+                      </Button>
+                      <Button
                         variant="secondary"
-                        style={{ color: colors.danger, borderColor: colors.danger + "40", backgroundColor: colors.danger + "10" }}
+                        size="xs"
+                        color="rose"
+                        icon={TrashIcon}
                         onClick={(e) => handleDelete(activity.id, e)}
-                      >
-                        מחיקה
-                      </SmallActionButton>
+                      />
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </Card>

@@ -1,7 +1,19 @@
 "use client";
 
-import { colors, spacing } from "@/app/styles/foundations";
-import { muted, summaryCardStyle } from "../utils";
+import {
+  Card,
+  Grid,
+  Text,
+  Metric,
+  Flex,
+  Icon,
+} from "@tremor/react";
+import {
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  ScaleIcon,
+} from "@heroicons/react/24/outline";
+import { cssVar } from "@/app/styles/design-system";
 import { FinanceStats } from "../types";
 
 type FinanceSummaryProps = {
@@ -17,50 +29,76 @@ export default function FinanceSummary({
 
   return (
     <div>
-      <div style={{ color: muted, fontSize: 13, marginTop: 4, marginBottom: spacing.md }}>
+      <Text className="mb-4" style={{ color: cssVar.text.muted }}>
         סה״כ {transactionCount} תנועות במערכת
-      </div>
+      </Text>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: spacing.md,
-        }}
-      >
-        <div style={summaryCardStyle(colors.successSoft, colors.success)}>
-          <div style={{ fontSize: 13, color: muted, marginBottom: 4 }}>
-            סה״כ הכנסות
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>
-            ₪{totalIncome.toLocaleString()}
-          </div>
-        </div>
-        <div style={summaryCardStyle(colors.dangerSoft, colors.danger)}>
-          <div style={{ fontSize: 13, color: muted, marginBottom: 4 }}>
-            סה״כ הוצאות
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>
-            ₪{totalExpense.toLocaleString()}
-          </div>
-        </div>
-        <div
-          style={summaryCardStyle(
-            balance >= 0 ? colors.primarySoft : "rgba(251, 191, 36, 0.2)",
-            balance >= 0 ? colors.primary : "#d97706"
-          )}
-        >
-          <div style={{ fontSize: 13, color: muted, marginBottom: 4 }}>
-            יתרה
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 800 }}>
-            ₪{balance.toLocaleString()}
-          </div>
-        </div>
-      </div>
+      <Grid numItems={1} numItemsSm={3} className="gap-4">
+        <Card decoration="top" decorationColor="emerald">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                סה״כ הכנסות
+              </Text>
+              <Metric
+                className="text-2xl font-bold mt-1"
+                style={{ color: cssVar.status.success }}
+              >
+                ₪{totalIncome.toLocaleString()}
+              </Metric>
+            </div>
+            <Icon icon={ArrowTrendingUpIcon} variant="light" size="lg" color="emerald" />
+          </Flex>
+        </Card>
+
+        <Card decoration="top" decorationColor="rose">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                סה״כ הוצאות
+              </Text>
+              <Metric
+                className="text-2xl font-bold mt-1"
+                style={{ color: cssVar.status.danger }}
+              >
+                ₪{totalExpense.toLocaleString()}
+              </Metric>
+            </div>
+            <Icon icon={ArrowTrendingDownIcon} variant="light" size="lg" color="rose" />
+          </Flex>
+        </Card>
+
+        <Card decoration="top" decorationColor={balance >= 0 ? "blue" : "amber"}>
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                יתרה
+              </Text>
+              <Metric
+                className="text-2xl font-bold mt-1"
+                style={{ color: balance >= 0 ? cssVar.status.info : cssVar.status.warning }}
+              >
+                ₪{balance.toLocaleString()}
+              </Metric>
+            </div>
+            <Icon
+              icon={ScaleIcon}
+              variant="light"
+              size="lg"
+              color={balance >= 0 ? "blue" : "amber"}
+            />
+          </Flex>
+        </Card>
+      </Grid>
     </div>
   );
 }
-
-
-

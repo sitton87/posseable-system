@@ -1,33 +1,47 @@
 import { NoteStatus } from "@/type";
 
+// Based on DB schema: volunteer table
 export type Volunteer = {
   national_id: string;
   full_name: string;
-  phone: string;
-  email: string;
-  residence?: string | null;
-  program?: string | null;
-  group_id?: string | null;
-  group_name?: string | null;
-  status?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  kind?: string | null;
   active: boolean;
   notes?: string | null;
+  created_at?: string | null;
+  // Address
+  street?: string | null;
+  house_number?: string | null;
+  city?: string | null;
+  // Dates
+  join_date?: string | null;
+  training_date?: string | null;
+  // Activity
+  total_activities: number;
+  // Professional info
+  profession?: string | null;
+  sea_connection_level?: number | null;
+  volunteer_type?: string | null;
+  media_specialization?: string | null;
+  availability?: string | null;
+  personal_website?: string | null;
+  documents?: string | null;
+  // Classification (required)
   classification: "volunteer" | "staff" | "management";
 };
 
 export type VolunteerFilters = {
   search: string;
-  status: "all" | "active" | "inactive" | "approved" | "pending";
-  program: string;
+  status: "all" | "active" | "inactive";
   classification: "all" | "volunteer" | "staff" | "management";
 };
 
 export type VolunteerStats = {
   total: number;
   active: number;
-  approved: number;
-  pending: number;
-  grouped: number;
+  staff: number;
+  management: number;
 };
 
 export type VolunteerNote = {
@@ -47,9 +61,7 @@ export type VolunteerSummaryData = {
   recentActivity: {
     national_id: string;
     full_name: string;
-    status?: string | null;
-    program?: string | null;
-    group_name?: string | null;
+    classification?: string | null;
     created_at?: string | null;
   }[];
 };
@@ -65,8 +77,8 @@ export type VolunteerActivityRow = {
 export type SupportedSurferRow = {
   national_id: string;
   full_name: string;
-  program?: string | null;
-  status?: string | null;
+  program?: string | null; // This is for SURFER, not volunteer - surfers have program
+  status?: string | null;  // This is for SURFER status
   group_name?: string | null;
 };
 
@@ -75,18 +87,23 @@ export type VolunteerDetail = {
   supportedSurfers: SupportedSurferRow[];
 };
 
+// Form state matches DB columns
 export type VolunteerFormState = {
   national_id: string;
   full_name: string;
   phone: string;
   email: string;
-  residence: string;
-  program: string;
-  group_id: string;
-  status: string;
+  // Address
+  street: string;
+  house_number: string;
+  city: string;
+  // Activity
   active: boolean;
   notes: string;
   classification: string;
+  volunteer_type: string;
+  profession: string;
+  availability: string;
 };
 
 export type TaskFormState = {
@@ -97,4 +114,3 @@ export type TaskFormState = {
 };
 
 export type TabId = "home" | "list" | "settings";
-

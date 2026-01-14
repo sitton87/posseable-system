@@ -1,12 +1,25 @@
 "use client";
 
 import { Activity, EquipmentItem } from "@/type";
-import { colors, spacing } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 import { Section } from "@/app/components/shared/layoutPrimitives";
-import { Button, Select, Input } from "@/app/components/ui";
+import {
+  Card,
+  Title,
+  Text,
+  TextInput,
+  Select,
+  SelectItem,
+  Button,
+} from "@tremor/react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { Wrench, Plus, Trash2 } from "lucide-react";
+import {
+  WrenchScrewdriverIcon,
+  PlusIcon,
+  TrashIcon,
+  BoltIcon,
+} from "@heroicons/react/24/outline";
 import { TasksBoard } from "@/app/components/shared/TasksBoard";
 
 const TASKS_TEMPLATE = [
@@ -31,14 +44,12 @@ export function TimelineTab({
     const [taskTrigger, setTaskTrigger] = useState<{ action: string, ts: number } | null>(null);
     const [assignees, setAssignees] = useState<any[]>([]);
     
-    // Equipment State
     const [items, setItems] = useState<EquipmentItem[]>([]);
     const [newItemId, setNewItemId] = useState("");
-    const [newQty, setNewQty] = useState(1);
+    const [newQty, setNewQty] = useState("1");
     const [addingEquip, setAddingEquip] = useState(false);
 
     useEffect(() => {
-        // Fetch staff and management for assignment
         Promise.all([
             fetch("/api/volunteers?classification=staff").then(r => r.json()),
             fetch("/api/volunteers?classification=management").then(r => r.json()),
@@ -63,14 +74,14 @@ export function TimelineTab({
             body: JSON.stringify({
               activity_id: activity.id,
               item_id: newItemId,
-              quantity: newQty,
-              notes: "REQUESTED" // Default status/note
+              quantity: Number(newQty),
+              notes: "REQUESTED"
             })
           });
           if (res.ok) {
             toast.success("ציוד נוסף בהצלחה");
             setNewItemId("");
-            setNewQty(1);
+            setNewQty("1");
             refresh();
           } else {
             toast.error("שגיאה בהוספת ציוד");
@@ -119,7 +130,6 @@ export function TimelineTab({
                 const dueDate = new Date(activityDate);
                 dueDate.setDate(activityDate.getDate() + task.offset);
                 
-                // Use the standard Notes API
                 const res = await fetch("/api/notes", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -137,7 +147,7 @@ export function TimelineTab({
 
             if (successCount > 0) {
                 toast.success(`נוצרו ${successCount} משימות בהצלחה`);
-                setTasksKey(prev => prev + 1); // Refresh TasksBoard
+                setTasksKey(prev => prev + 1);
                 refresh(); 
             } else {
                 toast.error("שגיאה ביצירת משימות");
@@ -151,21 +161,21 @@ export function TimelineTab({
     };
 
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: spacing.lg, alignItems: "start" }}>
+        <div className="grid grid-cols-[2fr_1fr] gap-5 items-start">
             
             {/* Right Column: Tasks Timeline */}
-            <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+            <div className="flex flex-col gap-5">
                 <Section title="ציר זמן והכנות">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md }}>
-                        <div style={{ color: colors.textMuted, fontSize: 13 }}>
+                    <div className="flex justify-between items-center mb-4">
+                        <Text style={{ color: cssVar.text.muted }}>
                             ניהול משימות הכנה לפי לוח זמנים.
-                        </div>
-                        <div style={{ display: "flex", gap: spacing.sm }}>
-                            <Button variant="secondary" onClick={generatePreparationTasks} disabled={generating} style={{ fontSize: 12 }}>
-                                {generating ? "מייצר..." : "⚡ טען תבנית הכנה"}
+                        </Text>
+                        <div className="flex gap-2">
+                            <Button variant="secondary" size="sm" icon={BoltIcon} onClick={generatePreparationTasks} disabled={generating}>
+                                {generating ? "מייצר..." : "טען תבנית הכנה"}
                             </Button>
-                            <Button variant="primary" onClick={() => setTaskTrigger({ action: 'open_add_modal', ts: Date.now() })} style={{ fontSize: 12 }}>
-                                <Plus size={14} style={{ marginLeft: 6 }} /> הוסף משימה
+                            <Button size="sm" icon={PlusIcon} onClick={() => setTaskTrigger({ action: 'open_add_modal', ts: Date.now() })}>
+                                הוסף משימה
                             </Button>
                         </div>
                     </div>
@@ -175,7 +185,7 @@ export function TimelineTab({
                         entityType="activity"
                         fixedEntityId={activity.id.toString()}
                         title=""
-                        assignees={assignees} // Pass volunteers as assignees
+                        assignees={assignees}
                         variant="list"
                         hideAddButton={true}
                         externalTrigger={taskTrigger}
@@ -184,51 +194,53 @@ export function TimelineTab({
             </div>
 
             {/* Left Column: Equipment Checklist */}
-            <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+            <div className="flex flex-col gap-5">
                 <Section title="רשימת ציוד לוגיסטי">
-                    <div style={{ display: "flex", gap: spacing.sm, alignItems: "flex-end", marginBottom: spacing.md }}>
-                       <div style={{ flex: 1 }}>
+                    <div className="flex gap-2 items-end mb-4">
+                       <div className="flex-1">
+                         <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>בחר ציוד</Text>
                          <Select
-                           label="בחר ציוד"
-                           value={newItemId}
-                           onChange={(e) => setNewItemId(e.target.value)}
-                           options={[
-                             { value: "", label: "בחר פריט..." },
-                             ...items.map(i => ({ value: i.id.toString(), label: i.name }))
-                           ]}
-                         />
+                           value={newItemId || undefined}
+                           onValueChange={(val) => setNewItemId(val || "")}
+                           placeholder="בחר פריט..."
+                         >
+                           {items.map(i => (
+                             <SelectItem key={i.id} value={i.id.toString()}>{i.name}</SelectItem>
+                           ))}
+                         </Select>
                        </div>
-                       <div style={{ width: 80 }}>
-                         <Input 
-                           label="כמות" 
+                       <div className="w-20">
+                         <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>כמות</Text>
+                         <TextInput 
                            type="number" 
                            value={newQty} 
-                           onChange={(e) => setNewQty(Number(e.target.value))} 
-                           min={1}
+                           onChange={(e) => setNewQty(e.target.value)} 
                          />
                        </div>
-                       <Button onClick={handleAddEquipment} disabled={addingEquip || !newItemId} style={{ padding: "0 12px" }}>
-                         <Plus size={16} />
-                       </Button>
+                       <Button size="sm" icon={PlusIcon} onClick={handleAddEquipment} disabled={addingEquip || !newItemId} />
                     </div>
 
                     {(!activity.equipment || activity.equipment.length === 0) ? (
-                        <div style={{ color: colors.textMuted, fontSize: 13, textAlign: "center", padding: 20 }}>
-                            לא נבחר ציוד לפעילות זו.
-                        </div>
+                        <Card className="text-center p-5 border-dashed">
+                            <Text style={{ color: cssVar.text.muted }}>לא נבחר ציוד לפעילות זו.</Text>
+                        </Card>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div className="flex flex-col gap-2">
                             {activity.equipment.map((item: any) => (
-                                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, background: "white", borderRadius: 4, border: `1px solid ${colors.border}` }}>
-                                    <div style={{ background: colors.surfaceAlt, padding: 6, borderRadius: "50%" }}>
-                                        <Wrench size={14} color={colors.textMuted} />
+                                <Card key={item.id} className="p-2 flex items-center gap-2">
+                                    <div
+                                      className="p-1.5 rounded-full"
+                                      style={{ backgroundColor: cssVar.bg.secondary }}
+                                    >
+                                        <WrenchScrewdriverIcon className="w-3.5 h-3.5" style={{ color: cssVar.text.muted }} />
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: 13 }}>{item.item_name}</div>
-                                        <div style={{ fontSize: 12, color: colors.textMuted }}>כמות: {item.quantity}</div>
+                                    <div className="flex-1">
+                                        <Text className="font-semibold text-sm">{item.item_name}</Text>
+                                        <Text className="text-xs" style={{ color: cssVar.text.muted }}>כמות: {item.quantity}</Text>
                                     </div>
                                     <select 
-                                        style={{ fontSize: 11, padding: "2px 4px", borderRadius: 4, border: `1px solid ${colors.borderMuted}` }}
+                                        className="text-xs px-1 py-0.5 rounded border"
+                                        style={{ borderColor: cssVar.border.primary }}
                                         value={item.status || "REQUESTED"}
                                         onChange={(e) => handleUpdateEquipmentStatus(item.id, e.target.value)}
                                     >
@@ -240,12 +252,13 @@ export function TimelineTab({
                                     </select>
                                     <button 
                                         onClick={() => handleRemoveEquipment(item.id)}
-                                        style={{ color: colors.danger, background: "none", border: "none", cursor: "pointer", padding: 4 }}
+                                        className="bg-transparent border-none cursor-pointer p-1"
+                                        style={{ color: cssVar.status.danger }}
                                         title="הסר"
                                     >
-                                        <Trash2 size={14} />
+                                        <TrashIcon className="w-3.5 h-3.5" />
                                     </button>
-                                </div>
+                                </Card>
                             ))}
                         </div>
                     )}

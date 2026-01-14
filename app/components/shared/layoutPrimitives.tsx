@@ -1,46 +1,44 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
 import { Button } from "@/app/components/ui";
-import {
-  colors,
-  radii,
-  shadows,
-  spacing,
-  typography,
-} from "@/app/styles/foundations";
+import { cssVar, numericValues, tw, presets } from "@/app/styles/design-system";
 
-const px = (value: number) => `${value}px`;
+// --- Section Card Style ---
 
 export const sectionCardStyle: CSSProperties = {
-  padding: px(spacing.lg),
-  background: colors.surfaceAlt,
-  borderRadius: radii.card,
-  border: `1px solid ${colors.borderMuted}`,
+  padding: numericValues.spacing[6],
+  background: cssVar.bg.secondary,
+  borderRadius: numericValues.radius.lg,
+  border: `1px solid ${cssVar.border.muted}`,
 };
 
 export const smallActionButtonStyle: CSSProperties = {
-  fontSize: 12,
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
+  fontSize: numericValues.fontSize.xs,
+  padding: `${numericValues.spacing[1]}px ${numericValues.spacing[2]}px`,
 };
+
+// --- Status Pill ---
 
 const pillBase: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
-  borderRadius: radii.button,
-  fontSize: 12,
-  fontWeight: typography.headingsWeight,
+  padding: `${numericValues.spacing[1]}px ${numericValues.spacing[2]}px`,
+  borderRadius: numericValues.radius.md,
+  fontSize: numericValues.fontSize.xs,
+  fontWeight: numericValues.fontWeight.semibold,
 };
 
 const pillMap = {
-  success: { bg: colors.successSoft, fg: colors.success },
-  danger: { bg: colors.dangerSoft, fg: colors.danger },
-  warning: { bg: "rgba(217,119,6,0.15)", fg: colors.warning },
-  info: { bg: colors.primarySoft, fg: colors.primary },
-  muted: { bg: colors.surfaceAlt, fg: colors.textMuted },
-  neutral: { bg: colors.surfaceAlt, fg: colors.textPrimary },
-  active: { bg: colors.successSoft, fg: colors.success },
-  inactive: { bg: colors.dangerSoft, fg: colors.danger },
+  success: { bg: "var(--color-success-light)", fg: "var(--color-success-text)" },
+  danger: { bg: "var(--color-danger-light)", fg: "var(--color-danger-text)" },
+  warning: { bg: "var(--color-warning-light)", fg: "var(--color-warning-text)" },
+  info: { bg: "var(--color-info-light)", fg: "var(--color-info-text)" },
+  muted: { bg: "var(--color-bg-tertiary)", fg: "var(--color-text-muted)" },
+  neutral: { bg: "var(--color-bg-tertiary)", fg: "var(--color-text-primary)" },
+  active: { bg: "var(--color-success-light)", fg: "var(--color-success-text)" },
+  inactive: { bg: "var(--color-danger-light)", fg: "var(--color-danger-text)" },
 } as const;
 
 export type StatusTone = keyof typeof pillMap;
@@ -68,6 +66,8 @@ export function StatusPill({
     </span>
   );
 }
+
+// --- Section ---
 
 export function Section({
   title,
@@ -100,23 +100,26 @@ export function Section({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            gap: spacing.sm,
-            marginBottom: spacing.md,
+            gap: numericValues.spacing[3],
+            marginBottom: numericValues.spacing[4],
             flexWrap: "wrap",
           }}
         >
           <div>
             {title && (
-              <h4 style={{ margin: 0, fontSize: 16, lineHeight: 1.4 }}>
+              <h4 
+                className="text-ds-text-primary font-semibold"
+                style={{ margin: 0, fontSize: numericValues.fontSize.base, lineHeight: 1.4 }}
+              >
                 {title}
               </h4>
             )}
             {subtitle && (
               <p
+                className="text-ds-text-muted"
                 style={{
                   margin: "4px 0 0",
-                  color: colors.textMuted,
-                  fontSize: 13,
+                  fontSize: numericValues.fontSize.sm,
                 }}
               >
                 {subtitle}
@@ -131,7 +134,7 @@ export function Section({
           ...(bodyStyle || {}),
           display: "flex",
           flexDirection: "column",
-          gap: spacing.sm,
+          gap: numericValues.spacing[3],
         }}
       >
         {children}
@@ -140,11 +143,13 @@ export function Section({
   );
 }
 
+// --- Form Grid ---
+
 export function FormGrid({
   children,
   minWidth = 200,
   columns,
-  gap = spacing.md,
+  gap = numericValues.spacing[4],
   style,
 }: {
   children: ReactNode;
@@ -168,6 +173,8 @@ export function FormGrid({
   );
 }
 
+// --- Small Action Button ---
+
 export function SmallActionButton({
   children,
   style,
@@ -175,6 +182,7 @@ export function SmallActionButton({
 }: React.ComponentProps<typeof Button>) {
   return (
     <Button
+      size="sm"
       {...rest}
       style={{
         ...smallActionButtonStyle,

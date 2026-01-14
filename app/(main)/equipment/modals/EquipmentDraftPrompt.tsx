@@ -1,8 +1,10 @@
-import { Modal, Button } from "@/app/components/ui";
-import { SmallActionButton, sectionCardStyle } from "@/app/components/shared";
-import { spacing, colors } from "@/app/styles/foundations";
-
-const muted = colors.textMuted;
+import {
+  Title,
+  Text,
+  Button,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 type Props = {
   open: boolean;
@@ -18,37 +20,26 @@ export default function EquipmentDraftPrompt({
   onDiscard,
 }: Props) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(420px, 90vw)"
-    >
-      <div style={{ ...sectionCardStyle, boxShadow: "none" }}>
-        <h3 style={{ marginTop: 0 }}>לשמור את הפריט כטיוטה?</h3>
-        <p style={{ color: muted }}>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-sm">
+        <Title className="mb-2">לשמור את הפריט כטיוטה?</Title>
+        <Text className="mb-6">
           ניתן לשמור את הפריט כטיוטה אישית (מוצגת רק לך) ולהמשיך לעבוד עליו
           מאוחר יותר או לבטל את הפעולה כעת.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-            marginTop: spacing.lg,
-          }}
-        >
-          <SmallActionButton variant="ghost" onClick={onClose}>
+        </Text>
+
+        <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
+          <Button variant="light" size="sm" onClick={onClose}>
             חזרה לעריכה
-          </SmallActionButton>
-          <SmallActionButton variant="secondary" onClick={onDiscard}>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onDiscard}>
             בטל וסגור
-          </SmallActionButton>
-          <SmallActionButton onClick={onSaveDraft}>
+          </Button>
+          <Button size="sm" onClick={onSaveDraft}>
             שמור כטיוטה
-          </SmallActionButton>
+          </Button>
         </div>
-      </div>
-    </Modal>
+      </DialogPanel>
+    </Dialog>
   );
 }
-

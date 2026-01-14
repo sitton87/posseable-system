@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/app/components/ui/Button";
-import clsx from "clsx";
 import {
-  AppPageRow,
-  PermissionLevel,
-  RoleGroupOption,
-} from "../types";
-import { Card } from "@/app/components/ui/Card";
-import {
-  PAGE_HIERARCHY,
-  PageHierarchyNode,
-} from "@/lib/permissions/pageHierarchy";
+  Card,
+  Title,
+  Text,
+  Button,
+  Select,
+  SelectItem,
+  Flex,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
+import { AppPageRow, PermissionLevel, RoleGroupOption } from "../types";
+import { PAGE_HIERARCHY, PageHierarchyNode } from "@/lib/permissions/pageHierarchy";
+import { cssVar } from "@/app/styles/design-system";
 
 const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   none: "ללא גישה",
@@ -30,17 +36,13 @@ export default function SystemPermissionsTab() {
   const [roleGroups, setRoleGroups] = useState<RoleGroupOption[]>([]);
   const [pages, setPages] = useState<AppPageRow[]>([]);
   const [selectedRoleGroup, setSelectedRoleGroup] = useState("");
-  const [pagePermissions, setPagePermissions] = useState<
-    Record<string, PermissionLevel>
-  >({});
+  const [pagePermissions, setPagePermissions] = useState<Record<string, PermissionLevel>>({});
   const [initialPagePermissions, setInitialPagePermissions] = useState<
     Record<string, PermissionLevel>
   >({});
   const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [permissionsSaving, setPermissionsSaving] = useState(false);
-  const [permissionsMessage, setPermissionsMessage] = useState<string | null>(
-    null
-  );
+  const [permissionsMessage, setPermissionsMessage] = useState<string | null>(null);
 
   const loadRoleGroupPermissions = async (roleGroupCode?: string) => {
     setPermissionsLoading(true);
@@ -62,8 +64,7 @@ export default function SystemPermissionsTab() {
       const nextRoleGroup =
         data.roleGroupCode ||
         roleGroupCode ||
-        data.roleGroups?.find((group: RoleGroupOption) => group.is_default)
-          ?.code ||
+        data.roleGroups?.find((group: RoleGroupOption) => group.is_default)?.code ||
         data.roleGroups?.[0]?.code ||
         "";
 
@@ -79,14 +80,12 @@ export default function SystemPermissionsTab() {
             permission_level: PermissionLevel;
           }) => permission.page_key === page.page_key
         );
-        permissionMap[page.page_key] = (record?.permission_level ??
-          "none") as PermissionLevel;
+        permissionMap[page.page_key] = (record?.permission_level ?? "none") as PermissionLevel;
       });
       setPagePermissions(permissionMap);
       setInitialPagePermissions(permissionMap);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "שגיאה בטעינת ההרשאות";
+      const message = err instanceof Error ? err.message : "שגיאה בטעינת ההרשאות";
       setPermissionsMessage(message);
       console.error("Failed to load permissions", err);
     } finally {
@@ -154,8 +153,7 @@ export default function SystemPermissionsTab() {
       setInitialPagePermissions(pagePermissions);
       setPermissionsMessage("ההרשאות נשמרו בהצלחה");
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "שגיאה בשמירת ההרשאות";
+      const message = err instanceof Error ? err.message : "שגיאה בשמירת ההרשאות";
       setPermissionsMessage(message);
       console.error("Failed to save permissions", err);
     } finally {
@@ -221,12 +219,11 @@ export default function SystemPermissionsTab() {
         type="button"
         onClick={() => handlePermissionChange(pageKey, level)}
         disabled={permissionsLoading || permissionsSaving}
-        className={clsx(
-          "w-full rounded-md border px-2 py-1 text-sm font-semibold transition",
+        className={`w-full rounded-md border px-2 py-1 text-sm font-semibold transition ${
           isSelected
             ? "border-sky-500 bg-sky-50 text-sky-700"
             : "border-gray-200 text-gray-600 hover:bg-gray-50"
-        )}
+        }`}
         title={PERMISSION_HELP[level]}
       >
         {PERMISSION_LABELS[level]}
@@ -235,131 +232,120 @@ export default function SystemPermissionsTab() {
   };
 
   const permissionSaveDisabled =
-    !selectedRoleGroup ||
-    permissionsLoading ||
-    permissionsSaving ||
-    !hasPermissionChanges;
+    !selectedRoleGroup || permissionsLoading || permissionsSaving || !hasPermissionChanges;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-6">
       <Card className="space-y-4 p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <Title className="text-xl font-semibold" style={{ color: cssVar.text.primary }}>
               הרשאות דפי מערכת
-            </h2>
-            <p className="text-sm text-gray-500">
+            </Title>
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
               קבע אילו דפים זמינים לכל קבוצת ניהול ומה רמת הגישה שלהם.
-            </p>
+            </Text>
           </div>
           <div className="flex w-full flex-col gap-2 lg:w-64">
-            <label className="text-sm font-medium text-gray-700">
+            <Text className="text-sm font-medium" style={{ color: cssVar.text.secondary }}>
               קבוצת ניהול
-            </label>
-            <select
-              className="rounded-md border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+            </Text>
+            <Select
               value={selectedRoleGroup}
-              onChange={(e) => loadRoleGroupPermissions(e.target.value)}
+              onValueChange={(val) => loadRoleGroupPermissions(val)}
               disabled={!roleGroupOptionsMemo.length || permissionsLoading}
             >
               {roleGroupOptionsMemo.map((group) => (
-                <option key={group.code} value={group.code}>
+                <SelectItem key={group.code} value={group.code}>
                   {group.name}
-                </option>
+                </SelectItem>
               ))}
-            </select>
+            </Select>
             {selectedRoleGroupInfo?.description && (
-              <p className="text-xs text-gray-500">
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>
                 {selectedRoleGroupInfo.description}
-              </p>
+              </Text>
             )}
           </div>
         </div>
 
         {permissionsMessage && (
-          <p
-            className={clsx(
-              "text-sm",
-              permissionsMessage.includes("שגיאה")
-                ? "text-red-600"
-                : "text-emerald-700"
-            )}
+          <Text
+            className="text-sm"
+            style={{
+              color: permissionsMessage.includes("שגיאה")
+                ? cssVar.status.danger
+                : cssVar.status.success,
+            }}
           >
             {permissionsMessage}
-          </p>
+          </Text>
         )}
 
         <div className="overflow-x-auto">
           {permissionsLoading ? (
-            <p className="text-sm text-gray-500">טוען הגדרות הרשאה...</p>
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+              טוען הגדרות הרשאה...
+            </Text>
           ) : !roleGroupOptionsMemo.length ? (
-            <p className="text-sm text-gray-500">
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
               אין קבוצות ניהול זמינות. צור לפחות קבוצה אחת כדי להגדיר הרשאות.
-            </p>
+            </Text>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200 text-sm text-center">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 font-semibold text-gray-600">דף</th>
-                  <th className="px-4 py-2 font-semibold text-gray-600">
-                    קטגוריה
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-gray-600">
-                    ללא גישה
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-gray-600">
-                    קריאה
-                  </th>
-                  <th className="px-4 py-2 font-semibold text-gray-600">
-                    עריכה
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>דף</TableHeaderCell>
+                  <TableHeaderCell>קטגוריה</TableHeaderCell>
+                  <TableHeaderCell className="text-center">ללא גישה</TableHeaderCell>
+                  <TableHeaderCell className="text-center">קריאה</TableHeaderCell>
+                  <TableHeaderCell className="text-center">עריכה</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {orderedPages.map(({ page, indent }) => (
-                  <tr key={page.page_key}>
-                    <td className="px-4 py-3 font-semibold text-gray-900">
+                  <TableRow key={page.page_key}>
+                    <TableCell>
                       <div
                         style={{ paddingRight: `${indent * 1.5}rem` }}
                         className="flex flex-col items-start"
                       >
-                        <div>{page.display_name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="font-semibold" style={{ color: cssVar.text.primary }}>
+                          {page.display_name}
+                        </div>
+                        <div className="text-xs" style={{ color: cssVar.text.muted }}>
                           {page.route_path}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {page.category || "-"}
-                    </td>
-                    <td className="px-2 py-3 text-center">
+                    </TableCell>
+                    <TableCell>{page.category || "-"}</TableCell>
+                    <TableCell className="text-center">
                       {renderPermissionButton(page.page_key, "none")}
-                    </td>
-                    <td className="px-2 py-3 text-center">
+                    </TableCell>
+                    <TableCell className="text-center">
                       {renderPermissionButton(page.page_key, "read")}
-                    </td>
-                    <td className="px-2 py-3 text-center">
+                    </TableCell>
+                    <TableCell className="text-center">
                       {renderPermissionButton(page.page_key, "write")}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="text-xs text-gray-500">
-            בחירה ב"עריכה" כוללת גם הרשאות צפייה. "ללא גישה" מסתיר את הדף לחלוטין
-            מהתפריט ומכל קיצור אחר.
-          </div>
+          <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+            בחירה ב"עריכה" כוללת גם הרשאות צפייה. "ללא גישה" מסתיר את הדף לחלוטין מהתפריט ומכל קיצור
+            אחר.
+          </Text>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
             <Button
               variant="secondary"
               type="button"
               onClick={handleSyncPages}
               disabled={permissionsLoading || permissionsSaving}
-              className="ml-auto sm:ml-0"
             >
               סנכרן דפים
             </Button>
@@ -371,11 +357,7 @@ export default function SystemPermissionsTab() {
             >
               אפס שינויים
             </Button>
-            <Button
-              type="button"
-              onClick={handleSavePermissions}
-              disabled={permissionSaveDisabled}
-            >
+            <Button type="button" onClick={handleSavePermissions} disabled={permissionSaveDisabled}>
               {permissionsSaving ? "שומר..." : "שמור הרשאות"}
             </Button>
           </div>
@@ -384,4 +366,3 @@ export default function SystemPermissionsTab() {
     </div>
   );
 }
-

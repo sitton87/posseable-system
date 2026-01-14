@@ -1,12 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card } from "@/app/components/ui";
-import { colors, spacing, radii } from "@/app/styles/foundations";
+import {
+  Card,
+  Grid,
+  Text,
+  Metric,
+  Flex,
+  Icon,
+  Title,
+  Button,
+  Badge,
+} from "@tremor/react";
+import {
+  CalendarDaysIcon,
+  RectangleStackIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import { SeasonPlan } from "@/type";
-import { StatCardGrid, TasksBoard, SmallActionButton } from "@/app/components/shared";
-
-const muted = colors.textMuted;
+import { TasksBoard } from "@/app/components/shared";
+import { cssVar } from "@/app/styles/design-system";
 
 export default function SeasonsDashboardTab() {
   const [stats, setStats] = useState({
@@ -22,138 +35,174 @@ export default function SeasonsDashboardTab() {
   }, []);
 
   async function fetchStats() {
-      try {
-        setLoading(true);
-        // Fetch seasons
-        const seasonsRes = await fetch("/api/seasons");
-        const seasonsData = await seasonsRes.json();
-        const seasons = seasonsData.success ? seasonsData.seasons : [];
+    try {
+      setLoading(true);
+      // Fetch seasons
+      const seasonsRes = await fetch("/api/seasons");
+      const seasonsData = await seasonsRes.json();
+      const seasons = seasonsData.success ? seasonsData.seasons : [];
 
-        const now = new Date();
-        const activeSeasonsList = seasons.filter((s: SeasonPlan) => {
-            const start = new Date(s.start_date);
-            const end = new Date(s.end_date);
-            return start <= now && end >= now;
-        });
+      const now = new Date();
+      const activeSeasonsList = seasons.filter((s: SeasonPlan) => {
+        const start = new Date(s.start_date);
+        const end = new Date(s.end_date);
+        return start <= now && end >= now;
+      });
 
-        // Fetch activities
-        const activitiesRes = await fetch("/api/activities");
-        const activitiesData = await activitiesRes.json();
-        const activities = activitiesData.success ? activitiesData.activities : [];
-        
-        const thisMonth = activities.filter((a: any) => {
-            const d = new Date(a.activity_date);
-            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }).length;
+      // Fetch activities
+      const activitiesRes = await fetch("/api/activities");
+      const activitiesData = await activitiesRes.json();
+      const activities = activitiesData.success ? activitiesData.activities : [];
 
-        // Sort activities by ID descending (newest first)
-        const sortedActivities = [...activities].sort((a, b) => b.id - a.id).slice(0, 5);
+      const thisMonth = activities.filter((a: any) => {
+        const d = new Date(a.activity_date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
 
-        setStats({
-            activeSeasons: activeSeasonsList.length,
-            activeSeries: new Set(activities.map((a: any) => a.series_id)).size,
-            upcomingActivities: thisMonth
-        });
-        setRecentActivities(sortedActivities);
+      // Sort activities by ID descending (newest first)
+      const sortedActivities = [...activities].sort((a, b) => b.id - a.id).slice(0, 5);
 
-      } catch (error) {
-        console.error("Error fetching dashboard stats", error);
-      } finally {
-        setLoading(false);
-      }
+      setStats({
+        activeSeasons: activeSeasonsList.length,
+        activeSeries: new Set(activities.map((a: any) => a.series_id)).size,
+        upcomingActivities: thisMonth,
+      });
+      setRecentActivities(sortedActivities);
+    } catch (error) {
+      console.error("Error fetching dashboard stats", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const statCards = [
-    { label: "עונות פעילות", value: stats.activeSeasons },
-    { label: "סדרות פעילות (החודש)", value: stats.activeSeries },
-    { label: "פעילויות החודש", value: stats.upcomingActivities },
-  ];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
-      {/* KPIs Card */}
+    <div className="space-y-6">
+      {/* Header */}
       <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: spacing.sm,
-            marginBottom: spacing.sm,
-            flexWrap: "wrap",
-          }}
-        >
+        <Flex justifyContent="between" alignItems="center" className="flex-wrap gap-4">
           <div>
-            <h3 style={{ margin: 0 }}>מבט כללי · עונות ופעילויות</h3>
-            <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+            <Title className="text-xl font-bold" style={{ color: cssVar.text.primary }}>
+              מבט כללי · עונות ופעילויות
+            </Title>
+            <Text style={{ color: cssVar.text.muted }}>
               סיכום נתונים מרכזיים
-            </p>
+            </Text>
           </div>
-          <SmallActionButton variant="secondary" onClick={fetchStats}>
+          <Button variant="secondary" onClick={fetchStats} disabled={loading}>
             רענן
-          </SmallActionButton>
-        </div>
-        {loading ? (
-          <div style={{ padding: spacing.lg, textAlign: "center" }}>
-            טוען נתונים...
-          </div>
-        ) : (
-          <StatCardGrid stats={statCards} />
-        )}
+          </Button>
+        </Flex>
       </Card>
 
-      {/* Main Content Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: spacing.lg }}>
-          
-          {/* Left Column: Tasks Board */}
-          <TasksBoard 
-                entityType="season_general" 
-                title="משימות ניהול עונות" 
-          />
-
-          {/* Right Column: Recent Activities */}
-          <Card style={{ padding: spacing.lg }}>
-             <h4 style={{ margin: "0 0 12px 0" }}>פעילויות שנוצרו לאחרונה</h4>
-             <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}>
-                {recentActivities.length === 0 && (
-                  <div style={{ color: muted, fontSize: 13 }}>
-                    לא נמצאו פעילויות חדשות.
-                  </div>
-                )}
-                {recentActivities.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      border: `1px solid ${colors.borderMuted}`,
-                      borderRadius: radii.card,
-                      padding: spacing.sm,
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div style={{ fontWeight: 700 }}>{item.group_name || "ללא קבוצה"}</div>
-                      <div style={{ color: muted, fontSize: 12 }}>
-                        {item.activity_date
-                          ? new Date(item.activity_date).toLocaleDateString("he-IL")
-                          : "—"}
-                      </div>
-                    </div>
-                    <div style={{ color: muted, fontSize: 13 }}>
-                      {item.kind} · {item.location || "—"}
-                    </div>
-                    <div style={{ fontSize: 12, color: muted }}>
-                        <span style={{ 
-                            padding: "2px 6px", 
-                            borderRadius: 4, 
-                            background: "rgba(0,0,0,0.05)",
-                            marginRight: 4
-                        }}>
-                            {item.status}
-                        </span>
-                    </div>
-                  </div>
-                ))}
-             </div>
+      {/* KPI Cards */}
+      {loading ? (
+        <div className="text-center py-10" style={{ color: cssVar.text.muted }}>
+          טוען נתונים...
+        </div>
+      ) : (
+        <Grid numItems={1} numItemsSm={3} className="gap-6">
+          <Card decoration="top" decorationColor="blue">
+            <Flex alignItems="start">
+              <div>
+                <Text
+                  className="text-sm font-medium uppercase tracking-wide"
+                  style={{ color: cssVar.text.muted }}
+                >
+                  עונות פעילות
+                </Text>
+                <Metric
+                  className="text-3xl font-bold mt-1"
+                  style={{ color: cssVar.text.primary }}
+                >
+                  {stats.activeSeasons}
+                </Metric>
+              </div>
+              <Icon icon={CalendarDaysIcon} variant="light" size="lg" color="blue" />
+            </Flex>
           </Card>
+
+          <Card decoration="top" decorationColor="indigo">
+            <Flex alignItems="start">
+              <div>
+                <Text
+                  className="text-sm font-medium uppercase tracking-wide"
+                  style={{ color: cssVar.text.muted }}
+                >
+                  סדרות פעילות (החודש)
+                </Text>
+                <Metric
+                  className="text-3xl font-bold mt-1"
+                  style={{ color: cssVar.text.primary }}
+                >
+                  {stats.activeSeries}
+                </Metric>
+              </div>
+              <Icon icon={RectangleStackIcon} variant="light" size="lg" color="indigo" />
+            </Flex>
+          </Card>
+
+          <Card decoration="top" decorationColor="emerald">
+            <Flex alignItems="start">
+              <div>
+                <Text
+                  className="text-sm font-medium uppercase tracking-wide"
+                  style={{ color: cssVar.text.muted }}
+                >
+                  פעילויות החודש
+                </Text>
+                <Metric
+                  className="text-3xl font-bold mt-1"
+                  style={{ color: cssVar.text.primary }}
+                >
+                  {stats.upcomingActivities}
+                </Metric>
+              </div>
+              <Icon icon={SparklesIcon} variant="light" size="lg" color="emerald" />
+            </Flex>
+          </Card>
+        </Grid>
+      )}
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
+        {/* Left Column: Tasks Board */}
+        <TasksBoard entityType="season_general" title="משימות ניהול עונות" />
+
+        {/* Right Column: Recent Activities */}
+        <Card>
+          <Title className="mb-4">פעילויות שנוצרו לאחרונה</Title>
+          <div className="flex flex-col gap-3">
+            {recentActivities.length === 0 && (
+              <Text style={{ color: cssVar.text.muted }}>
+                לא נמצאו פעילויות חדשות.
+              </Text>
+            )}
+            {recentActivities.map((item) => (
+              <div
+                key={item.id}
+                className="p-3 border rounded-lg transition-colors hover:bg-tremor-background-subtle"
+                style={{ borderColor: cssVar.border.muted }}
+              >
+                <Flex justifyContent="between" className="mb-1">
+                  <Text className="font-bold" style={{ color: cssVar.text.primary }}>
+                    {item.group_name || "ללא קבוצה"}
+                  </Text>
+                  <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+                    {item.activity_date
+                      ? new Date(item.activity_date).toLocaleDateString("he-IL")
+                      : "—"}
+                  </Text>
+                </Flex>
+                <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+                  {item.kind} · {item.location || "—"}
+                </Text>
+                <Badge size="xs" color="slate" className="mt-2">
+                  {item.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
-import { getUserBasicInfo } from "@/lib/services/authService";
+import { decryptSession } from "@/lib/auth";
 import { syncAppPages } from "@/lib/services/systemUserService";
 import {
   flattenHierarchy,
@@ -21,7 +21,7 @@ async function getSession(): Promise<SessionPayload | null> {
     if (!sessionCookie?.value) {
       return null;
     }
-    return JSON.parse(sessionCookie.value);
+    return await decryptSession(sessionCookie.value);
   } catch (error) {
     console.error("Failed to parse session cookie", error);
     return null;
@@ -34,18 +34,13 @@ async function getAdminContext() {
     return null;
   }
 
-  const userResult = await getUserBasicInfo(session.national_id);
-  if (!userResult.recordset.length) {
-    return null;
-  }
-
-  const user = userResult.recordset[0];
-  const allowed = hasSystemAdminAccess(user.role, user.role_group_code);
+  // בדיקת הרשאות מתבססת על נתוני ה-session
+  const allowed = hasSystemAdminAccess(session.role, session.role_group_code);
   if (!allowed) {
     return null;
   }
 
-  return { session, user };
+  return { session };
 }
 
 export async function POST(req: Request) {

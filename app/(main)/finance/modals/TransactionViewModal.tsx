@@ -1,15 +1,17 @@
 "use client";
 
-import { Button, Modal } from "@/app/components/ui";
-import { colors, radii, spacing } from "@/app/styles/foundations";
-import { Transaction } from "../types";
 import {
-  formatCurrency,
-  formatDate,
-  muted,
-  sectionBoxStyle,
-  typePillStyle,
-} from "../utils";
+  Card,
+  Title,
+  Text,
+  Badge,
+  Button,
+  Flex,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
+import { Transaction } from "../types";
+import { formatCurrency, formatDate } from "../utils";
 
 type TransactionViewModalProps = {
   open: boolean;
@@ -25,280 +27,208 @@ export default function TransactionViewModal({
   if (!transaction) return null;
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(700px, 95vw)"
-      style={{ padding: spacing.xxl }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: spacing.md,
-          gap: spacing.md,
-          flexWrap: "wrap",
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>
-          פרטי תנועה – {transaction.description}
-        </h3>
-        <Button
-          variant="secondary"
-          onClick={onClose}
-          type="button"
-        >
-          ✕ סגור
-        </Button>
-      </div>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-2xl">
+        {/* Header */}
+        <Flex justifyContent="between" alignItems="start" className="mb-6 flex-wrap gap-4">
+          <Title>פרטי תנועה – {transaction.description}</Title>
+          <Button variant="secondary" onClick={onClose}>
+            ✕ סגור
+          </Button>
+        </Flex>
 
-      <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-        <h4
-          style={{
-            margin: "0 0 12px 0",
-            fontSize: 14,
-            color: muted,
-            borderBottom: `2px solid ${colors.borderMuted}`,
-            paddingBottom: spacing.xs,
-          }}
-        >
-          יסודות
-        </h4>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>תאריך</div>
-            <div>{formatDate(transaction.transaction_date)}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>סוג</div>
-            <span
-              style={{
-                ...typePillStyle(transaction.type),
-                marginTop: spacing.xs,
-              }}
-            >
-              {transaction.type === "income" ? "הכנסה" : "הוצאה"}
-            </span>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>קטגוריה</div>
-            <div style={{ fontWeight: 600 }}>{transaction.category}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>סכום</div>
-            <div
-              style={{
-                fontWeight: 700,
-                color:
-                  transaction.type === "income"
-                    ? colors.success
-                    : colors.danger,
-              }}
-            >
-              {formatCurrency(transaction.amount)}
-            </div>
-          </div>
-        </div>
-        <div style={{ marginTop: spacing.md }}>
-          <div style={{ fontSize: 12, color: muted }}>תיאור</div>
-          <div style={{ fontWeight: 600 }}>{transaction.description}</div>
-        </div>
-      </div>
-
-      <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-        <h4
-          style={{
-            margin: "0 0 12px 0",
-            fontSize: 14,
-            color: muted,
-            borderBottom: `2px solid ${colors.borderMuted}`,
-            paddingBottom: spacing.xs,
-          }}
-        >
-          שיוך לפעילות
-        </h4>
-        {transaction.activity_id ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: spacing.md,
-            }}
+        {/* יסודות */}
+        <Card className="mb-4">
+          <Text
+            className="text-sm font-semibold mb-3 pb-2 border-b"
+            style={{ color: cssVar.text.muted, borderColor: cssVar.border.muted }}
           >
+            יסודות
+          </Text>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <div style={{ fontSize: 12, color: muted }}>פעילות</div>
-              <div style={{ fontWeight: 600 }}>
-                {transaction.activity_kind ||
-                  `פעילות #${transaction.activity_id}`}
-              </div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>תאריך</Text>
+              <Text style={{ color: cssVar.text.primary }}>{formatDate(transaction.transaction_date)}</Text>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: muted }}>תאריך פעילות</div>
-              <div>{formatDate(transaction.activity_date)}</div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>סוג</Text>
+              <Badge
+                color={transaction.type === "income" ? "emerald" : "rose"}
+                size="sm"
+                className="mt-1"
+              >
+                {transaction.type === "income" ? "הכנסה" : "הוצאה"}
+              </Badge>
             </div>
             <div>
-              <div style={{ fontSize: 12, color: muted }}>עונה</div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>קטגוריה</Text>
+              <Text className="font-semibold" style={{ color: cssVar.text.primary }}>
+                {transaction.category}
+              </Text>
+            </div>
+            <div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>סכום</Text>
+              <Text
+                className="font-bold"
+                style={{
+                  color: transaction.type === "income"
+                    ? cssVar.status.success
+                    : cssVar.status.danger,
+                }}
+              >
+                {formatCurrency(transaction.amount)}
+              </Text>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Text className="text-xs" style={{ color: cssVar.text.muted }}>תיאור</Text>
+            <Text className="font-semibold" style={{ color: cssVar.text.primary }}>
+              {transaction.description}
+            </Text>
+          </div>
+        </Card>
+
+        {/* שיוך לפעילות */}
+        <Card className="mb-4">
+          <Text
+            className="text-sm font-semibold mb-3 pb-2 border-b"
+            style={{ color: cssVar.text.muted, borderColor: cssVar.border.muted }}
+          >
+            שיוך לפעילות
+          </Text>
+          {transaction.activity_id ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                {transaction.season_name
-                  ? `${transaction.season_name} · ${
-                      transaction.season_year ?? ""
-                    }`
-                  : "—"}
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>פעילות</Text>
+                <Text className="font-semibold" style={{ color: cssVar.text.primary }}>
+                  {transaction.activity_kind || `פעילות #${transaction.activity_id}`}
+                </Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>תאריך פעילות</Text>
+                <Text style={{ color: cssVar.text.primary }}>
+                  {formatDate(transaction.activity_date)}
+                </Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>עונה</Text>
+                <Text style={{ color: cssVar.text.primary }}>
+                  {transaction.season_name
+                    ? `${transaction.season_name} · ${transaction.season_year ?? ""}`
+                    : "—"}
+                </Text>
               </div>
             </div>
-          </div>
-        ) : (
-          <div style={{ fontSize: 13, color: muted }}>לא משויכת לפעילות</div>
-        )}
-      </div>
+          ) : (
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+              לא משויכת לפעילות
+            </Text>
+          )}
+        </Card>
 
-      <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-        <h4
-          style={{
-            margin: "0 0 12px 0",
-            fontSize: 14,
-            color: muted,
-            borderBottom: `2px solid ${colors.borderMuted}`,
-            paddingBottom: spacing.xs,
-          }}
-        >
-          פרטי תשלום
-        </h4>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>שולם על ידי</div>
-            <div>{transaction.paid_by || "—"}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: muted }}>חשבונית</div>
+        {/* פרטי תשלום */}
+        <Card className="mb-4">
+          <Text
+            className="text-sm font-semibold mb-3 pb-2 border-b"
+            style={{ color: cssVar.text.muted, borderColor: cssVar.border.muted }}
+          >
+            פרטי תשלום
+          </Text>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              {transaction.has_invoice
-                ? transaction.invoice_number
-                  ? `#${transaction.invoice_number}`
-                  : "קיימת"
-                : "—"}
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>שולם על ידי</Text>
+              <Text style={{ color: cssVar.text.primary }}>{transaction.paid_by || "—"}</Text>
+            </div>
+            <div>
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>חשבונית</Text>
+              <Text style={{ color: cssVar.text.primary }}>
+                {transaction.has_invoice
+                  ? transaction.invoice_number
+                    ? `#${transaction.invoice_number}`
+                    : "קיימת"
+                  : "—"}
+              </Text>
             </div>
           </div>
-        </div>
-        <div style={{ marginTop: spacing.sm }}>
-          <div style={{ fontSize: 12, color: muted }}>פרטי תשלום</div>
-          <div style={{ whiteSpace: "pre-wrap" }}>
-            {transaction.payment_details || "—"}
+          <div className="mt-3">
+            <Text className="text-xs" style={{ color: cssVar.text.muted }}>פרטי תשלום</Text>
+            <Text className="whitespace-pre-wrap" style={{ color: cssVar.text.secondary }}>
+              {transaction.payment_details || "—"}
+            </Text>
           </div>
-        </div>
-      </div>
+        </Card>
 
-      {transaction.donor_shares?.length ? (
-        <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-          <h4
-            style={{
-              margin: "0 0 12px 0",
-              fontSize: 14,
-              color: muted,
-              borderBottom: `2px solid ${colors.borderMuted}`,
-              paddingBottom: spacing.xs,
-            }}
-          >
-            תורמים משויכים
-          </h4>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
-            {transaction.donor_shares.map((share) => (
-              <div
-                key={share.donor_id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: spacing.sm,
-                  borderRadius: radii.card,
-                  border: `1px solid ${colors.borderMuted}`,
-                  background: colors.surfaceAlt,
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 600 }}>
-                    {share.donor_name || "—"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: muted,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {share.donor_id}
-                  </div>
-                </div>
-                <div style={{ fontWeight: 700 }}>
-                  {formatCurrency(share.amount)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {(transaction.attachment_name && transaction.attachment_data) ||
-      transaction.notes ? (
-        <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-          {transaction.notes && (
-            <>
-              <h4
-                style={{
-                  margin: "0 0 12px 0",
-                  fontSize: 14,
-                  color: muted,
-                  borderBottom: `2px solid ${colors.borderMuted}`,
-                  paddingBottom: spacing.xs,
-                }}
-              >
-                הערות
-              </h4>
-              <div
-                style={{
-                  whiteSpace: "pre-wrap",
-                  marginBottom: transaction.attachment_name ? spacing.md : 0,
-                }}
-              >
-                {transaction.notes}
-              </div>
-            </>
-          )}
-          {transaction.attachment_name && transaction.attachment_data && (
-            <a
-              href={`data:${
-                transaction.attachment_mime || "application/octet-stream"
-              };base64,${transaction.attachment_data}`}
-              download={transaction.attachment_name}
-              style={{ color: colors.accent, fontSize: 13 }}
+        {/* תורמים משויכים */}
+        {transaction.donor_shares?.length ? (
+          <Card className="mb-4">
+            <Text
+              className="text-sm font-semibold mb-3 pb-2 border-b"
+              style={{ color: cssVar.text.muted, borderColor: cssVar.border.muted }}
             >
-              הורד/י קובץ מצורף ({transaction.attachment_name})
-            </a>
-          )}
-        </div>
-      ) : null}
-    </Modal>
+              תורמים משויכים
+            </Text>
+            <div className="space-y-2">
+              {transaction.donor_shares.map((share) => (
+                <div
+                  key={share.donor_id}
+                  className="flex justify-between items-center p-3 rounded-lg border"
+                  style={{
+                    borderColor: cssVar.border.muted,
+                    backgroundColor: cssVar.bg.secondary,
+                  }}
+                >
+                  <div>
+                    <Text className="font-semibold" style={{ color: cssVar.text.primary }}>
+                      {share.donor_name || "—"}
+                    </Text>
+                    <Text className="text-xs font-mono" style={{ color: cssVar.text.muted }}>
+                      {share.donor_id}
+                    </Text>
+                  </div>
+                  <Text className="font-bold" style={{ color: cssVar.text.primary }}>
+                    {formatCurrency(share.amount)}
+                  </Text>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : null}
+
+        {/* הערות וקובץ */}
+        {(transaction.attachment_name && transaction.attachment_data) ||
+        transaction.notes ? (
+          <Card>
+            {transaction.notes && (
+              <>
+                <Text
+                  className="text-sm font-semibold mb-3 pb-2 border-b"
+                  style={{ color: cssVar.text.muted, borderColor: cssVar.border.muted }}
+                >
+                  הערות
+                </Text>
+                <Text
+                  className="whitespace-pre-wrap mb-4"
+                  style={{ color: cssVar.text.secondary }}
+                >
+                  {transaction.notes}
+                </Text>
+              </>
+            )}
+            {transaction.attachment_name && transaction.attachment_data && (
+              <a
+                href={`data:${
+                  transaction.attachment_mime || "application/octet-stream"
+                };base64,${transaction.attachment_data}`}
+                download={transaction.attachment_name}
+                style={{ color: cssVar.brand.primary }}
+                className="text-sm"
+              >
+                הורד/י קובץ מצורף ({transaction.attachment_name})
+              </a>
+            )}
+          </Card>
+        ) : null}
+      </DialogPanel>
+    </Dialog>
   );
 }
-
-
-

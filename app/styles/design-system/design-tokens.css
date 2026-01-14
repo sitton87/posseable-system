@@ -1,0 +1,488 @@
+/**
+ * PosSEAble Design System - Design Tokens
+ * ========================================
+ * 
+ * קובץ זה מגדיר את כל ה-Design Tokens של המערכת.
+ * שינוי ערך כאן ישפיע על כל המערכת.
+ * 
+ * שימוש: @import בתוך globals.css
+ */
+
+:root {
+  /* ===================================================================
+     COLORS - צבעים
+     =================================================================== */
+  
+  /* --- Text Colors - צבעי טקסט --- */
+  --color-text-primary: #1e293b;      /* Slate-800 - כותרות ראשיות */
+  --color-text-secondary: #475569;    /* Slate-600 - טקסט רגיל */
+  --color-text-muted: #64748b;        /* Slate-500 - טקסט משני */
+  --color-text-subtle: #94a3b8;       /* Slate-400 - טקסט עמום */
+  --color-text-inverted: #ffffff;     /* טקסט על רקע כהה */
+  
+  /* --- Background Colors - צבעי רקע --- */
+  --color-bg-primary: #ffffff;        /* רקע ראשי */
+  --color-bg-secondary: #f8fafc;      /* Slate-50 - רקע משני */
+  --color-bg-tertiary: #f1f5f9;       /* Slate-100 - רקע שלישוני */
+  --color-bg-hover: #e2e8f0;          /* Slate-200 - רקע בהובר */
+  --color-bg-active: #cbd5e1;         /* Slate-300 - רקע פעיל */
+  
+  /* --- Brand Colors - צבעי מותג --- */
+  --color-brand-primary: #3b82f6;     /* Blue-500 - כחול ראשי */
+  --color-brand-primary-hover: #2563eb; /* Blue-600 */
+  --color-brand-primary-active: #1d4ed8; /* Blue-700 */
+  --color-brand-primary-light: #eff6ff; /* Blue-50 - רקע כחול בהיר */
+  --color-brand-primary-muted: #dbeafe; /* Blue-100 */
+  --color-brand-primary-text: #1e40af; /* Blue-800 - טקסט כחול */
+  
+  /* --- Semantic Colors - צבעים סמנטיים --- */
+  
+  /* Success - הצלחה */
+  --color-success: #22c55e;           /* Green-500 */
+  --color-success-hover: #16a34a;     /* Green-600 */
+  --color-success-light: #dcfce7;     /* Green-100 */
+  --color-success-text: #15803d;      /* Green-700 */
+  
+  /* Warning - אזהרה */
+  --color-warning: #f59e0b;           /* Amber-500 */
+  --color-warning-hover: #d97706;     /* Amber-600 */
+  --color-warning-light: #fef3c7;     /* Amber-100 */
+  --color-warning-text: #b45309;      /* Amber-700 */
+  
+  /* Danger - סכנה/שגיאה */
+  --color-danger: #ef4444;            /* Red-500 */
+  --color-danger-hover: #dc2626;      /* Red-600 */
+  --color-danger-light: #fee2e2;      /* Red-100 */
+  --color-danger-text: #b91c1c;       /* Red-700 */
+  
+  /* Info - מידע */
+  --color-info: #0ea5e9;              /* Sky-500 */
+  --color-info-hover: #0284c7;        /* Sky-600 */
+  --color-info-light: #e0f2fe;        /* Sky-100 */
+  --color-info-text: #0369a1;         /* Sky-700 */
+  
+  /* --- Border Colors - צבעי גבול --- */
+  --color-border-primary: #e2e8f0;    /* Slate-200 - גבול רגיל */
+  --color-border-secondary: #cbd5e1;  /* Slate-300 - גבול בולט */
+  --color-border-muted: #f1f5f9;      /* Slate-100 - גבול עדין */
+  --color-border-focus: #3b82f6;      /* Blue-500 - גבול פוקוס */
+  
+  /* --- Overlay - שכבות כיסוי --- */
+  --color-overlay: rgba(15, 23, 42, 0.5);  /* רקע מודל */
+  --color-overlay-light: rgba(15, 23, 42, 0.3);
+  
+  /* ===================================================================
+     TYPOGRAPHY - טיפוגרפיה
+     =================================================================== */
+  
+  /* --- Font Families - משפחות פונט --- */
+  --font-family-primary: "Calibri", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-family-heading: "Calibri", "Segoe UI", sans-serif;
+  --font-family-mono: "Consolas", "Monaco", "Courier New", monospace;
+  
+  /* --- Font Sizes - גדלי פונט --- */
+  --font-size-xs: 0.75rem;            /* 12px - labels קטנים */
+  --font-size-sm: 0.875rem;           /* 14px - טקסט משני */
+  --font-size-base: 1rem;             /* 16px - טקסט רגיל */
+  --font-size-lg: 1.125rem;           /* 18px - כותרות משנה */
+  --font-size-xl: 1.25rem;            /* 20px - כותרות */
+  --font-size-2xl: 1.5rem;            /* 24px - כותרות גדולות */
+  --font-size-3xl: 1.875rem;          /* 30px - כותרות ראשיות */
+  --font-size-4xl: 2.25rem;           /* 36px - hero */
+  
+  /* --- Font Weights - משקלי פונט --- */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  
+  /* --- Line Heights - גובה שורה --- */
+  --line-height-none: 1;
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+  
+  /* --- Letter Spacing - ריווח אותיות --- */
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;     /* לכותרות uppercase */
+  
+  /* ===================================================================
+     SPACING - ריווח
+     =================================================================== */
+  
+  --spacing-0: 0;
+  --spacing-0-5: 0.125rem;            /* 2px */
+  --spacing-1: 0.25rem;               /* 4px */
+  --spacing-1-5: 0.375rem;            /* 6px */
+  --spacing-2: 0.5rem;                /* 8px */
+  --spacing-2-5: 0.625rem;            /* 10px */
+  --spacing-3: 0.75rem;               /* 12px */
+  --spacing-3-5: 0.875rem;            /* 14px */
+  --spacing-4: 1rem;                  /* 16px */
+  --spacing-5: 1.25rem;               /* 20px */
+  --spacing-6: 1.5rem;                /* 24px */
+  --spacing-7: 1.75rem;               /* 28px */
+  --spacing-8: 2rem;                  /* 32px */
+  --spacing-9: 2.25rem;               /* 36px */
+  --spacing-10: 2.5rem;               /* 40px */
+  --spacing-12: 3rem;                 /* 48px */
+  --spacing-14: 3.5rem;               /* 56px */
+  --spacing-16: 4rem;                 /* 64px */
+  --spacing-20: 5rem;                 /* 80px */
+  --spacing-24: 6rem;                 /* 96px */
+  
+  /* ===================================================================
+     BORDERS - גבולות
+     =================================================================== */
+  
+  /* --- Border Widths - עובי גבול --- */
+  --border-width-none: 0;
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 4px;
+  
+  /* --- Border Radius - פינות מעוגלות --- */
+  --radius-none: 0;
+  --radius-xs: 0.125rem;              /* 2px */
+  --radius-sm: 0.25rem;               /* 4px - inputs קטנים */
+  --radius-md: 0.375rem;              /* 6px - buttons */
+  --radius-lg: 0.5rem;                /* 8px - cards */
+  --radius-xl: 0.75rem;               /* 12px - modals */
+  --radius-2xl: 1rem;                 /* 16px - cards גדולים */
+  --radius-3xl: 1.5rem;               /* 24px */
+  --radius-full: 9999px;              /* pills, avatars */
+  
+  /* ===================================================================
+     SHADOWS - צללים
+     =================================================================== */
+  
+  --shadow-none: none;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08), 0 4px 6px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  
+  /* Colored shadows */
+  --shadow-brand: 0 4px 14px rgba(59, 130, 246, 0.25);
+  --shadow-success: 0 4px 14px rgba(34, 197, 94, 0.25);
+  --shadow-danger: 0 4px 14px rgba(239, 68, 68, 0.25);
+  
+  /* ===================================================================
+     TRANSITIONS - מעברים
+     =================================================================== */
+  
+  /* --- Durations - משכים --- */
+  --duration-instant: 0ms;
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  --duration-slowest: 700ms;
+  
+  /* --- Easing Functions - פונקציות האטה --- */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* --- Combined Transitions - מעברים משולבים --- */
+  --transition-fast: var(--duration-fast) var(--ease-in-out);
+  --transition-normal: var(--duration-normal) var(--ease-in-out);
+  --transition-slow: var(--duration-slow) var(--ease-in-out);
+  
+  /* ===================================================================
+     Z-INDEX - שכבות
+     =================================================================== */
+  
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-navbar: 40;
+  --z-modal-backdrop: 50;
+  --z-modal: 60;
+  --z-popover: 70;
+  --z-tooltip: 80;
+  --z-notification: 90;
+  --z-max: 9999;
+  
+  /* ===================================================================
+     LAYOUT - פריסה
+     =================================================================== */
+  
+  /* --- Navbar --- */
+  --navbar-width: 200px;
+  --navbar-width-collapsed: 72px;
+  --navbar-width-min: 150px;
+  --navbar-width-max: 250px;
+  --navbar-transition: var(--duration-slow) var(--ease-in-out);
+  
+  /* --- Content Area --- */
+  --content-max-width: 1400px;
+  --content-padding: var(--spacing-6);
+  --content-padding-mobile: var(--spacing-4);
+  
+  /* --- Page Header --- */
+  --page-header-height: 64px;
+  --page-header-padding: var(--spacing-4) var(--spacing-6);
+  
+  /* ===================================================================
+     COMPONENTS - קומפוננטות
+     =================================================================== */
+  
+  /* --- Cards - כרטיסים --- */
+  
+  /* Base Card */
+  --card-padding: var(--spacing-4);
+  --card-padding-sm: var(--spacing-3);
+  --card-padding-lg: var(--spacing-6);
+  --card-radius: var(--radius-lg);
+  --card-shadow: var(--shadow-sm);
+  --card-shadow-hover: var(--shadow-md);
+  --card-border: var(--border-width-thin) solid var(--color-border-primary);
+  --card-bg: var(--color-bg-primary);
+  
+  /* Card Header */
+  --card-header-padding-x: var(--spacing-4);
+  --card-header-padding-y: var(--spacing-3);
+  --card-header-bg: var(--color-bg-secondary);
+  --card-header-border: var(--border-width-thin) solid var(--color-border-muted);
+  
+  /* Card Body */
+  --card-body-padding: var(--spacing-4);
+  --card-body-gap: var(--spacing-3);
+  
+  /* Card Footer */
+  --card-footer-padding-x: var(--spacing-4);
+  --card-footer-padding-y: var(--spacing-3);
+  --card-footer-bg: var(--color-bg-secondary);
+  --card-footer-border: var(--border-width-thin) solid var(--color-border-muted);
+  
+  /* Card Info Row (שורת מידע כמו "טלפון: 050-1234567") */
+  --card-info-row-padding-y: var(--spacing-2);
+  --card-info-row-border: var(--border-width-thin) solid var(--color-border-muted);
+  --card-info-label-color: var(--color-text-muted);
+  --card-info-label-size: var(--font-size-sm);
+  --card-info-value-color: var(--color-text-primary);
+  --card-info-value-size: var(--font-size-sm);
+  --card-info-gap: var(--spacing-2);
+  
+  /* Card Title */
+  --card-title-color: var(--color-text-primary);
+  --card-title-size: var(--font-size-lg);
+  --card-title-weight: var(--font-weight-semibold);
+  --card-subtitle-color: var(--color-text-muted);
+  --card-subtitle-size: var(--font-size-sm);
+  
+  /* Card States - מצבים */
+  --card-selected-border: var(--border-width-medium) solid var(--color-brand-primary);
+  --card-selected-bg: var(--color-brand-primary-light);
+  --card-disabled-opacity: 0.6;
+  
+  /* Card Status Indicators - אינדיקטורים של סטטוס */
+  --card-status-active-color: var(--color-success);
+  --card-status-inactive-color: var(--color-text-subtle);
+  --card-status-warning-color: var(--color-warning);
+  --card-status-danger-color: var(--color-danger);
+  --card-status-dot-size: 8px;
+  
+  /* --- Modals - חלונות מודל --- */
+  --modal-padding: var(--spacing-6);
+  --modal-radius: var(--radius-xl);
+  --modal-shadow: var(--shadow-xl);
+  --modal-width-xs: 320px;
+  --modal-width-sm: 400px;
+  --modal-width-md: 500px;
+  --modal-width-lg: 700px;
+  --modal-width-xl: 900px;
+  --modal-width-full: calc(100vw - var(--spacing-8));
+  
+  /* --- Tables - טבלאות --- */
+  --table-cell-padding-x: var(--spacing-4);
+  --table-cell-padding-y: var(--spacing-3);
+  --table-header-bg: var(--color-bg-secondary);
+  --table-row-hover-bg: var(--color-bg-tertiary);
+  --table-border: var(--border-width-thin) solid var(--color-border-primary);
+  
+  /* --- Forms - טפסים --- */
+  --input-height: 2.5rem;             /* 40px */
+  --input-height-sm: 2rem;            /* 32px */
+  --input-height-lg: 3rem;            /* 48px */
+  --input-padding-x: var(--spacing-3);
+  --input-padding-y: var(--spacing-2);
+  --input-radius: var(--radius-md);
+  --input-border: var(--border-width-thin) solid var(--color-border-primary);
+  --input-border-focus: var(--border-width-medium) solid var(--color-border-focus);
+  --input-bg: var(--color-bg-primary);
+  --input-bg-disabled: var(--color-bg-secondary);
+  
+  /* --- Buttons - כפתורים --- */
+  --button-height: 2.5rem;            /* 40px */
+  --button-height-sm: 2rem;           /* 32px */
+  --button-height-lg: 3rem;           /* 48px */
+  --button-padding-x: var(--spacing-4);
+  --button-padding-x-sm: var(--spacing-3);
+  --button-padding-x-lg: var(--spacing-6);
+  --button-radius: var(--radius-md);
+  --button-font-weight: var(--font-weight-medium);
+  
+  /* --- Badges - תגיות --- */
+  --badge-padding-x: var(--spacing-2);
+  --badge-padding-y: var(--spacing-0-5);
+  --badge-radius: var(--radius-full);
+  --badge-font-size: var(--font-size-xs);
+  --badge-font-weight: var(--font-weight-medium);
+  
+  /* --- Icons - אייקונים --- */
+  --icon-size-xs: 14px;
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --icon-size-lg: 24px;
+  --icon-size-xl: 32px;
+  --icon-size-2xl: 40px;
+  
+  /* --- Avatar - תמונת פרופיל --- */
+  --avatar-size-xs: 24px;
+  --avatar-size-sm: 32px;
+  --avatar-size-md: 40px;
+  --avatar-size-lg: 48px;
+  --avatar-size-xl: 64px;
+  --avatar-radius: var(--radius-full);
+  
+  /* --- Draft List - רשימת טיוטות --- */
+  --draft-border-color: #8bd4a1;
+  --draft-surface-color: #e6f5ec;
+  --draft-badge-bg: var(--color-success);
+  --draft-badge-color: var(--color-text-inverted);
+  --draft-padding: var(--spacing-3);
+  --draft-radius: var(--radius-md);
+  --draft-row-padding-y: var(--spacing-2);
+  --draft-title-size: var(--font-size-sm);
+  --draft-title-weight: var(--font-weight-semibold);
+  --draft-subtitle-size: var(--font-size-xs);
+  --draft-subtitle-color: var(--color-text-muted);
+  
+  /* --- Tasks - משימות --- */
+  
+  /* Task Card */
+  --task-card-bg: var(--color-bg-primary);
+  --task-card-bg-completed: var(--color-bg-secondary);
+  --task-card-border: var(--border-width-thin) solid var(--color-border-muted);
+  --task-card-radius: var(--radius-lg);
+  --task-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --task-card-opacity-completed: 0.7;
+  
+  /* Task Card Header */
+  --task-header-padding: var(--spacing-2) var(--spacing-3);
+  --task-header-bg: rgba(249, 250, 251, 0.5);
+  --task-header-border: var(--border-width-thin) solid var(--color-border-primary);
+  --task-title-size: 15px;
+  --task-title-weight: var(--font-weight-semibold);
+  
+  /* Task Card Body */
+  --task-body-padding: var(--spacing-3);
+  --task-body-font-size: var(--font-size-sm);
+  --task-body-line-height: var(--line-height-relaxed);
+  
+  /* Task Card Footer */
+  --task-footer-padding: var(--spacing-1) var(--spacing-5);
+  --task-footer-border: var(--border-width-thin) solid var(--color-border-primary);
+  --task-action-font-size: var(--font-size-xs);
+  --task-action-gap: var(--spacing-3);
+  
+  /* Task Status Colors */
+  --task-status-not-started-bg: #f3f4f6;
+  --task-status-not-started-text: #374151;
+  --task-status-open-bg: #fef3c7;
+  --task-status-open-text: #92400e;
+  --task-status-in-progress-bg: #e0f2fe;
+  --task-status-in-progress-text: #075985;
+  --task-status-postponed-bg: #f3e8ff;
+  --task-status-postponed-text: #6b21a8;
+  --task-status-done-bg: #dcfce7;
+  --task-status-done-text: #166534;
+  --task-status-cancelled-bg: #fee2e2;
+  --task-status-cancelled-text: #991b1b;
+  
+  /* Task Due Date */
+  --task-due-date-bg: rgba(0, 0, 0, 0.04);
+  --task-due-date-color: var(--color-text-muted);
+  --task-due-date-overdue-bg: rgba(239, 68, 68, 0.1);
+  --task-due-date-overdue-color: var(--color-danger);
+  --task-due-date-font-size: var(--font-size-xs);
+  --task-due-date-radius: var(--radius-full);
+  
+  /* Task List Item (compact view) */
+  --task-list-item-padding: var(--spacing-2) var(--spacing-3);
+  --task-list-item-gap: var(--spacing-3);
+  --task-list-item-radius: var(--radius-md);
+  
+  /* Task Metadata */
+  --task-meta-font-size: var(--font-size-xs);
+  --task-meta-color: var(--color-text-muted);
+  --task-meta-gap: var(--spacing-3);
+  
+  /* ===================================================================
+     BREAKPOINTS - נקודות שבירה (לרפרנס בלבד - Tailwind מנהל את אלה)
+     =================================================================== */
+  
+  /* 
+   * sm: 640px
+   * md: 768px
+   * lg: 1024px
+   * xl: 1280px
+   * 2xl: 1536px
+   */
+}
+
+/* ===================================================================
+   DARK MODE - מצב כהה (לעתיד)
+   =================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Text Colors */
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-text-subtle: #64748b;
+    --color-text-inverted: #0f172a;
+    
+    /* Background Colors */
+    --color-bg-primary: #0f172a;
+    --color-bg-secondary: #1e293b;
+    --color-bg-tertiary: #334155;
+    --color-bg-hover: #475569;
+    --color-bg-active: #64748b;
+    
+    /* Border Colors */
+    --color-border-primary: #334155;
+    --color-border-secondary: #475569;
+    --color-border-muted: #1e293b;
+    
+    /* Overlay */
+    --color-overlay: rgba(0, 0, 0, 0.7);
+    --color-overlay-light: rgba(0, 0, 0, 0.5);
+    
+    /* Shadows - darker in dark mode */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+    
+    /* Card */
+    --card-bg: var(--color-bg-secondary);
+  }
+}
+

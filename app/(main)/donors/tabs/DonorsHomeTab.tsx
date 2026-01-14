@@ -1,15 +1,29 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button, Card } from "@/app/components/ui";
 import {
-  StatCardGrid,
+  Card,
+  Grid,
+  Text,
+  Metric,
+  Flex,
+  Icon,
+  Title,
+  Button,
+} from "@tremor/react";
+import {
+  HeartIcon,
+  CurrencyDollarIcon,
+  ArrowTrendingUpIcon,
+  ChartBarIcon,
+} from "@heroicons/react/24/outline";
+import {
   TasksBoard,
   TaskEntityOption,
 } from "@/app/components/shared";
-import { colors, spacing, radii } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 import { HomeTabProps } from "../types";
-import { formatCurrency, formatDate, muted } from "../utils";
+import { formatCurrency, formatDate } from "../utils";
 
 export default function DonorsHomeTab({
   stats,
@@ -17,22 +31,6 @@ export default function DonorsHomeTab({
   onRefresh,
   loading,
 }: HomeTabProps) {
-  const statCards = [
-    { label: 'סה"כ תורמים', value: stats.total_donors },
-    {
-      label: 'סה"כ תרומות',
-      value: formatCurrency(stats.total_donations),
-    },
-    {
-      label: "התרומה הגבוהה ביותר",
-      value: formatCurrency(stats.highest_donation),
-    },
-    {
-      label: "ממוצע תרומה",
-      value: formatCurrency(stats.average_donation),
-    },
-  ];
-
   const donorEntities: TaskEntityOption[] = donors.map((d) => ({
     id: d.national_id,
     name: d.full_name,
@@ -52,60 +50,130 @@ export default function DonorsHomeTab({
   }, [donors]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="space-y-6">
+      {/* Header */}
       <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: spacing.sm,
-            marginBottom: spacing.md,
-          }}
-        >
+        <Flex justifyContent="between" alignItems="center" className="flex-wrap gap-4">
           <div>
-            <h3 style={{ margin: 0 }}>דף הבית · תורמים</h3>
-            <p style={{ margin: "4px 0 0", color: muted, fontSize: 13 }}>
+            <Title className="text-xl font-bold" style={{ color: cssVar.text.primary }}>
+              דף הבית · תורמים
+            </Title>
+            <Text style={{ color: cssVar.text.muted }}>
               מבט על בריאות מערך התורמים ומעקב משימות.
-            </p>
+            </Text>
           </div>
           <Button variant="secondary" onClick={onRefresh} disabled={loading}>
             רענן נתונים
           </Button>
-        </div>
-        <StatCardGrid stats={statCards} />
+        </Flex>
       </Card>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: spacing.lg,
-        }}
-      >
+      {/* KPI Cards */}
+      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6">
+        <Card decoration="top" decorationColor="rose">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                סה״כ תורמים
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {stats.total_donors}
+              </Metric>
+            </div>
+            <Icon icon={HeartIcon} variant="light" size="lg" color="rose" />
+          </Flex>
+          <Flex className="mt-4">
+            <Text className="text-sm" style={{ color: cssVar.text.secondary }}>
+              פעילים
+            </Text>
+            <Text className="font-bold" style={{ color: cssVar.status.success }}>
+              {donors.filter(d => d.is_active).length}
+            </Text>
+          </Flex>
+        </Card>
+
+        <Card decoration="top" decorationColor="emerald">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                סה״כ תרומות
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {formatCurrency(stats.total_donations)}
+              </Metric>
+            </div>
+            <Icon icon={CurrencyDollarIcon} variant="light" size="lg" color="emerald" />
+          </Flex>
+        </Card>
+
+        <Card decoration="top" decorationColor="blue">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                התרומה הגבוהה ביותר
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {formatCurrency(stats.highest_donation)}
+              </Metric>
+            </div>
+            <Icon icon={ArrowTrendingUpIcon} variant="light" size="lg" color="blue" />
+          </Flex>
+        </Card>
+
+        <Card decoration="top" decorationColor="amber">
+          <Flex alignItems="start">
+            <div>
+              <Text
+                className="text-sm font-medium uppercase tracking-wide"
+                style={{ color: cssVar.text.muted }}
+              >
+                ממוצע תרומה
+              </Text>
+              <Metric
+                className="text-3xl font-bold mt-1"
+                style={{ color: cssVar.text.primary }}
+              >
+                {formatCurrency(stats.average_donation)}
+              </Metric>
+            </div>
+            <Icon icon={ChartBarIcon} variant="light" size="lg" color="amber" />
+          </Flex>
+        </Card>
+      </Grid>
+
+      {/* Tasks and Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
         <TasksBoard
           entityType="donor"
           entities={donorEntities}
           title="משימות ופתקים (תורמים)"
         />
 
-        <Card style={{ padding: spacing.lg }}>
-          <h4 style={{ margin: "0 0 16px 0" }}>תרומות אחרונות</h4>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: spacing.sm,
-            }}
-          >
+        <Card>
+          <Title className="mb-4">תרומות אחרונות</Title>
+          <div className="flex flex-col gap-3">
             {recentActivity.length === 0 ? (
               <div
-                style={{
-                  color: muted,
-                  textAlign: "center",
-                  padding: spacing.md,
-                }}
+                className="text-center py-6"
+                style={{ color: cssVar.text.muted }}
               >
                 אין פעילות תרומות רשומה.
               </div>
@@ -113,28 +181,22 @@ export default function DonorsHomeTab({
               recentActivity.map((donor) => (
                 <div
                   key={donor.national_id}
-                  style={{
-                    padding: spacing.sm,
-                    border: `1px solid ${colors.borderMuted}`,
-                    borderRadius: radii.card,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
+                  className="p-3 border rounded-lg flex justify-between items-center transition-colors hover:bg-tremor-background-subtle"
+                  style={{ borderColor: cssVar.border.muted }}
                 >
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>
+                    <div className="font-semibold text-sm" style={{ color: cssVar.text.primary }}>
                       {donor.full_name}
                     </div>
-                    <div style={{ fontSize: 12, color: muted }}>
+                    <div className="text-xs" style={{ color: cssVar.text.muted }}>
                       {donor.organization || "פרטי"}
                     </div>
                   </div>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>
+                  <div className="text-left">
+                    <div className="text-sm font-medium" style={{ color: cssVar.text.primary }}>
                       {formatDate(donor.last_donation_date)}
                     </div>
-                    <div style={{ fontSize: 11, color: muted }}>
+                    <div className="text-xs" style={{ color: cssVar.text.muted }}>
                       תאריך תרומה
                     </div>
                   </div>
@@ -147,6 +209,3 @@ export default function DonorsHomeTab({
     </div>
   );
 }
-
-
-

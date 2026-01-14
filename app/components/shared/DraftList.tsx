@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Button } from "@/app/components/ui";
 import type { DraftEntry } from "@/app/hooks/useDraftManager";
-import { colors, spacing } from "@/app/styles/foundations";
+import { draft as draftPresets, cssVar, numericValues } from "@/app/styles/design-system";
 
 type DraftListProps<TPayload> = {
   drafts: DraftEntry<TPayload>[];
@@ -39,53 +39,39 @@ export function DraftList<TPayload>({
   }
 
   return (
-    <div
-      style={{
-        border: `1px solid ${draftBorderColor}`,
-        borderRadius: spacing.md,
-        padding: spacing.md,
-        background: draftSurfaceColor,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.xs,
-        }}
-      >
-        <strong>{title}</strong>
-        {description && (
-          <p style={{ margin: 0, color: colors.textMuted, fontSize: 12 }}>
-            {description}
-          </p>
-        )}
+    <div className={draftPresets.container} dir="rtl">
+      <div className={draftPresets.header}>
+        <div className="flex items-center gap-2">
+          <strong className={draftPresets.title}>{title}</strong>
+          {description && (
+            <>
+              <span style={{ color: cssVar.border.primary, fontWeight: 300 }}>|</span>
+              <span className={draftPresets.description}>
+                {description}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      <div style={{ marginTop: spacing.sm }}>
+      <div style={{ marginTop: cssVar.spacing[3] }}>
         {drafts.length === 0 ? (
-          <div
-            style={{
-              padding: spacing.sm,
-              color: colors.textMuted,
-              textAlign: "center",
-            }}
-          >
+          <div className={draftPresets.empty}>
             {emptyMessage}
           </div>
         ) : (
           drafts.map((draft, index) => (
             <div
               key={draft.id}
+              className={draftPresets.row}
               style={{
-                ...draftRowStyle,
                 borderBottom:
                   index === drafts.length - 1
                     ? "none"
-                    : draftRowStyle.borderBottom,
+                    : undefined,
               }}
             >
-              <div style={{ minWidth: 0 }}>
+              <div className={draftPresets.rowContent}>
                 {renderDraftContent ? (
                   renderDraftContent(draft)
                 ) : (
@@ -97,15 +83,10 @@ export function DraftList<TPayload>({
                   />
                 )}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: spacing.sm,
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className={draftPresets.actions}>
                 {onResume && (
                   <Button
+                    size="sm"
                     onClick={() => onResume(draft.id)}
                     disabled={disableResume}
                   >
@@ -115,6 +96,7 @@ export function DraftList<TPayload>({
                 {onDelete && (
                   <Button
                     variant="secondary"
+                    size="sm"
                     onClick={() => onDelete(draft.id)}
                   >
                     🗑️
@@ -128,17 +110,6 @@ export function DraftList<TPayload>({
     </div>
   );
 }
-
-const draftBorderColor = "#8bd4a1";
-const draftSurfaceColor = "#e6f5ec";
-const draftRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: spacing.md,
-  padding: `${spacing.sm} 0`,
-  borderBottom: `1px solid ${draftBorderColor}`,
-};
 
 type DefaultDraftContentProps<TPayload> = {
   draft: DraftEntry<TPayload>;
@@ -159,36 +130,15 @@ function DefaultDraftContent<TPayload>({
     : new Date(draft.updatedAt).toLocaleString("he-IL");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.xs }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: spacing.sm,
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "2px 8px",
-            borderRadius: spacing.sm,
-            background: colors.success,
-            color: "#fff",
-            fontSize: 12,
-            fontWeight: 600,
-          }}
-        >
-          {badgeLabel}
-        </span>
-        <strong style={{ fontSize: 14 }}>{titleNode}</strong>
-      </div>
-      <p style={{ margin: 0, color: colors.textMuted, fontSize: 12 }}>
+    <div className="flex items-center gap-2" dir="rtl">
+      <span className={draftPresets.badge}>
+        {badgeLabel}
+      </span>
+      <strong className={draftPresets.itemTitle}>{titleNode}</strong>
+      <span style={{ color: cssVar.border.primary, fontWeight: 300 }}>|</span>
+      <span className={draftPresets.itemSubtitle}>
         {subtitleNode}
-      </p>
+      </span>
     </div>
   );
 }
-

@@ -1,13 +1,19 @@
 "use client";
 
-import { Button, Card } from "@/app/components/ui";
-import { StatCardGrid } from "@/app/components/shared";
 import {
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, radii, shadows, spacing } from "@/app/styles/foundations";
+  Card,
+  Title,
+  Text,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
+import { StatCardGrid } from "@/app/components/shared";
+import { cssVar } from "@/app/styles/design-system";
 import type { EquipmentItem, Warehouse } from "@/type";
 import type { InventoryDocumentSummary, StatSummary } from "../types";
 import { getConditionLabel } from "../constants";
@@ -15,7 +21,6 @@ import {
   formatCurrency,
   formatDate,
   formatNumber,
-  px,
 } from "../utils";
 
 type HomeTabProps = {
@@ -27,7 +32,6 @@ type HomeTabProps = {
   onNavigate: (tab: "catalog" | "inventory" | "structure") => void;
 };
 
-const muted = colors.textMuted;
 const ACTION_LABELS: Record<string, string> = {
   RECEIPT: "קליטת ספק",
   DONATION: "תרומה נכנסת",
@@ -79,184 +83,124 @@ export function HomeTab({
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-ds-spacing-5">
       <StatCardGrid stats={statCards} />
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: spacing.lg,
-        }}
-      >
-        <Card style={{ padding: px(spacing.md) }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: spacing.sm,
-            }}
-          >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-ds-spacing-5">
+        <Card className="p-ds-spacing-4">
+          <div className="flex justify-between items-center mb-ds-spacing-3">
             <div>
-              <h3 style={{ margin: 0 }}>פריטים בתיקון</h3>
-              <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+              <Title>פריטים בתיקון</Title>
+              <Text className="text-sm mt-1">
                 מעקב אחרי פריטים במצב "דורש תיקון".
-              </p>
+              </Text>
             </div>
             <Button
               variant="secondary"
               onClick={() => onNavigate("catalog")}
-              style={{ whiteSpace: "nowrap" }}
             >
               כל הפריטים
             </Button>
           </div>
           {repairItems.length === 0 ? (
-            <div
-              style={{
-                padding: px(spacing.md),
-                textAlign: "center",
-                color: muted,
-              }}
-            >
+            <div className="p-ds-spacing-4 text-center" style={{ color: cssVar.text.muted }}>
               אין פריטים שמסומנים לתיקון כרגע.
             </div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  ...tableStyle,
-                  width: "100%",
-                  tableLayout: "fixed",
-                  minWidth: "100%",
-                }}
-              >
-                <colgroup>
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "36%" }} />
-                  <col style={{ width: "20%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "16%" }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>מקט</th>
-                    <th style={tableHeaderStyle}>פריט</th>
-                    <th style={tableHeaderStyle}>ספק</th>
-                    <th style={tableHeaderStyle}>סטטוס</th>
-                    <th style={tableHeaderStyle}>תאריך יעד</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {repairItems.map((item) => (
-                    <tr key={item.id}>
-                      <td style={tableCellStyle}>{item.internal_sku || "—"}</td>
-                      <td style={{ ...tableCellStyle, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {item.name}
-                        {item.supplier_name && (
-                          <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>
-                            ספק: {item.supplier_name}
-                          </div>
-                        )}
-                      </td>
-                      <td style={tableCellStyle}>{item.supplier_name || "—"}</td>
-                      <td style={tableCellStyle}>
-                        {getConditionLabel(item.condition)}
-                      </td>
-                      <td style={tableCellStyle}>
-                        {item.updated_at
-                          ? formatDate(item.updated_at.toString())
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>מקט</TableHeaderCell>
+                  <TableHeaderCell>פריט</TableHeaderCell>
+                  <TableHeaderCell>ספק</TableHeaderCell>
+                  <TableHeaderCell>סטטוס</TableHeaderCell>
+                  <TableHeaderCell>תאריך יעד</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {repairItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.internal_sku || "—"}</TableCell>
+                    <TableCell>
+                      {item.name}
+                      {item.supplier_name && (
+                        <Text className="text-xs mt-0.5">
+                          ספק: {item.supplier_name}
+                        </Text>
+                      )}
+                    </TableCell>
+                    <TableCell>{item.supplier_name || "—"}</TableCell>
+                    <TableCell>
+                      {getConditionLabel(item.condition)}
+                    </TableCell>
+                    <TableCell>
+                      {item.updated_at
+                        ? formatDate(item.updated_at.toString())
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </Card>
 
-        <Card style={{ padding: px(spacing.md) }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: spacing.sm,
-            }}
-          >
+        <Card className="p-ds-spacing-4">
+          <div className="flex justify-between items-center mb-ds-spacing-3">
             <div>
-              <h3 style={{ margin: 0 }}>תעודות מלאי אחרונות</h3>
-              <p style={{ margin: 0, color: muted, fontSize: 13 }}>
+              <Title>תעודות מלאי אחרונות</Title>
+              <Text className="text-sm mt-1">
                 חמש התעודות האחרונות שנרשמו במערכת.
-              </p>
+              </Text>
             </div>
             <Button
               variant="secondary"
               onClick={() => onNavigate("inventory")}
-              style={{ whiteSpace: "nowrap" }}
             >
               ניהול מלאי
             </Button>
           </div>
           {documentsLoading ? (
-            <div
-              style={{
-                padding: px(spacing.md),
-                textAlign: "center",
-                color: muted,
-              }}
-            >
+            <div className="p-ds-spacing-4 text-center" style={{ color: cssVar.text.muted }}>
               טוען תעודות...
             </div>
           ) : recentDocuments.length === 0 ? (
-            <div
-              style={{
-                padding: px(spacing.md),
-                textAlign: "center",
-                color: muted,
-              }}
-            >
+            <div className="p-ds-spacing-4 text-center" style={{ color: cssVar.text.muted }}>
               אין תעודות להצגה.
             </div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-                <table style={{ ...tableStyle, minWidth: 520 }}>
-                <thead>
-                  <tr>
-                    <th style={tableHeaderStyle}>מספר תעודה</th>
-                      <th style={tableHeaderStyle}>סוג פעולה</th>
-                    <th style={tableHeaderStyle}>משתמש</th>
-                    <th style={tableHeaderStyle}>ערך כספי</th>
-                  </tr>
-                </thead>
-                <tbody>
-                    {recentDocuments.map((entry) => (
-                      <tr key={entry.id}>
-                        <td style={tableCellStyle}>
-                          {entry.document_number}
-                        </td>
-                        <td style={tableCellStyle}>
-                          {ACTION_LABELS[entry.action_type] ||
-                            entry.action_type}
-                        </td>
-                      <td style={tableCellStyle}>
-                          {entry.created_by_name || entry.created_by || "—"}
-                      </td>
-                      <td style={tableCellStyle}>
-                          {formatCurrency(entry.total_value)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>מספר תעודה</TableHeaderCell>
+                  <TableHeaderCell>סוג פעולה</TableHeaderCell>
+                  <TableHeaderCell>משתמש</TableHeaderCell>
+                  <TableHeaderCell>ערך כספי</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {recentDocuments.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>
+                      {entry.document_number}
+                    </TableCell>
+                    <TableCell>
+                      {ACTION_LABELS[entry.action_type] ||
+                        entry.action_type}
+                    </TableCell>
+                    <TableCell>
+                      {entry.created_by_name || entry.created_by || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(entry.total_value)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </Card>
       </div>
-
     </div>
   );
 }
-

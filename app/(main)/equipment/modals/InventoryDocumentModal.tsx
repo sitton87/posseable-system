@@ -1,15 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Modal, Button } from "@/app/components/ui";
 import {
-  inputStyle,
-  labelStyle,
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Select,
+  SelectItem,
+  Button,
+  Table,
+  TableHead,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import type { Donor, EquipmentItem, Supplier, Warehouse } from "@/type";
 import type {
   InventoryDocumentAction,
@@ -40,7 +48,6 @@ type InventoryDocumentModalProps = {
   escEnabled?: boolean;
 };
 
-const muted = colors.textMuted;
 const ACTION_OPTIONS: { value: InventoryDocumentAction; label: string }[] = [
   { value: "RECEIPT", label: "קליטת ספק" },
   { value: "DONATION", label: "תרומה נכנסת" },
@@ -223,358 +230,304 @@ export function InventoryDocumentModal({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(980px, 96vw)"
-      style={{ padding: spacing.xxl }}
-      escEnabled={escEnabled}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: spacing.md,
-        }}
-      >
-        <div>
-          <h3 style={{ margin: 0 }}>
-            {editingDocumentId
-              ? `עריכת תעודה #${editingDocumentNumber ?? ""}`.trim()
-              : "תעודת מלאי חדשה"}
-          </h3>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            התאריך יירשם אוטומטית בעת השמירה – מלא רק את סוג הפעולה והפרטים
-            הנדרשים.
-          </p>
-          <p style={{ margin: 0, color: muted, fontSize: 12 }}>
-            לאחר יצירה לא ניתן למחוק תעודות, רק לעדכן אותן.
-          </p>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-5xl">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <Title>
+              {editingDocumentId
+                ? `עריכת תעודה #${editingDocumentNumber ?? ""}`.trim()
+                : "תעודת מלאי חדשה"}
+            </Title>
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+              התאריך יירשם אוטומטית בעת השמירה – מלא רק את סוג הפעולה והפרטים
+              הנדרשים.
+            </Text>
+            <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+              לאחר יצירה לא ניתן למחוק תעודות, רק לעדכן אותן.
+            </Text>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              ✖ סגור
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting
+                ? "שומר..."
+                : editingDocumentId
+                ? "עדכון תעודה"
+                : "שמירת תעודה"}
+            </Button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: spacing.sm }}>
-          <Button variant="secondary" onClick={onClose}>
-            ✖ סגור
-          </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting
-              ? "שומר..."
-              : editingDocumentId
-              ? "עדכון תעודה"
-              : "שמירת תעודה"}
-          </Button>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+          <div>
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+              סוג פעולה
+            </Text>
+            <Select
+              value={formState.action_type}
+              onValueChange={(val) =>
+                handleActionChange(val as InventoryDocumentAction)
+              }
+            >
+              {ACTION_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </Select>
+          </div>
+
+          {allowsSupplier && (
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                ספק {requiresSupplier && <span style={{ color: cssVar.status.danger }}>*</span>}
+              </Text>
+              <Select
+                value={formState.supplier_identifier || undefined}
+                onValueChange={(val) =>
+                  handleFieldChange("supplier_identifier", val || "")
+                }
+                placeholder="בחר ספק"
+              >
+                {supplierOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          {requiresDonor && (
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                תורם <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <Select
+                value={formState.donor_national_id || undefined}
+                onValueChange={(val) =>
+                  handleFieldChange("donor_national_id", val || "")
+                }
+                placeholder="בחר תורם"
+              >
+                {donorOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          {requiresExternalParty && (
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                גורם חיצוני
+              </Text>
+              <TextInput
+                value={formState.external_party}
+                onChange={(e) =>
+                  handleFieldChange("external_party", e.target.value)
+                }
+                placeholder="שם הנתרם / הגוף המטפל"
+              />
+            </div>
+          )}
+
+          {actionType === "RECEIPT" && (
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                סוג תעודת ספק
+              </Text>
+              <TextInput
+                value={formState.supplier_document_type}
+                onChange={(e) =>
+                  handleFieldChange("supplier_document_type", e.target.value)
+                }
+                placeholder="לדוגמה: חשבונית / תעודת משלוח"
+              />
+            </div>
+          )}
+
+          <div className="col-span-full">
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+              הערות לתעודה
+            </Text>
+            <Textarea
+              value={formState.notes}
+              onChange={(e) => handleFieldChange("notes", e.target.value)}
+              rows={2}
+              placeholder="מידע נוסף שיופיע בתעודה"
+            />
+          </div>
         </div>
-      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: spacing.md,
-          marginBottom: spacing.lg,
-        }}
-      >
-        <label style={labelStyle}>
-          סוג פעולה
-          <select
-            value={formState.action_type}
-            onChange={(event) =>
-              handleActionChange(event.target.value as InventoryDocumentAction)
-            }
-            style={{ ...inputStyle, marginTop: spacing.xs }}
-          >
-            {ACTION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {allowsSupplier && (
-          <label style={labelStyle}>
-            ספק
-            <select
-              value={formState.supplier_identifier}
-              onChange={(event) =>
-                handleFieldChange("supplier_identifier", event.target.value)
-              }
-              style={{
-                ...inputStyle,
-                marginTop: spacing.xs,
-                borderColor: requiresSupplier ? colors.primary : undefined,
-              }}
-            >
-              <option value="">בחר ספק</option>
-              {supplierOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {requiresDonor && (
-          <label style={labelStyle}>
-            תורם
-            <select
-              value={formState.donor_national_id}
-              onChange={(event) =>
-                handleFieldChange("donor_national_id", event.target.value)
-              }
-              style={{
-                ...inputStyle,
-                marginTop: spacing.xs,
-                borderColor: colors.primary,
-              }}
-            >
-              <option value="">בחר תורם</option>
-              {donorOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {requiresExternalParty && (
-          <label style={labelStyle}>
-            גורם חיצוני
-            <input
-              type="text"
-              value={formState.external_party}
-              onChange={(event) =>
-                handleFieldChange("external_party", event.target.value)
-              }
-              style={{ ...inputStyle, marginTop: spacing.xs }}
-              placeholder="שם הנתרם / הגוף המטפל"
-            />
-          </label>
-        )}
-
-        {actionType === "RECEIPT" && (
-          <label style={labelStyle}>
-            סוג תעודת ספק
-            <input
-              type="text"
-              value={formState.supplier_document_type}
-              onChange={(event) =>
-                handleFieldChange("supplier_document_type", event.target.value)
-              }
-              style={{ ...inputStyle, marginTop: spacing.xs }}
-              placeholder="לדוגמה: חשבונית / תעודת משלוח"
-            />
-          </label>
-        )}
-
-        <label style={{ ...labelStyle, gridColumn: "1 / -1" }}>
-          הערות לתעודה
-          <textarea
-            value={formState.notes}
-            onChange={(event) => handleFieldChange("notes", event.target.value)}
-            style={{
-              ...inputStyle,
-              marginTop: spacing.xs,
-              minHeight: 48,
-              resize: "vertical",
-            }}
-            rows={2}
-            placeholder="מידע נוסף שיופיע בתעודה"
-          />
-        </label>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: spacing.sm,
-        }}
-      >
-        <strong>שורות התעודה</strong>
-        <div style={{ display: "flex", gap: spacing.sm }}>
-          <Button variant="secondary" onClick={addLine}>
+        <div className="flex justify-between items-center mb-2">
+          <Text className="font-semibold">שורות התעודה</Text>
+          <Button variant="secondary" size="sm" onClick={addLine}>
             + הוסף שורה
           </Button>
         </div>
-      </div>
 
-      {isStockAdjust && (
-        <div style={{ color: muted, fontSize: 13, marginBottom: spacing.sm }}>
-          הזן את ההפרש לספירת המלאי ובחר אם מדובר בהוספה או הפחתה מהמלאי במחסן.
-        </div>
-      )}
+        {isStockAdjust && (
+          <Text className="text-sm mb-2" style={{ color: cssVar.text.muted }}>
+            הזן את ההפרש לספירת המלאי ובחר אם מדובר בהוספה או הפחתה מהמלאי במחסן.
+          </Text>
+        )}
 
-      <div style={{ overflowX: "auto" }}>
-        <table
-          style={{
-            ...tableStyle,
-            minWidth: actionType === "TRANSFER" ? 920 : 720,
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={tableHeaderStyle}>פריט</th>
-              {actionType === "TRANSFER" && (
-                <th style={tableHeaderStyle}>מחסן שולח</th>
-              )}
-              <th style={tableHeaderStyle}>
-                {actionType === "DISPOSAL" ? "מחסן מקור" : "מחסן יעד"}
-              </th>
-              <th style={tableHeaderStyle}>כמות</th>
-              {isStockAdjust && <th style={tableHeaderStyle}>כיוון התאמה</th>}
-              {!hideSupplierDocField && (
-                <th style={tableHeaderStyle}>מס' מסמך ספק</th>
-              )}
-              <th style={tableHeaderStyle}>פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {formState.lines.map((line, index) => (
-              <tr key={`document-line-${index}`}>
-                <td style={tableCellStyle}>
-                  <select
-                    value={line.item_id}
-                    onChange={(event) =>
-                      handleLineChange(index, "item_id", event.target.value)
-                    }
-                    style={inputStyle}
-                  >
-                    <option value="">בחר פריט</option>
-                    {itemOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </td>
+        <div className="overflow-x-auto">
+          <Table style={{ minWidth: actionType === "TRANSFER" ? 920 : 720 }}>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>פריט</TableHeaderCell>
                 {actionType === "TRANSFER" && (
-                  <td style={tableCellStyle}>
-                    <select
-                      value={line.source_warehouse_id}
-                      onChange={(event) =>
-                        handleLineChange(
-                          index,
-                          "source_warehouse_id",
-                          event.target.value
-                        )
-                      }
-                      style={inputStyle}
-                    >
-                      <option value="">בחר מחסן</option>
-                      {warehouseOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+                  <TableHeaderCell>מחסן שולח</TableHeaderCell>
                 )}
-                <td style={tableCellStyle}>
-                  <select
-                    value={line.target_warehouse_id}
-                    onChange={(event) =>
-                      handleLineChange(
-                        index,
-                        "target_warehouse_id",
-                        event.target.value
-                      )
-                    }
-                    style={inputStyle}
-                  >
-                    <option value="">—</option>
-                    {warehouseOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td style={tableCellStyle}>
-                  <input
-                    type="number"
-                    step="any"
-                    value={line.quantity}
-                    onChange={(event) =>
-                      handleLineChange(index, "quantity", event.target.value)
-                    }
-                    style={inputStyle}
-                  />
-                </td>
-                {isStockAdjust && (
-                  <td style={tableCellStyle}>
-                    <select
-                      value={line.adjust_direction}
-                      onChange={(event) =>
-                        handleLineChange(
-                          index,
-                          "adjust_direction",
-                          event.target
-                            .value as InventoryDocumentFormLine["adjust_direction"]
-                        )
-                      }
-                      style={inputStyle}
-                    >
-                      {Object.entries(STOCK_ADJUST_LABELS).map(
-                        ([key, label]) => (
-                          <option key={key} value={key}>
-                            {label}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  </td>
-                )}
+                <TableHeaderCell>
+                  {actionType === "DISPOSAL" ? "מחסן מקור" : "מחסן יעד"}
+                </TableHeaderCell>
+                <TableHeaderCell>כמות</TableHeaderCell>
+                {isStockAdjust && <TableHeaderCell>כיוון התאמה</TableHeaderCell>}
                 {!hideSupplierDocField && (
-                  <td style={tableCellStyle}>
-                    <input
-                      type="text"
-                      value={line.supplier_document_number}
-                      onChange={(event) =>
+                  <TableHeaderCell>מס' מסמך ספק</TableHeaderCell>
+                )}
+                <TableHeaderCell>פעולות</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {formState.lines.map((line, index) => (
+                <TableRow key={`document-line-${index}`}>
+                  <TableCell>
+                    <Select
+                      value={line.item_id || undefined}
+                      onValueChange={(val) =>
+                        handleLineChange(index, "item_id", val || "")
+                      }
+                      placeholder="בחר פריט"
+                    >
+                      {itemOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </TableCell>
+                  {actionType === "TRANSFER" && (
+                    <TableCell>
+                      <Select
+                        value={line.source_warehouse_id || undefined}
+                        onValueChange={(val) =>
+                          handleLineChange(
+                            index,
+                            "source_warehouse_id",
+                            val || ""
+                          )
+                        }
+                        placeholder="בחר מחסן"
+                      >
+                        {warehouseOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </Select>
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <Select
+                      value={line.target_warehouse_id || undefined}
+                      onValueChange={(val) =>
                         handleLineChange(
                           index,
-                          "supplier_document_number",
-                          event.target.value
+                          "target_warehouse_id",
+                          val || ""
                         )
                       }
-                      style={inputStyle}
-                      placeholder="מס' חשבונית/מסמך"
+                      placeholder="—"
+                    >
+                      {warehouseOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <TextInput
+                      type="number"
+                      value={line.quantity}
+                      onChange={(e) =>
+                        handleLineChange(index, "quantity", e.target.value)
+                      }
                     />
-                  </td>
-                )}
-                <td style={tableCellStyle}>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: spacing.xs,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Button
-                      variant="secondary"
-                      onClick={() => duplicateLine(index)}
-                      aria-label="שכפל שורה"
-                    >
-                      📄
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => removeLine(index)}
-                      disabled={formState.lines.length === 1}
-                      aria-label="מחק שורה"
-                    >
-                      🗑️
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Modal>
+                  </TableCell>
+                  {isStockAdjust && (
+                    <TableCell>
+                      <Select
+                        value={line.adjust_direction}
+                        onValueChange={(val) =>
+                          handleLineChange(
+                            index,
+                            "adjust_direction",
+                            val as InventoryDocumentFormLine["adjust_direction"]
+                          )
+                        }
+                      >
+                        {Object.entries(STOCK_ADJUST_LABELS).map(
+                          ([key, label]) => (
+                            <SelectItem key={key} value={key}>
+                              {label}
+                            </SelectItem>
+                          )
+                        )}
+                      </Select>
+                    </TableCell>
+                  )}
+                  {!hideSupplierDocField && (
+                    <TableCell>
+                      <TextInput
+                        value={line.supplier_document_number}
+                        onChange={(e) =>
+                          handleLineChange(
+                            index,
+                            "supplier_document_number",
+                            e.target.value
+                          )
+                        }
+                        placeholder="מס' חשבונית/מסמך"
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex gap-1 justify-center">
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => duplicateLine(index)}
+                        aria-label="שכפל שורה"
+                      >
+                        📄
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => removeLine(index)}
+                        disabled={formState.lines.length === 1}
+                        aria-label="מחק שורה"
+                      >
+                        🗑️
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </DialogPanel>
+    </Dialog>
   );
 }

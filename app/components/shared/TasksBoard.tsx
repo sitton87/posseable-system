@@ -7,8 +7,7 @@ import {
   StatusTone,
 } from "@/app/components/shared";
 import { Card, Modal, Button } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
-import { colors, spacing, radii } from "@/app/styles/foundations";
+import { task as taskPresets, cssVar, numericValues } from "@/app/styles/design-system";
 import { NoteStatus } from "@/type";
 import {
   Calendar,
@@ -77,26 +76,28 @@ type TasksBoardProps = {
 
 // --- Helpers ---
 
-// Map tone names to hex colors for inline styles if needed
-const TONE_COLORS: Record<string, { bg: string; text: string }> = {
-  neutral: { bg: "#f3f4f6", text: "#374151" },
-  warning: { bg: "#fef3c7", text: "#92400e" },
-  info: { bg: "#e0f2fe", text: "#075985" },
-  purple: { bg: "#f3e8ff", text: "#6b21a8" },
-  success: { bg: "#dcfce7", text: "#166534" },
-  danger: { bg: "#fee2e2", text: "#991b1b" },
-  muted: { bg: "#f3f4f6", text: "#6b7280" },
-};
-
 const TASK_STATUSES: { value: NoteStatus; label: string; tone: StatusTone }[] =
   [
     { value: "not_started", label: "טרם התחיל", tone: "neutral" },
     { value: "open", label: "פתוח", tone: "warning" },
     { value: "in_progress", label: "בתהליך", tone: "info" },
-    { value: "postponed", label: "נדחה", tone: "muted" }, // mapped to muted as purple doesn't exist in StatusTone
+    { value: "postponed", label: "נדחה", tone: "muted" },
     { value: "done", label: "הסתיים", tone: "success" },
     { value: "cancelled", label: "בוטל", tone: "danger" },
   ];
+
+// Status class mapping for select dropdown
+const getStatusClass = (status: NoteStatus) => {
+  const map: Record<NoteStatus, string> = {
+    not_started: taskPresets.statusNotStarted,
+    open: taskPresets.statusOpen,
+    in_progress: taskPresets.statusInProgress,
+    postponed: taskPresets.statusPostponed,
+    done: taskPresets.statusDone,
+    cancelled: taskPresets.statusCancelled,
+  };
+  return map[status] || taskPresets.statusNotStarted;
+};
 
 const normalizeStatus = (raw?: string | null): NoteStatus => {
   if (!raw) return "open";
@@ -402,7 +403,7 @@ export function TasksBoard({
   const clearFormContent = () => {
     if (confirm("לנקות את כל השדות בטופס?")) {
       setFormData({
-        entity_id: fixedEntityId || "", // Reset to default or empty if not fixed
+        entity_id: fixedEntityId || "",
         title: "",
         body: "",
         due_date: "",
@@ -415,34 +416,14 @@ export function TasksBoard({
   // --- Render Helpers ---
 
   const renderCreationForm = () => (
-    <div
-      style={{
-        background: colors.background,
-        padding: spacing.md,
-        borderRadius: radii.card,
-        border: `1px solid ${colors.border}`,
-        marginBottom: spacing.lg,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: spacing.md,
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: spacing.md,
-          }}
-        >
+    <div className={taskPresets.form}>
+      <div className="flex flex-col gap-3">
+        <div className={taskPresets.formGrid}>
           {!fixedEntityId && (
             <div>
-              <label style={labelStyle}>שיוך</label>
+              <label className="block text-sm font-medium text-ds-text-secondary mb-1">שיוך</label>
               <select
-                style={inputStyle}
+                className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
                 value={formData.entity_id}
                 onChange={(e) =>
                   setFormData({ ...formData, entity_id: e.target.value })
@@ -460,9 +441,9 @@ export function TasksBoard({
 
           {assignees.length > 0 && (
             <div>
-              <label style={labelStyle}>אחריות (אופציונלי)</label>
+              <label className="block text-sm font-medium text-ds-text-secondary mb-1">אחריות (אופציונלי)</label>
               <select
-                style={inputStyle}
+                className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
                 value={formData.assigned_to}
                 onChange={(e) =>
                   setFormData({ ...formData, assigned_to: e.target.value })
@@ -479,10 +460,10 @@ export function TasksBoard({
           )}
 
           <div>
-            <label style={labelStyle}>תאריך יעד</label>
+            <label className="block text-sm font-medium text-ds-text-secondary mb-1">תאריך יעד</label>
             <input
               type="date"
-              style={inputStyle}
+              className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
               value={formData.due_date}
               onChange={(e) =>
                 setFormData({ ...formData, due_date: e.target.value })
@@ -491,17 +472,11 @@ export function TasksBoard({
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 2fr",
-            gap: spacing.md,
-          }}
-        >
+        <div className="grid grid-cols-[1fr_2fr] gap-3">
           <div>
-            <label style={labelStyle}>כותרת</label>
+            <label className="block text-sm font-medium text-ds-text-secondary mb-1">כותרת</label>
             <input
-              style={inputStyle}
+              className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -510,9 +485,9 @@ export function TasksBoard({
             />
           </div>
           <div>
-            <label style={labelStyle}>תוכן</label>
+            <label className="block text-sm font-medium text-ds-text-secondary mb-1">תוכן</label>
             <input
-              style={inputStyle}
+              className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
               value={formData.body}
               onChange={(e) =>
                 setFormData({ ...formData, body: e.target.value })
@@ -522,13 +497,7 @@ export function TasksBoard({
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-          }}
-        >
+        <div className={taskPresets.formActions}>
           <SmallActionButton
             variant="secondary"
             onClick={clearFormContent}
@@ -545,7 +514,7 @@ export function TasksBoard({
   );
 
   const renderGridView = (listTasks: TaskNote[]) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+    <div className={taskPresets.cardList}>
       {listTasks.map((task) => {
         const entityName = entities.find((e) => e.id === task.entity_id)?.name;
         const statusObj = TASK_STATUSES.find((s) => s.value === task.status);
@@ -559,57 +528,17 @@ export function TasksBoard({
         return (
           <div
             key={task.note_id}
-            style={{
-              background: isCompleted ? colors.surfaceAlt : "#fff",
-              borderRadius: radii.card,
-              border: `1px solid ${colors.borderMuted}`,
-              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-              overflow: "hidden",
-              opacity: isCompleted ? 0.7 : 1,
-            }}
+            className={isCompleted ? taskPresets.cardCompleted : taskPresets.card}
           >
             {/* Header */}
-            <div
-              style={{
-                padding: `${spacing.sm} ${spacing.md}`,
-                borderBottom: `1px solid ${colors.border}`,
-                background: isCompleted
-                  ? "transparent"
-                  : "rgba(249, 250, 251, 0.5)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 600,
-                  fontSize: 15,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  textDecoration: isCompleted ? "line-through" : "none",
-                }}
-              >
+            <div className={isCompleted ? taskPresets.cardHeaderCompleted : taskPresets.cardHeader}>
+              <div className={isCompleted ? taskPresets.cardTitleCompleted : taskPresets.cardTitle}>
                 {task.title}
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="flex items-center gap-2">
                 {task.due_date && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      padding: "2px 8px",
-                      background: isOverdue
-                        ? "rgba(239, 68, 68, 0.1)"
-                        : "rgba(0,0,0,0.04)",
-                      borderRadius: radii.pill,
-                      color: isOverdue ? colors.danger : colors.textMuted,
-                    }}
-                  >
+                  <div className={isOverdue ? taskPresets.dueDateOverdue : taskPresets.dueDate}>
                     <Calendar size={13} />
                     <span>
                       {new Date(task.due_date).toLocaleDateString("he-IL")}
@@ -619,17 +548,7 @@ export function TasksBoard({
                 )}
 
                 <select
-                  style={{
-                    fontSize: 12,
-                    padding: "4px 8px",
-                    borderRadius: radii.pill,
-                    border: "none",
-                    background: TONE_COLORS[statusObj?.tone || "neutral"].bg,
-                    color: TONE_COLORS[statusObj?.tone || "neutral"].text,
-                    cursor: "pointer",
-                    outline: "none",
-                    fontWeight: 600,
-                  }}
+                  className={`${getStatusClass(task.status)} cursor-pointer outline-none border-none`}
                   value={task.status}
                   onChange={(e) =>
                     handleStatusChange(task, e.target.value as NoteStatus)
@@ -649,34 +568,15 @@ export function TasksBoard({
             </div>
 
             {/* Body */}
-            <div style={{ padding: spacing.md }}>
-              <p
-                style={{
-                  margin: "0 0 16px 0",
-                  color: colors.textPrimary,
-                  whiteSpace: "pre-wrap",
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                  textDecoration: isCompleted ? "line-through" : "none",
-                }}
-              >
+            <div className={taskPresets.cardBody}>
+              <p className={isCompleted ? taskPresets.cardTextCompleted : taskPresets.cardText}>
                 {task.body}
               </p>
 
               {/* Metadata Grid */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                  gap: 12,
-                  fontSize: 12,
-                  color: colors.textMuted,
-                }}
-              >
+              <div className={taskPresets.metaGrid}>
                 {!fixedEntityId && entityName && (
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  >
+                  <div className={taskPresets.metaItem}>
                     <User size={14} />
                     <span>
                       עבור: <strong>{entityName}</strong>
@@ -684,16 +584,14 @@ export function TasksBoard({
                   </div>
                 )}
                 {task.assigned_to_name && (
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  >
+                  <div className={taskPresets.metaItem}>
                     <User size={14} />
                     <span>
                       אחריות: <strong>{task.assigned_to_name}</strong>
                     </span>
                   </div>
                 )}
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className={taskPresets.metaItem}>
                   <User size={14} />
                   <span>
                     נוצר ע"י:{" "}
@@ -702,7 +600,7 @@ export function TasksBoard({
                     </strong>
                   </span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div className={taskPresets.metaItem}>
                   <Clock size={14} />
                   <span>נוצר: {formatDateTime(task.created_at)}</span>
                 </div>
@@ -710,58 +608,22 @@ export function TasksBoard({
             </div>
 
             {/* Footer Actions */}
-            <div
-              style={{
-                padding: `${spacing.xs} ${spacing.xl}`,
-                borderTop: `1px solid ${colors.border}`,
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: spacing.md,
-                background: isCompleted ? "transparent" : "#fff",
-              }}
-            >
+            <div className={isCompleted ? taskPresets.cardFooterCompleted : taskPresets.cardFooter}>
               <button
                 onClick={() => handleShowHistory(task)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 12,
-                  color: colors.primary,
-                }}
+                className={taskPresets.actionPrimary}
               >
                 <History size={14} /> היסטוריה
               </button>
               <button
                 onClick={() => startEdit(task)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 12,
-                  color: colors.textMuted,
-                }}
+                className={taskPresets.action}
               >
                 <Edit2 size={14} /> ערוך
               </button>
               <button
                 onClick={() => handleDelete(task.note_id)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 12,
-                  color: colors.danger,
-                }}
+                className={taskPresets.actionDanger}
               >
                 <Trash2 size={14} /> מחק
               </button>
@@ -773,7 +635,7 @@ export function TasksBoard({
   );
 
   const renderTaskList = (listTasks: TaskNote[]) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className={taskPresets.itemList}>
       {listTasks.map((task) => {
         const isCompleted =
           task.status === "done" ||
@@ -785,67 +647,27 @@ export function TasksBoard({
         return (
           <div
             key={task.note_id}
-            style={{
-              background: isCompleted ? colors.surfaceAlt : "#fff",
-              border: `1px solid ${colors.border}`,
-              borderRadius: 6,
-              padding: "8px 12px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              opacity: isCompleted ? 0.6 : 1,
-              transition: "all 0.2s",
-            }}
+            className={isCompleted ? taskPresets.listItemCompleted : taskPresets.listItem}
           >
             {/* 1. Checkbox */}
             <div
               onClick={() => handleToggleComplete(task)}
-              style={{
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                color: isCompleted ? colors.success : colors.textMuted,
-              }}
+              className={isCompleted ? taskPresets.checkboxChecked : taskPresets.checkbox}
             >
               {isCompleted ? <CheckSquare size={20} /> : <Square size={20} />}
             </div>
 
             {/* 2. Title & Assignee */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                overflow: "hidden",
-              }}
-            >
+            <div className="flex-1 flex items-center gap-2 overflow-hidden">
               <span
                 onClick={() => startEdit(task)}
-                style={{
-                  fontWeight: 500,
-                  fontSize: 14,
-                  textDecoration: isCompleted ? "line-through" : "none",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
+                className={isCompleted ? taskPresets.listTitleCompleted : taskPresets.listTitle}
               >
                 {task.title}
               </span>
 
               {task.assigned_to_name && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    background: colors.surfaceAlt,
-                    padding: "2px 6px",
-                    borderRadius: 4,
-                    color: colors.textMuted,
-                    whiteSpace: "nowrap",
-                  }}
-                >
+                <span className={taskPresets.listAssignee}>
                   <User
                     size={10}
                     style={{ verticalAlign: "middle", marginLeft: 2 }}
@@ -857,15 +679,7 @@ export function TasksBoard({
 
             {/* 3. Due Date */}
             {task.due_date && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: isOverdue ? colors.danger : colors.textMuted,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
+              <div className={isOverdue ? taskPresets.dueDateOverdue : taskPresets.dueDate}>
                 <Calendar size={12} />
                 {new Date(task.due_date).toLocaleDateString("he-IL", {
                   day: "2-digit",
@@ -875,30 +689,18 @@ export function TasksBoard({
             )}
 
             {/* 4. Actions */}
-            <div style={{ display: "flex", gap: 4 }}>
+            <div className="flex gap-1">
               <button
                 onClick={() => handleShowHistory(task)}
                 title="היסטוריה"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: colors.textMuted,
-                  padding: 4,
-                }}
+                className={taskPresets.actionIcon}
               >
                 <History size={16} />
               </button>
               <button
                 onClick={() => handleDelete(task.note_id)}
                 title="מחק"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: colors.textMuted, // Using muted instead of danger for cleaner look until hover
-                  padding: 4,
-                }}
+                className={taskPresets.actionIcon}
               >
                 <Trash2 size={16} />
               </button>
@@ -913,8 +715,8 @@ export function TasksBoard({
 
   return (
     <Card
+      padding={variant === "list" ? "none" : "lg"}
       style={{
-        padding: spacing.lg,
         background: variant === "list" ? "transparent" : undefined,
         boxShadow: variant === "list" ? "none" : undefined,
         border: variant === "list" ? "none" : undefined,
@@ -922,13 +724,13 @@ export function TasksBoard({
     >
       <div
         style={{
-          marginBottom: spacing.lg,
+          marginBottom: numericValues.spacing[6],
           display: variant === "list" ? "none" : "flex",
           justifyContent: "space-between",
           alignItems: "center",
         }}
       >
-        <h4 style={{ margin: "0" }}>{title}</h4>
+        <h4 className="m-0 text-ds-text-primary font-semibold">{title}</h4>
       </div>
 
       {!isEditing && !hideAddButton && (
@@ -949,13 +751,11 @@ export function TasksBoard({
 
       {/* List Area */}
       {loading && activeTasks.length === 0 ? (
-        <div
-          style={{ color: colors.textMuted, textAlign: "center", padding: 20 }}
-        >
+        <div className={taskPresets.empty}>
           טוען...
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {/* Active Tasks */}
           {activeTasks.length > 0 ? (
             variant === "list" ? (
@@ -964,32 +764,15 @@ export function TasksBoard({
               renderGridView(activeTasks)
             )
           ) : (
-            <div
-              style={{
-                textAlign: "center",
-                color: colors.textMuted,
-                padding: 20,
-              }}
-            >
+            <div className={taskPresets.empty}>
               אין משימות פתוחות
             </div>
           )}
 
           {/* Completed Tasks Section */}
           {completedTasks.length > 0 && (
-            <div
-              style={{
-                borderTop: `1px solid ${colors.border}`,
-                paddingTop: 20,
-              }}
-            >
-              <h5
-                style={{
-                  margin: "0 0 12px 0",
-                  color: colors.textMuted,
-                  fontSize: 13,
-                }}
-              >
+            <div className={taskPresets.sectionDivider}>
+              <h5 className={taskPresets.sectionTitle}>
                 הושלמו לאחרונה
               </h5>
               {variant === "list"
@@ -1019,24 +802,16 @@ export function TasksBoard({
       <Modal
         open={isEditing}
         onClose={resetForm}
-        width="min(500px, 90vw)"
-        style={{ padding: spacing.xl }}
+        size="sm"
       >
-        <h3 style={{ marginTop: 0 }}>
+        <h3 className="mt-0 text-ds-text-primary font-semibold text-lg">
           {editingId ? "עריכת משימה" : "הוספת משימה חדשה"}
         </h3>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-            marginTop: spacing.lg,
-          }}
-        >
+        <div className="flex flex-col gap-3 mt-4">
           <div>
-            <label style={labelStyle}>כותרת</label>
+            <label className="block text-sm font-medium text-ds-text-secondary mb-1">כותרת</label>
             <input
-              style={inputStyle}
+              className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -1047,9 +822,9 @@ export function TasksBoard({
 
           {assignees.length > 0 && (
             <div>
-              <label style={labelStyle}>אחריות</label>
+              <label className="block text-sm font-medium text-ds-text-secondary mb-1">אחריות</label>
               <select
-                style={inputStyle}
+                className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
                 value={formData.assigned_to}
                 onChange={(e) =>
                   setFormData({ ...formData, assigned_to: e.target.value })
@@ -1066,26 +841,20 @@ export function TasksBoard({
           )}
 
           <div>
-            <label style={labelStyle}>תוכן (אופציונלי)</label>
+            <label className="block text-sm font-medium text-ds-text-secondary mb-1">תוכן (אופציונלי)</label>
             <textarea
-              style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
+              className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none min-h-[100px] resize-y"
               value={formData.body}
               onChange={(e) =>
                 setFormData({ ...formData, body: e.target.value })
               }
             />
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: spacing.md,
-            }}
-          >
+          <div className={taskPresets.formGrid}>
             <div>
-              <label style={labelStyle}>סטטוס</label>
+              <label className="block text-sm font-medium text-ds-text-secondary mb-1">סטטוס</label>
               <select
-                style={inputStyle}
+                className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
                 value={formData.status}
                 onChange={(e) =>
                   setFormData({
@@ -1102,10 +871,10 @@ export function TasksBoard({
               </select>
             </div>
             <div>
-              <label style={labelStyle}>תאריך יעד</label>
+              <label className="block text-sm font-medium text-ds-text-secondary mb-1">תאריך יעד</label>
               <input
                 type="date"
-                style={inputStyle}
+                className="w-full border border-ds-border rounded-ds-input p-2 bg-ds-bg-primary text-ds-text-primary focus:ring-2 focus:ring-ds-brand outline-none"
                 value={formData.due_date}
                 onChange={(e) =>
                   setFormData({ ...formData, due_date: e.target.value })
@@ -1114,19 +883,12 @@ export function TasksBoard({
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: spacing.sm,
-              marginTop: spacing.md,
-            }}
-          >
+          <div className="flex justify-end gap-2 mt-3">
             <Button variant="secondary" onClick={resetForm}>
               ביטול
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "שמור" : "שמור"}
+              {submitting ? "שומר..." : "שמור"}
             </Button>
           </div>
         </div>
@@ -1136,68 +898,41 @@ export function TasksBoard({
       <Modal
         open={historyModalOpen}
         onClose={() => setHistoryModalOpen(false)}
-        width="min(500px, 90vw)"
-        style={{ padding: spacing.xl }}
+        size="sm"
       >
-        <h3 style={{ marginTop: 0, marginBottom: spacing.md }}>
+        <h3 className="mt-0 mb-3 text-ds-text-primary font-semibold text-lg">
           היסטוריית שינויים
         </h3>
-        <p
-          style={{
-            margin: "0 0 16px 0",
-            color: colors.textMuted,
-            fontSize: 13,
-          }}
-        >
+        <p className="m-0 mb-4 text-ds-text-muted text-sm">
           עבור: {currentHistoryTitle}
         </p>
 
         {historyLoading ? (
-          <div style={{ textAlign: "center", color: colors.textMuted }}>
+          <div className="text-center text-ds-text-muted">
             טוען נתונים...
           </div>
         ) : historyData.length === 0 ? (
-          <div style={{ textAlign: "center", color: colors.textMuted }}>
+          <div className="text-center text-ds-text-muted">
             אין היסטוריית שינויים.
           </div>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              maxHeight: "60vh",
-              overflowY: "auto",
-            }}
-          >
+          <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto">
             {historyData.map((entry) => (
               <div
                 key={entry.id}
-                style={{
-                  padding: 12,
-                  background: colors.background,
-                  borderRadius: radii.button,
-                  border: `1px solid ${colors.border}`,
-                  fontSize: 13,
-                }}
+                className="p-3 bg-ds-bg-secondary rounded-ds-md border border-ds-border text-sm"
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 4,
-                  }}
-                >
-                  <strong>{entry.changed_by_name || entry.changed_by}</strong>
-                  <span style={{ color: colors.textMuted }}>
+                <div className="flex justify-between mb-1">
+                  <strong className="text-ds-text-primary">{entry.changed_by_name || entry.changed_by}</strong>
+                  <span className="text-ds-text-muted">
                     {formatDateTime(entry.changed_at)}
                   </span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="flex items-center gap-2">
                   <StatusPill tone="neutral">
                     {getStatusLabel(entry.old_status || "—")}
                   </StatusPill>
-                  <span style={{ color: colors.textMuted }}>←</span>
+                  <span className="text-ds-text-muted">←</span>
                   <StatusPill
                     tone={
                       (TASK_STATUSES.find((s) => s.value === entry.new_status)
@@ -1212,7 +947,7 @@ export function TasksBoard({
           </div>
         )}
 
-        <div style={{ marginTop: spacing.lg, textAlign: "right" }}>
+        <div className="mt-4 text-right">
           <Button
             variant="secondary"
             onClick={() => setHistoryModalOpen(false)}

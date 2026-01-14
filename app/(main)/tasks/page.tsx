@@ -1,22 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { TasksCenter } from "./TasksCenter";
-import { colors, spacing } from "@/app/styles/foundations";
+import { Card, Title, Text } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 export default function TasksPage() {
   return (
-    <div
-      style={{
-        padding: spacing.xl,
-        maxWidth: 1200,
-        margin: "0 auto",
-      }}
-    >
-      <header style={{ marginBottom: spacing.xl }}>
-        <h2 style={{ fontSize: 18, color: colors.textMuted, marginTop: 0 }}>
+    <div className="p-ds-spacing-xl max-w-6xl mx-auto">
+      <header className="mb-ds-spacing-xl">
+        <Text className="text-lg" style={{ color: cssVar.text.muted }}>
           ריכוז כל משימות המערכת במקום אחד
-        </h2>
+        </Text>
       </header>
 
       <TasksCenter />

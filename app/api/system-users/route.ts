@@ -10,7 +10,7 @@ import {
 } from "@/lib/services/systemUserService";
 import { sendWelcomeEmail } from "@/lib/services/emailService";
 import { hasSystemAdminAccess } from "@/lib/utils/roles";
-import { getUserBasicInfo } from "@/lib/services/authService";
+import { decryptSession } from "@/lib/auth";
 import { generateTemporaryPassword } from "@/lib/utils/password";
 
 type SessionPayload = {
@@ -26,7 +26,7 @@ async function getSession(): Promise<SessionPayload | null> {
     if (!sessionCookie?.value) {
       return null;
     }
-    const parsed = JSON.parse(sessionCookie.value);
+    const parsed = await decryptSession(sessionCookie.value);
     return parsed;
   } catch (error) {
     console.error("Failed to parse session cookie", error);
@@ -40,18 +40,13 @@ async function getAdminContext() {
     return null;
   }
 
-  const userResult = await getUserBasicInfo(session.national_id);
-  if (!userResult.recordset.length) {
-    return null;
-  }
-
-  const user = userResult.recordset[0];
-  const allowed = hasSystemAdminAccess(user.role, user.role_group_code);
+  // בדיקת הרשאות מתבססת על נתוני ה-session (שכוללים role_group_code: "management" במצב פיתוח)
+  const allowed = hasSystemAdminAccess(session.role, session.role_group_code);
   if (!allowed) {
     return null;
   }
 
-  return { session, user };
+  return { session };
 }
 
 function forbiddenResponse() {

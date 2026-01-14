@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, Modal } from "@/app/components/ui";
-import { colors, spacing } from "@/app/styles/foundations";
-import { muted } from "../utils";
+import { Title, Text, Button, Flex } from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 type DraftPromptModalProps = {
   open: boolean;
@@ -20,30 +20,22 @@ export default function DraftPromptModal({
   onSave,
 }: DraftPromptModalProps) {
   return (
-    <Modal open={open} onClose={onClose} width="min(420px, 90vw)">
-      <h3 style={{ marginTop: 0 }}>לשמור את התורם כטיוטה?</h3>
-      <p style={{ color: muted }}>
-        הטיוטה תישמר עבורך בלבד ותאפשר לך לחזור בהמשך מבלי לאבד נתונים.
-      </p>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: spacing.sm,
-          marginTop: spacing.lg,
-        }}
-      >
-        <Button variant="ghost" onClick={onContinue}>
-          המשך לערוך
-        </Button>
-        <Button variant="secondary" onClick={onDiscard}>
-          בטל
-        </Button>
-        <Button onClick={onSave}>שמור כטיוטה</Button>
-      </div>
-    </Modal>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-md">
+        <Title className="mb-2">לשמור את התורם כטיוטה?</Title>
+        <Text style={{ color: cssVar.text.muted }} className="mb-6">
+          הטיוטה תישמר עבורך בלבד ותאפשר לך לחזור בהמשך מבלי לאבד נתונים.
+        </Text>
+        <Flex justifyContent="end" className="gap-3">
+          <Button variant="secondary" color="slate" onClick={onContinue}>
+            המשך לערוך
+          </Button>
+          <Button variant="secondary" onClick={onDiscard}>
+            בטל
+          </Button>
+          <Button onClick={onSave}>שמור כטיוטה</Button>
+        </Flex>
+      </DialogPanel>
+    </Dialog>
   );
 }
-
-
-

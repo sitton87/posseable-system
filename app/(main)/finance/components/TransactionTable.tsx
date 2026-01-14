@@ -1,9 +1,24 @@
 "use client";
 
-import { Button, Card } from "@/app/components/ui";
-import { colors } from "@/app/styles/foundations";
+import {
+  Card,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  Badge,
+  Button,
+  Flex,
+} from "@tremor/react";
+import {
+  EyeIcon,
+  PencilIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import { cssVar } from "@/app/styles/design-system";
 import { Transaction } from "../types";
-import { muted, smallButtonStyle, typePillStyle } from "../utils";
 
 type TransactionTableProps = {
   transactions: Transaction[];
@@ -20,156 +35,131 @@ export default function TransactionTable({
 }: TransactionTableProps) {
   return (
     <Card>
-      <div style={{ overflowX: "auto" }}>
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "separate",
-            borderSpacing: "0 8px",
-          }}
-        >
-          <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
-            <tr style={{ color: muted, fontSize: 13 }}>
-              <th style={{ textAlign: "center", padding: 8 }}>תאריך</th>
-              <th style={{ textAlign: "center", padding: 8 }}>סוג</th>
-              <th style={{ textAlign: "center", padding: 8 }}>קטגוריה</th>
-              <th style={{ textAlign: "center", padding: 8 }}>פעילות משויכת</th>
-              <th style={{ textAlign: "center", padding: 8 }}>תיאור</th>
-              <th style={{ textAlign: "center", padding: 8 }}>סכום</th>
-              <th style={{ textAlign: "center", padding: 8 }}>פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((t) => (
-              <tr
-                key={t.id}
-                style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
-              >
-                <td
-                  style={{
-                    padding: 8,
-                    fontSize: 13,
-                    color: muted,
-                    textAlign: "center",
-                  }}
-                >
-                  {new Date(t.transaction_date).toLocaleDateString("he-IL")}
-                </td>
-                <td style={{ textAlign: "center", padding: 8 }}>
-                  <span style={typePillStyle(t.type)}>
-                    {t.type === "income" ? "הכנסה" : "הוצאה"}
-                  </span>
-                </td>
-                <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
-                  {t.category}
-                </td>
-                <td style={{ textAlign: "center", padding: 8, fontSize: 13 }}>
-                  {t.activity_id ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                      }}
-                    >
-                      <span style={{ fontWeight: 600 }}>
-                        {t.activity_kind || `פעילות #${t.activity_id}`}
-                      </span>
-                      <span style={{ fontSize: 12, color: muted }}>
-                        {t.activity_date
-                          ? new Date(t.activity_date).toLocaleDateString(
-                              "he-IL"
-                            )
-                          : "—"}
-                        {t.season_name ? ` · ${t.season_name}` : ""}
-                      </span>
-                    </div>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td
-                  style={{ padding: 8, fontWeight: 600, textAlign: "center" }}
-                >
-                  <div>{t.description}</div>
-                  <div style={{ fontSize: 12, color: muted, marginTop: 4 }}>
-                    {t.paid_by && (
-                      <span style={{ display: "block" }}>
-                        שולמה ע"י: {t.paid_by}
-                      </span>
-                    )}
-                    {t.has_invoice && (
-                      <span style={{ display: "block" }}>
-                        חשבונית{" "}
-                        {t.invoice_number ? `#${t.invoice_number}` : "✓"}
-                      </span>
-                    )}
-                    {t.attachment_name && t.attachment_data && (
-                      <a
-                        href={`data:${
-                          t.attachment_mime || "application/octet-stream"
-                        };base64,${t.attachment_data}`}
-                        download={t.attachment_name}
-                        style={{ color: colors.accent, fontSize: 12 }}
-                      >
-                        הורדת קובץ
-                      </a>
-                    )}
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeaderCell className="text-center">תאריך</TableHeaderCell>
+            <TableHeaderCell className="text-center">סוג</TableHeaderCell>
+            <TableHeaderCell className="text-center">קטגוריה</TableHeaderCell>
+            <TableHeaderCell className="text-center">פעילות משויכת</TableHeaderCell>
+            <TableHeaderCell className="text-center">תיאור</TableHeaderCell>
+            <TableHeaderCell className="text-center">סכום</TableHeaderCell>
+            <TableHeaderCell className="text-center">פעולות</TableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {transactions.map((t) => (
+            <TableRow
+              key={t.id}
+              className="transition-colors hover:bg-tremor-background-subtle"
+            >
+              <TableCell className="text-center text-sm" style={{ color: cssVar.text.muted }}>
+                {new Date(t.transaction_date).toLocaleDateString("he-IL")}
+              </TableCell>
+              <TableCell className="text-center">
+                <Badge color={t.type === "income" ? "emerald" : "rose"} size="sm">
+                  {t.type === "income" ? "הכנסה" : "הוצאה"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-center text-sm">
+                {t.category}
+              </TableCell>
+              <TableCell className="text-center text-sm">
+                {t.activity_id ? (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold">
+                      {t.activity_kind || `פעילות #${t.activity_id}`}
+                    </span>
+                    <span className="text-xs" style={{ color: cssVar.text.muted }}>
+                      {t.activity_date
+                        ? new Date(t.activity_date).toLocaleDateString("he-IL")
+                        : "—"}
+                      {t.season_name ? ` · ${t.season_name}` : ""}
+                    </span>
                   </div>
-                </td>
-                <td
-                  style={{
-                    textAlign: "center",
-                    padding: 8,
-                    fontWeight: 700,
-                    fontSize: 16,
-                    color: t.type === "income" ? colors.success : colors.danger,
-                  }}
-                >
-                  {t.type === "income" ? "+" : "-"}₪
-                  {t.amount.toLocaleString()}
-                </td>
-                <td style={{ textAlign: "center", padding: 8 }}>
+                ) : (
+                  "—"
+                )}
+              </TableCell>
+              <TableCell className="text-center">
+                <div className="font-semibold">{t.description}</div>
+                <div className="text-xs mt-1" style={{ color: cssVar.text.muted }}>
+                  {t.paid_by && (
+                    <span className="block">שולמה ע"י: {t.paid_by}</span>
+                  )}
+                  {t.has_invoice && (
+                    <span className="block">
+                      חשבונית {t.invoice_number ? `#${t.invoice_number}` : "✓"}
+                    </span>
+                  )}
+                  {t.attachment_name && t.attachment_data && (
+                    <a
+                      href={`data:${
+                        t.attachment_mime || "application/octet-stream"
+                      };base64,${t.attachment_data}`}
+                      download={t.attachment_name}
+                      style={{ color: cssVar.brand.primary }}
+                      className="text-xs"
+                    >
+                      הורדת קובץ
+                    </a>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell
+                className="text-center font-bold text-lg"
+                style={{
+                  color: t.type === "income" ? cssVar.status.success : cssVar.status.danger,
+                }}
+              >
+                {t.type === "income" ? "+" : "-"}₪{t.amount.toLocaleString()}
+              </TableCell>
+              <TableCell>
+                <Flex justifyContent="center" className="gap-2">
                   <Button
+                    size="xs"
                     variant="secondary"
-                    style={{ ...smallButtonStyle, marginLeft: 4 }}
+                    color="indigo"
+                    icon={EyeIcon}
                     onClick={() => onView(t)}
-                  >
-                    👁️
-                  </Button>
+                    tooltip="צפייה"
+                    className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200"
+                  />
                   <Button
+                    size="xs"
                     variant="secondary"
-                    style={{ ...smallButtonStyle, marginLeft: 4 }}
+                    color="blue"
+                    icon={PencilIcon}
                     onClick={() => onEdit(t)}
-                  >
-                    ✏️
-                  </Button>
+                    tooltip="עריכה"
+                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                  />
                   <Button
+                    size="xs"
                     variant="secondary"
-                    style={{ ...smallButtonStyle, color: colors.danger }}
+                    color="rose"
+                    icon={TrashIcon}
                     onClick={() => onDelete(t.id)}
-                  >
-                    🗑️
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {transactions.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  style={{ textAlign: "center", padding: 20, color: muted }}
-                >
-                  אין תנועות במערכת. לחץ על "הוסף תנועה" להתחיל.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    tooltip="מחיקה"
+                    className="bg-rose-50 text-rose-600 hover:bg-rose-100 border-rose-200"
+                  />
+                </Flex>
+              </TableCell>
+            </TableRow>
+          ))}
+          {transactions.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="text-center py-10"
+                style={{ color: cssVar.text.muted }}
+              >
+                אין תנועות במערכת. לחץ על "הוסף תנועה" להתחיל.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </Card>
   );
 }
-
-
-

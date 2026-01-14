@@ -1,8 +1,15 @@
 "use client";
 
-import { Modal, Button } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+import {
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Button,
+  Switch,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import type { WarehouseFormState } from "../types";
 
 type WarehouseModalProps = {
@@ -34,223 +41,190 @@ export function WarehouseModal({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(760px, 95vw)"
-      style={{ padding: spacing.xxl }}
-    >
-      <h3 style={{ marginTop: 0, fontSize: 20, fontWeight: 800 }}>
-        {isEditing ? "עריכת מחסן" : "מחסן חדש"}
-      </h3>
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            {isEditing ? (
-              <>
-                <label style={labelStyle}>קוד מחסן</label>
-                <input
-                  type="text"
-                  style={{ ...inputStyle, backgroundColor: "#f5f5f5" }}
-                  value={form.code}
-                  disabled
-                  readOnly
-                />
-              </>
-            ) : (
-              <p style={{ color: colors.textMuted, fontSize: 13, margin: 0 }}>
-                קוד המחסן ייווצר אוטומטית בעת השמירה.
-              </p>
-            )}
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-3xl">
+        <Title className="mb-6">
+          {isEditing ? "עריכת מחסן" : "מחסן חדש"}
+        </Title>
+
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              {isEditing ? (
+                <>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                    קוד מחסן
+                  </Text>
+                  <TextInput
+                    value={form.code}
+                    disabled
+                  />
+                </>
+              ) : (
+                <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+                  קוד המחסן ייווצר אוטומטית בעת השמירה.
+                </Text>
+              )}
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                שם <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <TextInput
+                value={form.name}
+                onChange={(e) => onChange("name", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                עיר
+              </Text>
+              <TextInput
+                value={form.city}
+                onChange={(e) => onChange("city", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                כתובת
+              </Text>
+              <TextInput
+                value={form.address_line}
+                onChange={(e) => onChange("address_line", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                מיקוד
+              </Text>
+              <TextInput
+                value={form.postal_code}
+                onChange={(e) => onChange("postal_code", e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label style={labelStyle}>שם*</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={form.name}
-              onChange={(e) => onChange("name", e.target.value)}
-            />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                מנהל המחסן
+              </Text>
+              <TextInput
+                value={form.manager_name}
+                onChange={(e) => onChange("manager_name", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                טלפון מנהל
+              </Text>
+              <TextInput
+                type="tel"
+                placeholder="050-1234567"
+                value={form.manager_phone}
+                onChange={(e) => onChange("manager_phone", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                אימייל מנהל
+              </Text>
+              <TextInput
+                type="email"
+                value={form.manager_email}
+                onChange={(e) => onChange("manager_email", e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label style={labelStyle}>עיר</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={form.city}
-              onChange={(e) => onChange("city", e.target.value)}
-            />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                איש קשר נוסף
+              </Text>
+              <TextInput
+                value={form.contact_name}
+                onChange={(e) => onChange("contact_name", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                טלפון איש קשר
+              </Text>
+              <TextInput
+                type="tel"
+                placeholder="050-1234567"
+                value={form.contact_phone}
+                onChange={(e) => onChange("contact_phone", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                עלות שכירות (חודשי)
+              </Text>
+              <TextInput
+                type="number"
+                value={form.rent_cost}
+                onChange={(e) => onChange("rent_cost", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                מטבע
+              </Text>
+              <TextInput
+                maxLength={3}
+                value={form.rent_currency}
+                onChange={(e) =>
+                  onChange("rent_currency", e.target.value.toUpperCase())
+                }
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                תום חוזה שכירות
+              </Text>
+              <TextInput
+                type="date"
+                value={form.rent_expiry}
+                onChange={(e) => onChange("rent_expiry", e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label style={labelStyle}>כתובת</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={form.address_line}
-              onChange={(e) => onChange("address_line", e.target.value)}
-            />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                הערות חוזה / מסמכים
+              </Text>
+              <Textarea
+                rows={3}
+                value={form.lease_notes}
+                onChange={(e) => onChange("lease_notes", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                הערות כלליות
+              </Text>
+              <Textarea
+                rows={3}
+                value={form.general_notes}
+                onChange={(e) => onChange("general_notes", e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label style={labelStyle}>מיקוד</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={form.postal_code}
-              onChange={(e) => onChange("postal_code", e.target.value)}
+
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={form.is_active}
+              onChange={(val) => onChange("is_active", val)}
             />
+            <Text className="text-sm">מחסן פעיל</Text>
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>מנהל המחסן</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={form.manager_name}
-              onChange={(e) => onChange("manager_name", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>טלפון מנהל</label>
-            <input
-              type="tel"
-              inputMode="tel"
-              placeholder="050-1234567"
-              style={inputStyle}
-              value={form.manager_phone}
-              onChange={(e) => onChange("manager_phone", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>אימייל מנהל</label>
-            <input
-              type="email"
-              style={inputStyle}
-              value={form.manager_email}
-              onChange={(e) => onChange("manager_email", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>איש קשר נוסף</label>
-            <input
-              type="text"
-              style={inputStyle}
-              value={form.contact_name}
-              onChange={(e) => onChange("contact_name", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>טלפון איש קשר</label>
-            <input
-              type="tel"
-              inputMode="tel"
-              placeholder="050-1234567"
-              style={inputStyle}
-              value={form.contact_phone}
-              onChange={(e) => onChange("contact_phone", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>עלות שכירות (חודשי)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              style={inputStyle}
-              value={form.rent_cost}
-              onChange={(e) => onChange("rent_cost", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>מטבע</label>
-            <input
-              type="text"
-              maxLength={3}
-              style={inputStyle}
-              value={form.rent_currency}
-              onChange={(e) =>
-                onChange("rent_currency", e.target.value.toUpperCase())
-              }
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>תום חוזה שכירות</label>
-            <input
-              type="date"
-              style={inputStyle}
-              value={form.rent_expiry}
-              onChange={(e) => onChange("rent_expiry", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>הערות חוזה / מסמכים</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80 }}
-              value={form.lease_notes}
-              onChange={(e) => onChange("lease_notes", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>הערות כלליות</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80 }}
-              value={form.general_notes}
-              onChange={(e) => onChange("general_notes", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <label
-          style={{ display: "flex", alignItems: "center", gap: spacing.xs }}
-        >
-          <input
-            type="checkbox"
-            checked={form.is_active}
-            onChange={(e) => onChange("is_active", e.target.checked)}
-          />
-          מחסן פעיל
-        </label>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-          }}
-        >
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
           <Button variant="secondary" onClick={onClose}>
             ביטול
           </Button>
@@ -258,7 +232,7 @@ export function WarehouseModal({
             {submitting ? "שומר..." : isEditing ? "עדכן מחסן" : "שמור מחסן"}
           </Button>
         </div>
-      </div>
-    </Modal>
+      </DialogPanel>
+    </Dialog>
   );
 }

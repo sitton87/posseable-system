@@ -6,7 +6,7 @@ import GroupsPage from "./groups/page";
 import { usePagePermission } from "@/app/hooks/usePagePermission";
 import { AccessDenied } from "@/app/components/AccessDenied";
 import { Surfer } from "@/type";
-import { spacing } from "@/app/styles/foundations";
+import { numericValues } from "@/app/styles/design-system";
 import { useDraftManager } from "@/app/hooks/useDraftManager";
 
 import {
@@ -33,7 +33,7 @@ import SurfersListTab from "./tabs/SurfersListTab";
 import SettingsTab from "./tabs/SettingsTab";
 
 // Modals
-import SurferFormModal from "./modals/SurferFormModal";
+import SurferFormModal from "./modals/SurferFormDialog";
 import SurferViewModal from "./modals/SurferViewModal";
 import DraftPromptModal from "./modals/DraftPromptModal";
 
@@ -190,11 +190,9 @@ export default function SurfersPage() {
     key: K,
     value: SurferFormState[K]
   ) => {
-    setFormState((prev) => {
-      const next = { ...prev, [key]: value };
-      if (next !== prev) setFormDirty(true);
-      return next;
-    });
+    setFormState((prev) => ({ ...prev, [key]: value }));
+    // Mark as dirty when any field changes
+    setFormDirty(true);
   };
 
   const openCreateModal = () => {
@@ -393,7 +391,7 @@ export default function SurfersPage() {
 
   if (activeTab === "list" && !listPermLoading && listPermission === "none") {
     return (
-      <div style={{ padding: spacing.lg }}>
+      <div className="p-ds-spacing-lg">
         <AccessDenied title="אין לך הרשאה לצפות ברשימת הגולשים" />
       </div>
     );
@@ -405,7 +403,7 @@ export default function SurfersPage() {
     groupsPermission === "none"
   ) {
     return (
-      <div style={{ padding: spacing.lg }}>
+      <div className="p-ds-spacing-lg">
         <AccessDenied title="אין לך הרשאה לצפות בקבוצות" />
       </div>
     );
@@ -417,21 +415,14 @@ export default function SurfersPage() {
     settingsPermission === "none"
   ) {
     return (
-      <div style={{ padding: spacing.lg }}>
+      <div className="p-ds-spacing-lg">
         <AccessDenied title="אין לך הרשאה לצפות בהגדרות" />
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        padding: spacing.lg,
-        display: "flex",
-        flexDirection: "column",
-        gap: spacing.lg,
-      }}
-    >
+    <div className="p-ds-spacing-lg flex flex-col gap-ds-spacing-lg">
       {activeTab === "home" && (
         <SurfersHomeTab
           loading={summaryLoading}

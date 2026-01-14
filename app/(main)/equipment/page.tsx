@@ -9,19 +9,11 @@ import type {
   EquipmentCategory,
   Warehouse,
 } from "@/type";
-import { Button, Card, Modal } from "@/app/components/ui";
-import { SmallActionButton, sectionCardStyle } from "@/app/components/shared";
+import { Card, Text } from "@tremor/react";
 import { AccessDenied } from "@/app/components/AccessDenied";
 import { usePagePermission } from "@/app/hooks/usePagePermission";
 import { useDraftManager } from "@/app/hooks/useDraftManager";
-import { inputStyle, labelStyle } from "@/app/styles/components";
-import {
-  colors,
-  radii,
-  shadows,
-  spacing,
-  typography,
-} from "@/app/styles/foundations";
+import { tw, cssVar, numericValues } from "@/app/styles/design-system";
 import { CatalogTab } from "./tabs/CatalogTab";
 import { HomeTab } from "./tabs/HomeTab";
 import { InventoryTab } from "./tabs/InventoryTab";
@@ -84,7 +76,6 @@ const TAB_CONFIG = [
 
 type EquipmentTabId = (typeof TAB_CONFIG)[number]["id"];
 
-const muted = colors.textMuted;
 const createDefaultFilters = (): FiltersState => ({
   search: "",
   family: "",
@@ -434,11 +425,11 @@ export default function EquipmentPage() {
 
   if (permissionsLoading) {
     return (
-      <div style={{ padding: spacing.xl }}>
+      <div className="p-ds-spacing-6">
         <Card>
-          <div style={{ textAlign: "center", color: muted }}>
+          <Text className="text-center py-4" style={{ color: cssVar.text.muted }}>
             טוען הרשאות...
-          </div>
+          </Text>
         </Card>
       </div>
     );
@@ -446,7 +437,7 @@ export default function EquipmentPage() {
 
   if (!availableTabs.length) {
     return (
-      <div style={{ padding: spacing.xl }}>
+      <div className="p-ds-spacing-6">
         <AccessDenied
           title="אין לך הרשאה למסך הציוד"
           description="פנה למנהל המערכת כדי לאפשר גישה לאחד מתתי-המודולים."
@@ -1378,25 +1369,13 @@ export default function EquipmentPage() {
   };
 
   return (
-    <div
-      style={{
-        padding: spacing.xl,
-        display: "flex",
-        flexDirection: "column",
-        gap: spacing.lg,
-      }}
-    >
+    <div className="p-ds-spacing-6 flex flex-col gap-ds-spacing-5">
       {currentTabConfig &&
         (currentTabConfig.description || !activeTabPermission.canEdit) && (
-        <div
-          style={{
-            fontSize: 13,
-            color: colors.textMuted,
-          }}
-        >
+        <Text className="text-sm" style={{ color: cssVar.text.muted }}>
           {currentTabConfig.description}
           {!activeTabPermission.canEdit && " · מצב קריאה בלבד"}
-        </div>
+        </Text>
         )}
 
       {activeTab === "home" && (

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import PlanningSeasonsTab from "./PlanningSeasonsTab";
 import PlanningSeriesTab from "./PlanningSeriesTab";
-import { colors, spacing } from "@/app/styles/foundations";
+import { tw, cssVar } from "@/app/styles/design-system";
 import { CalendarRange, Layers } from "lucide-react";
 
 export default function PlanningTab() {
@@ -19,8 +19,8 @@ export default function PlanningTab() {
   }, [searchParams]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
-       <div style={{ display: "flex", gap: spacing.sm, borderBottom: `1px solid ${colors.borderMuted}`, paddingBottom: spacing.sm }}>
+    <div className="flex flex-col gap-ds-spacing-5">
+       <div className={`flex gap-ds-spacing-2 border-b ${tw.border.primary} pb-ds-spacing-2`}>
             <SubTabButton 
                 active={view === "seasons"} 
                 onClick={() => setView("seasons")} 
@@ -45,20 +45,11 @@ function SubTabButton({ active, onClick, label, icon }: { active: boolean, onCli
     return (
         <button
             onClick={onClick}
-            style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 16px",
-                background: active ? colors.primary + "15" : "transparent",
-                color: active ? colors.primary : colors.textMuted,
-                border: "none",
-                borderRadius: 6,
-                fontWeight: active ? 600 : 500,
-                fontSize: 13,
-                cursor: "pointer",
-                transition: "all 0.2s"
-            }}
+            className={`flex items-center gap-ds-spacing-2 px-ds-spacing-4 py-ds-spacing-2 border-none ${tw.rounded.md} text-ds-font-size-sm cursor-pointer transition-all ${
+              active 
+                ? `bg-ds-brand-light ${tw.text.brand} font-ds-font-weight-semibold` 
+                : `bg-transparent ${tw.text.muted} font-ds-font-weight-medium`
+            }`}
         >
             {icon}
             {label}

@@ -3,10 +3,23 @@
 import { useState, useEffect } from "react";
 import { Activity } from "@/type";
 import { Section, FormGrid } from "@/app/components/shared/layoutPrimitives";
-import { Button, Input, Select } from "@/app/components/ui";
-import { colors, spacing, radii } from "@/app/styles/foundations";
+import {
+  Card,
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Select,
+  SelectItem,
+  Button,
+} from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { toast } from "sonner";
-import { Users, UserCheck, ShieldCheck } from "lucide-react";
+import {
+  UsersIcon,
+  UserIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
 
 function AdditionalRolesSection({ activityId, staff }: { activityId: number, staff: any[] }) {
   const [roles, setRoles] = useState<any[]>([]);
@@ -56,36 +69,36 @@ function AdditionalRolesSection({ activityId, staff }: { activityId: number, sta
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <h5 style={{ margin: "16px 0 8px 0", fontSize: 14 }}>בעלי תפקידים נוספים</h5>
+    <div className="flex flex-col gap-1">
+        <Text className="mt-4 mb-2 text-sm font-semibold">בעלי תפקידים נוספים</Text>
         {roles.map(r => (
-            <div key={r.volunteer_national_id} style={{ display: "flex", justifyContent: "space-between", padding: 8, background: colors.surfaceAlt, borderRadius: 4, alignItems: "center", fontSize: 13 }}>
+            <Card key={r.volunteer_national_id} className="p-2 flex justify-between items-center text-sm">
                 <div>
-                    <strong>{r.volunteer_name}</strong>
-                    {r.role_name && <span style={{ marginRight: 8, color: colors.textMuted }}>({r.role_name})</span>}
+                    <Text className="font-semibold">{r.volunteer_name}</Text>
+                    {r.role_name && <Text className="text-sm" style={{ color: cssVar.text.muted }}>({r.role_name})</Text>}
                 </div>
-                <button onClick={() => handleRemove(r.volunteer_national_id)} style={{ border: "none", background: "none", color: colors.danger, cursor: "pointer" }}>הסר</button>
-            </div>
+                <button onClick={() => handleRemove(r.volunteer_national_id)} className="border-none bg-transparent cursor-pointer" style={{ color: cssVar.status.danger }}>הסר</button>
+            </Card>
         ))}
         
-        <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
-            <select 
-                style={{ flex: 1, padding: 6, borderRadius: 4, border: `1px solid ${colors.border}`, fontSize: 13 }}
-                value={newPerson}
-                onChange={(e) => setNewPerson(e.target.value)}
+        <div className="flex gap-1 mt-2">
+            <Select 
+                value={newPerson || undefined}
+                onValueChange={(val) => setNewPerson(val || "")}
+                placeholder="בחר איש צוות..."
+                className="flex-1"
             >
-                <option value="">בחר איש צוות...</option>
-                {staff.map(s => <option key={s.national_id} value={s.national_id}>{s.full_name}</option>)}
-            </select>
-            <select 
-                style={{ flex: 1, padding: 6, borderRadius: 4, border: `1px solid ${colors.border}`, fontSize: 13 }}
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
+                {staff.map(s => <SelectItem key={s.national_id} value={s.national_id}>{s.full_name}</SelectItem>)}
+            </Select>
+            <Select 
+                value={newRole || undefined}
+                onValueChange={(val) => setNewRole(val || "")}
+                placeholder="תפקיד..."
+                className="flex-1"
             >
-                <option value="">תפקיד...</option>
-                {availableRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-            <Button onClick={handleAdd} disabled={!newPerson} style={{ padding: "4px 8px", fontSize: 12 }}>+</Button>
+                {availableRoles.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+            </Select>
+            <Button onClick={handleAdd} disabled={!newPerson} size="sm">+</Button>
         </div>
     </div>
   );
@@ -112,15 +125,13 @@ export function OverviewTab({
   const [staff, setStaff] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   
-  // KPI Data
   const [kpiData, setKpiData] = useState({
       surfers: 0,
       volunteers: 0,
-      staff: 0 // If needed distinct from volunteers
+      staff: 0
   });
 
   useEffect(() => {
-    // Fetch staff volunteers and groups
     async function fetchData() {
       try {
         const [staffRes, managementRes, groupsRes] = await Promise.all([
@@ -141,13 +152,6 @@ export function OverviewTab({
 
          if(gData.success) setGroups(gData.groups);
 
-         // Calculate KPIs from activity object if available or fetch fresh
-         // Assuming activity.assignments contains all approved assignments
-         // If assignments is not populated in props, we might need to fetch it.
-         // Props `activity` usually comes from parent which fetches detailed activity.
-         // Let's rely on activity props if it has `assignments` array, otherwise 0.
-         // The parent component fetches `activity` which includes `assignments` in the recent update.
-         // Let's verify type. Assuming `activity` has `assignments`.
          const assignments = (activity as any).assignments || [];
          const uniqueSurfers = new Set(assignments.map((a: any) => a.surfer_id)).size;
          const uniqueVolunteers = new Set(assignments.map((a: any) => a.volunteer_id)).size;
@@ -155,7 +159,7 @@ export function OverviewTab({
          setKpiData({
              surfers: uniqueSurfers,
              volunteers: uniqueVolunteers,
-             staff: 0 // Placeholder or specific logic
+             staff: 0
          });
 
       } catch (err) {
@@ -170,7 +174,7 @@ export function OverviewTab({
     try {
       await onUpdate({
           ...formData,
-          group_id: formData.group_id || null // Ensure it is passed as string or null
+          group_id: formData.group_id || null
       });
       toast.success("השינויים נשמרו בהצלחה");
     } catch (error) {
@@ -180,115 +184,127 @@ export function OverviewTab({
     }
   };
 
-  const staffOptions = [
-    { value: "", label: "בחר מהרשימה..." },
-    ...staff.map(v => ({ value: v.national_id, label: v.full_name }))
-  ];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-5">
       
       {/* KPIs Header */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: spacing.md }}>
-          <div style={{ background: colors.surfaceAlt, padding: spacing.md, borderRadius: radii.card, display: "flex", alignItems: "center", gap: spacing.md }}>
-              <div style={{ padding: 10, background: colors.primary + "20", borderRadius: "50%", color: colors.primary }}>
-                  <Users size={24} />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+          <Card className="p-4 flex items-center gap-4">
+              <div
+                className="p-2.5 rounded-full"
+                style={{ backgroundColor: cssVar.status.infoSoft, color: cssVar.brand.primary }}
+              >
+                  <UsersIcon className="w-6 h-6" />
               </div>
               <div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>{kpiData.surfers}</div>
-                  <div style={{ fontSize: 13, color: colors.textMuted }}>גולשים משובצים</div>
+                  <Title>{kpiData.surfers}</Title>
+                  <Text style={{ color: cssVar.text.muted }}>גולשים משובצים</Text>
               </div>
-          </div>
-          <div style={{ background: colors.surfaceAlt, padding: spacing.md, borderRadius: radii.card, display: "flex", alignItems: "center", gap: spacing.md }}>
-              <div style={{ padding: 10, background: colors.success + "20", borderRadius: "50%", color: colors.success }}>
-                  <ShieldCheck size={24} />
-              </div>
-              <div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>{kpiData.volunteers}</div>
-                  <div style={{ fontSize: 13, color: colors.textMuted }}>אנשי צוות משובצים</div>
-              </div>
-          </div>
-          {/* Third KPI placeholder or remove if only 2 needed */}
-          <div style={{ background: colors.surfaceAlt, padding: spacing.md, borderRadius: radii.card, display: "flex", alignItems: "center", gap: spacing.md }}>
-              <div style={{ padding: 10, background: colors.warning + "20", borderRadius: "50%", color: colors.warning }}>
-                  <UserCheck size={24} />
+          </Card>
+          <Card className="p-4 flex items-center gap-4">
+              <div
+                className="p-2.5 rounded-full"
+                style={{ backgroundColor: cssVar.status.successSoft, color: cssVar.status.success }}
+              >
+                  <ShieldCheckIcon className="w-6 h-6" />
               </div>
               <div>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}>-</div>
-                  <div style={{ fontSize: 13, color: colors.textMuted }}>סטטוס נוכחות</div>
+                  <Title>{kpiData.volunteers}</Title>
+                  <Text style={{ color: cssVar.text.muted }}>אנשי צוות משובצים</Text>
               </div>
-          </div>
+          </Card>
+          <Card className="p-4 flex items-center gap-4">
+              <div
+                className="p-2.5 rounded-full"
+                style={{ backgroundColor: cssVar.status.warningSoft, color: cssVar.status.warning }}
+              >
+                  <UserIcon className="w-6 h-6" />
+              </div>
+              <div>
+                  <Title>-</Title>
+                  <Text style={{ color: cssVar.text.muted }}>סטטוס נוכחות</Text>
+              </div>
+          </Card>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: spacing.lg, alignItems: "start" }}>
+      <div className="grid grid-cols-[2fr_1fr] gap-5 items-start">
           
           {/* Right Column: Activity Details */}
           <Section title="פרטי הפעילות">
             <FormGrid columns="1fr">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: spacing.md }}>
-                  <Input
-                    type="date"
-                    label="תאריך"
-                    value={formData.activity_date}
-                    onChange={(e) => setFormData({ ...formData, activity_date: e.target.value })}
-                  />
-                  <Input
-                    type="time"
-                    label="התחלה"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  />
-                  <Input
-                    type="time"
-                    label="סיום"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  />
+              <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>תאריך</Text>
+                    <input
+                      type="date"
+                      className="w-full rounded-md border px-3 py-2"
+                      style={{ borderColor: cssVar.border.primary }}
+                      value={formData.activity_date}
+                      onChange={(e) => setFormData({ ...formData, activity_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>התחלה</Text>
+                    <input
+                      type="time"
+                      className="w-full rounded-md border px-3 py-2"
+                      style={{ borderColor: cssVar.border.primary }}
+                      value={formData.start_time}
+                      onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>סיום</Text>
+                    <input
+                      type="time"
+                      className="w-full rounded-md border px-3 py-2"
+                      style={{ borderColor: cssVar.border.primary }}
+                      value={formData.end_time}
+                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    />
+                  </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.md }}>
-                  <Input
-                    label="מיקום"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
-                  <Select 
-                    label="קבוצה משויכת"
-                    value={formData.group_id}
-                    onChange={(e) => setFormData({ ...formData, group_id: e.target.value })}
-                    options={[
-                        { value: "", label: "בחר קבוצה..." },
-                        ...groups.map(g => ({ value: String(g.id).toLowerCase(), label: g.name }))
-                    ]}
-                    disabled={!!activity.series_id} // Disable if part of a series
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מיקום</Text>
+                    <TextInput
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>קבוצה משויכת</Text>
+                    <Select 
+                      value={formData.group_id || undefined}
+                      onValueChange={(val) => setFormData({ ...formData, group_id: val || "" })}
+                      placeholder="בחר קבוצה..."
+                      disabled={!!activity.series_id}
+                    >
+                        {groups.map(g => (
+                            <SelectItem key={g.id} value={String(g.id).toLowerCase()}>{g.name}</SelectItem>
+                        ))}
+                    </Select>
+                  </div>
                   {activity.series_id && (
-                      <div style={{ fontSize: 12, color: colors.textMuted, marginTop: -12 }}>
+                      <Text className="text-xs -mt-3" style={{ color: cssVar.text.muted }}>
                           לא ניתן לשנות קבוצה לפעילות שהיא חלק מסדרה.
-                      </div>
+                      </Text>
                   )}
               </div>
 
-              <div style={{ marginTop: spacing.xs }}>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500, fontSize: 13 }}>הערות כלליות</label>
-                <textarea
-                    style={{ 
-                    width: "100%", 
-                    padding: 8, 
-                    borderRadius: radii.button, 
-                    border: `1px solid ${colors.border}`,
-                    fontFamily: "inherit",
-                    resize: "vertical",
-                    minHeight: 80
-                    }}
+              <div className="mt-1">
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>הערות כלליות</Text>
+                <Textarea
+                    rows={3}
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
             </FormGrid>
             
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: spacing.md }}>
-                <Button variant="primary" onClick={handleSave} disabled={saving}>
+            <div className="flex justify-end mt-4">
+                <Button onClick={handleSave} disabled={saving}>
                 {saving ? "שומר..." : "שמור שינויים"}
                 </Button>
             </div>
@@ -296,25 +312,33 @@ export function OverviewTab({
 
           {/* Left Column: Roles */}
           <Section title="בעלי תפקידים">
-             <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+             <div className="flex flex-col gap-4">
                  <div>
+                     <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מנהל פעילות</Text>
                      <Select 
-                        label="מנהל פעילות"
-                        value={formData.activity_manager_id}
-                        onChange={(e) => setFormData({ ...formData, activity_manager_id: e.target.value })}
-                        options={staffOptions}
-                     />
+                        value={formData.activity_manager_id || undefined}
+                        onValueChange={(val) => setFormData({ ...formData, activity_manager_id: val || "" })}
+                        placeholder="בחר מהרשימה..."
+                     >
+                        {staff.map(v => (
+                            <SelectItem key={v.national_id} value={v.national_id}>{v.full_name}</SelectItem>
+                        ))}
+                     </Select>
                  </div>
                  <div>
+                     <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מנהל בטיחות</Text>
                      <Select 
-                        label="מנהל בטיחות"
-                        value={formData.safety_manager_id}
-                        onChange={(e) => setFormData({ ...formData, safety_manager_id: e.target.value })}
-                        options={staffOptions}
-                     />
+                        value={formData.safety_manager_id || undefined}
+                        onValueChange={(val) => setFormData({ ...formData, safety_manager_id: val || "" })}
+                        placeholder="בחר מהרשימה..."
+                     >
+                        {staff.map(v => (
+                            <SelectItem key={v.national_id} value={v.national_id}>{v.full_name}</SelectItem>
+                        ))}
+                     </Select>
                  </div>
                  
-                 <div style={{ borderTop: `1px dashed ${colors.border}`, margin: "8px 0" }} />
+                 <div className="border-t border-dashed my-2" style={{ borderColor: cssVar.border.primary }} />
                  
                  <AdditionalRolesSection activityId={activity.id} staff={staff} />
              </div>
@@ -322,10 +346,10 @@ export function OverviewTab({
       </div>
 
       {/* Bottom Placeholder */}
-      <Section title="רשימות מיוחדות" style={{ opacity: 0.7 }}>
-          <div style={{ color: colors.textMuted, fontStyle: "italic", textAlign: "center", padding: spacing.md }}>
+      <Section title="רשימות מיוחדות" className="opacity-70">
+          <Text className="italic text-center p-4" style={{ color: cssVar.text.muted }}>
               כאן יופיעו רשימות דינמיות בהתאם לתוכנית הפעילות (בפיתוח)
-          </div>
+          </Text>
       </Section>
     </div>
   );

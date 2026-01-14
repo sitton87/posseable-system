@@ -1,16 +1,17 @@
-import { Modal, Button } from "@/app/components/ui";
-import { sectionCardStyle } from "@/app/components/shared";
-import { colors, spacing } from "@/app/styles/foundations";
+"use client";
+
+import {
+  Card,
+  Title,
+  Text,
+  Button,
+  Flex,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import { Supplier } from "@/type";
 import { supplierTypeOptions } from "../types";
-
-const muted = colors.textMuted;
-
-const sectionBoxStyle = {
-  ...sectionCardStyle,
-  marginBottom: spacing.lg,
-};
 
 type Props = {
   open: boolean;
@@ -24,68 +25,74 @@ export default function SupplierViewModal({
   onClose,
 }: Props) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(640px, 95vw)"
-      style={{ padding: spacing.xxl }}
-    >
-      {supplier && (
-        <>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: spacing.sm,
-              marginBottom: spacing.md,
-            }}
-          >
-            <h3 style={{ margin: 0 }}>{supplier.name}</h3>
-            <Button variant="secondary" onClick={onClose}>
-              ✕ סגור
-            </Button>
-          </div>
-          <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-            <div style={{ fontSize: 12, color: muted }}>מספר ספק</div>
-            <div style={{ fontFamily: "monospace" }}>
-              {supplier.supplier_identifier}
-            </div>
-          </div>
-          <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-            <div style={{ fontSize: 12, color: muted }}>סוג ספק</div>
-            <div>
-              {
-                supplierTypeOptions.find(
-                  (opt) =>
-                    opt.value === (supplier.supplier_type || "goods")
-                )?.label
-              }
-            </div>
-          </div>
-          {supplier.services_offered && (
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <div style={{ fontSize: 12, color: muted }}>שירותים</div>
-              <div>{supplier.services_offered}</div>
-            </div>
-          )}
-          <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-            <div style={{ fontSize: 12, color: muted }}>איש קשר</div>
-            <div>{supplier.contact_name || "—"}</div>
-            <div style={{ fontSize: 12, color: muted }}>טלפון</div>
-            <div>{formatPhoneNumber(supplier.phone)}</div>
-            <div style={{ fontSize: 12, color: muted }}>אימייל</div>
-            <div>{supplier.email || "—"}</div>
-          </div>
-          {supplier.notes && (
-            <div style={{ ...sectionBoxStyle, background: colors.surface }}>
-              <div style={{ fontSize: 12, color: muted }}>הערות</div>
-              <div style={{ whiteSpace: "pre-wrap" }}>{supplier.notes}</div>
-            </div>
-          )}
-        </>
-      )}
-    </Modal>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-xl">
+        {supplier && (
+          <>
+            {/* Header */}
+            <Flex justifyContent="between" alignItems="start" className="mb-6">
+              <Title>{supplier.name}</Title>
+              <Button variant="secondary" onClick={onClose}>
+                ✕ סגור
+              </Button>
+            </Flex>
+
+            {/* מספר ספק */}
+            <Card className="mb-4">
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>מספר ספק</Text>
+              <Text className="font-mono" style={{ color: cssVar.text.primary }}>
+                {supplier.supplier_identifier}
+              </Text>
+            </Card>
+
+            {/* סוג ספק */}
+            <Card className="mb-4">
+              <Text className="text-xs" style={{ color: cssVar.text.muted }}>סוג ספק</Text>
+              <Text style={{ color: cssVar.text.primary }}>
+                {supplierTypeOptions.find(
+                  (opt) => opt.value === (supplier.supplier_type || "goods")
+                )?.label || "—"}
+              </Text>
+            </Card>
+
+            {/* שירותים */}
+            {supplier.services_offered && (
+              <Card className="mb-4">
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>שירותים</Text>
+                <Text style={{ color: cssVar.text.primary }}>{supplier.services_offered}</Text>
+              </Card>
+            )}
+
+            {/* פרטי קשר */}
+            <Card className="mb-4">
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Text className="text-xs" style={{ color: cssVar.text.muted }}>איש קשר</Text>
+                  <Text style={{ color: cssVar.text.primary }}>{supplier.contact_name || "—"}</Text>
+                </div>
+                <div>
+                  <Text className="text-xs" style={{ color: cssVar.text.muted }}>טלפון</Text>
+                  <Text style={{ color: cssVar.text.primary }}>{formatPhoneNumber(supplier.phone)}</Text>
+                </div>
+                <div>
+                  <Text className="text-xs" style={{ color: cssVar.text.muted }}>אימייל</Text>
+                  <Text style={{ color: cssVar.text.primary }}>{supplier.email || "—"}</Text>
+                </div>
+              </div>
+            </Card>
+
+            {/* הערות */}
+            {supplier.notes && (
+              <Card>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>הערות</Text>
+                <Text className="whitespace-pre-wrap" style={{ color: cssVar.text.secondary }}>
+                  {supplier.notes}
+                </Text>
+              </Card>
+            )}
+          </>
+        )}
+      </DialogPanel>
+    </Dialog>
   );
 }
-

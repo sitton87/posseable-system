@@ -1,8 +1,11 @@
-import { Modal, Button } from "@/app/components/ui";
-import { SmallActionButton, sectionCardStyle } from "@/app/components/shared";
-import { spacing, colors } from "@/app/styles/foundations";
-
-const muted = colors.textMuted;
+import {
+  Title,
+  Text,
+  Button,
+  Flex,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 type Props = {
   open: boolean;
@@ -18,40 +21,30 @@ export default function DraftPromptModal({
   onDiscard,
 }: Props) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(420px, 90vw)"
-    >
-      <div style={{ ...sectionCardStyle, boxShadow: "none" }}>
-        <h3 style={{ marginTop: 0 }}>לשמור את המתנדב כטיוטה?</h3>
-        <p style={{ color: muted }}>
-          ניתן לשמור את הנתונים כטיוטה אישית ולהמשיך מאוחר יותר או לסגור ללא
-          שמירה.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-            marginTop: spacing.lg,
-          }}
-        >
-          <SmallActionButton
-            variant="ghost"
-            onClick={onClose}
-          >
-            חזרה לעריכה
-          </SmallActionButton>
-          <SmallActionButton variant="secondary" onClick={onDiscard}>
-            בטל וסגור
-          </SmallActionButton>
-          <SmallActionButton onClick={onSaveDraft}>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-sm" dir="rtl">
+        <Flex justifyContent="start" alignItems="center" className="gap-3 mb-4">
+          <Title style={{ color: cssVar.text.primary }}>לשמור כטיוטה?</Title>
+          <span className="text-xl font-light" style={{ color: cssVar.border.primary }}>|</span>
+          <Text style={{ color: cssVar.text.muted }}>שמירת נתונים לפני סגירה</Text>
+        </Flex>
+        
+        <Text className="mb-6" style={{ color: cssVar.text.secondary }}>
+          ניתן לשמור את הנתונים כטיוטה אישית ולהמשיך מאוחר יותר או לסגור ללא שמירה.
+        </Text>
+
+        <div className="flex justify-start gap-3 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
+          <Button onClick={onSaveDraft}>
             שמור כטיוטה
-          </SmallActionButton>
+          </Button>
+          <Button variant="secondary" onClick={onDiscard}>
+            בטל וסגור
+          </Button>
+          <Button variant="light" onClick={onClose}>
+            חזרה לעריכה
+          </Button>
         </div>
-      </div>
-    </Modal>
+      </DialogPanel>
+    </Dialog>
   );
 }
-

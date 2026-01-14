@@ -1,7 +1,14 @@
 "use client";
 
-import { Button, Card } from "@/app/components/ui";
-import { spacing } from "@/app/styles/foundations";
+import {
+  Card,
+  Title,
+  Text,
+  Button,
+  Flex,
+} from "@tremor/react";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import { cssVar } from "@/app/styles/design-system";
 import { Activity, Donor, SeasonPlan } from "@/type";
 import { useEffect, useState } from "react";
 import FinanceSummary from "./components/FinanceSummary";
@@ -11,7 +18,7 @@ import DonorSelectionModal from "./modals/DonorSelectionModal";
 import TransactionFormModal from "./modals/TransactionFormModal";
 import TransactionViewModal from "./modals/TransactionViewModal";
 import { FinanceStats, Transaction, TransactionFormData } from "./types";
-import { createEmptyFormData, muted } from "./utils";
+import { createEmptyFormData } from "./utils";
 
 export default function FinancePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -392,8 +399,8 @@ export default function FinancePage() {
 
   if (loading) {
     return (
-      <div style={{ padding: spacing.xl, textAlign: "center" }}>
-        <div>טוען תנועות...</div>
+      <div className="p-6 sm:p-10 text-center" style={{ color: cssVar.text.muted }}>
+        טוען תנועות...
       </div>
     );
   }
@@ -414,29 +421,37 @@ export default function FinancePage() {
   };
 
   return (
-    <div style={{ padding: spacing.xl }}>
-      <Card style={{ marginBottom: spacing.lg }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: spacing.md,
-            gap: spacing.md,
-            flexWrap: "wrap",
-          }}
-        >
+    <div className="p-6 sm:p-10">
+      <Card className="mb-6">
+        <Flex justifyContent="between" alignItems="center" className="flex-wrap gap-4 mb-6">
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
+            <Title className="text-xl font-bold" style={{ color: cssVar.text.primary }}>
               💰 ניהול כספים
-            </h2>
+            </Title>
           </div>
-          <Button onClick={handleAdd}>+ הוסף תנועה</Button>
-        </div>
+          <button
+            onClick={handleAdd}
+            className="h-[38px] flex items-center justify-center gap-2 px-4 rounded-lg transition-all active:scale-95 border-none outline-none"
+            style={{
+              background: cssVar.brand.primary,
+              color: cssVar.text.inverted,
+              boxShadow: cssVar.shadow.sm,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = cssVar.brand.emphasis;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = cssVar.brand.primary;
+            }}
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span className="text-sm font-medium whitespace-nowrap">הוסף תנועה</span>
+          </button>
+        </Flex>
 
         <FinanceSummary stats={stats} transactionCount={transactions.length} />
 
-        <div style={{ marginTop: spacing.lg }}>
+        <div className="mt-6">
           <TransactionFilters
             filterType={filterType}
             setFilterType={setFilterType}

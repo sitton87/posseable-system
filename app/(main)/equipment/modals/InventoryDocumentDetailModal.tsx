@@ -1,14 +1,21 @@
 "use client";
 
-import { Modal, Button } from "@/app/components/ui";
 import {
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+  Title,
+  Text,
+  Button,
+  Card,
+  Table,
+  TableHead,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import type { InventoryDocumentDetail } from "../types";
-import { formatCurrency, formatDate, px } from "../utils";
+import { formatCurrency, formatDate } from "../utils";
 
 type InventoryDocumentDetailModalProps = {
   open: boolean;
@@ -17,7 +24,6 @@ type InventoryDocumentDetailModalProps = {
   onClose: () => void;
 };
 
-const muted = colors.textMuted;
 const ACTION_LABELS: Record<string, string> = {
   RECEIPT: "קליטת ספק",
   DONATION: "תרומה נכנסת",
@@ -35,191 +41,148 @@ export function InventoryDocumentDetailModal({
   onClose,
 }: InventoryDocumentDetailModalProps) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(880px, 95vw)"
-      style={{ padding: spacing.xxl }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: spacing.md,
-        }}
-      >
-        <div>
-          <h3 style={{ margin: 0 }}>פרטי תעודת מלאי</h3>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            צפייה בפרטי התעודה והשורות שנרשמו במסמך.
-          </p>
-        </div>
-        <Button variant="secondary" onClick={onClose}>
-          ✖ סגור
-        </Button>
-      </div>
-
-      {loading ? (
-        <div
-          style={{
-            padding: px(spacing.lg),
-            textAlign: "center",
-            color: muted,
-          }}
-        >
-          טוען נתונים...
-        </div>
-      ) : !document ? (
-        <div
-          style={{
-            padding: px(spacing.lg),
-            textAlign: "center",
-            color: muted,
-          }}
-        >
-          לא נבחרה תעודה להצגה.
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>מספר תעודה</div>
-              <strong>{document.document_number}</strong>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>סוג פעולה</div>
-              <div>
-                {ACTION_LABELS[document.action_type] || document.action_type}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>תאריך</div>
-              <div>{formatDate(document.document_date)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>משתמש מבצע</div>
-              <div>
-                {document.created_by_name ||
-                  document.created_by ||
-                  "—"}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>
-                ספק / תורם / גורם
-              </div>
-              <div>
-                {document.supplier_name ||
-                  document.donor_name ||
-                  document.external_party ||
-                  document.supplier_identifier ||
-                  document.donor_national_id ||
-                  "—"}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>שווי כולל</div>
-              <div>{formatCurrency(document.total_value)}</div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>מחסן מקור</div>
-              <div>{document.source_warehouse_name || "—"}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>מחסן יעד</div>
-              <div>{document.target_warehouse_name || "—"}</div>
-            </div>
-            {document.supplier_document_type && (
-              <div>
-                <div style={{ fontSize: 12, color: muted }}>
-                  סוג תעודת ספק
-                </div>
-                <div>{document.supplier_document_type}</div>
-              </div>
-            )}
-          </div>
-
-          {document.notes && (
-            <div>
-              <div style={{ fontSize: 12, color: muted }}>הערות</div>
-              <div style={{ whiteSpace: "pre-wrap" }}>{document.notes}</div>
-            </div>
-          )}
-
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-4xl">
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <div style={{ fontWeight: 600, marginBottom: spacing.sm }}>
-              שורות התעודה
-            </div>
-            {document.lines.length === 0 ? (
-              <div
-                style={{
-                  padding: px(spacing.md),
-                  color: muted,
-                  textAlign: "center",
-                }}
-              >
-                לא נמצאו שורות לתעודה זו.
+            <Title>פרטי תעודת מלאי</Title>
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+              צפייה בפרטי התעודה והשורות שנרשמו במסמך.
+            </Text>
+          </div>
+          <Button variant="secondary" onClick={onClose}>
+            ✖ סגור
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="p-6 text-center">
+            <Text style={{ color: cssVar.text.muted }}>טוען נתונים...</Text>
+          </div>
+        ) : !document ? (
+          <div className="p-6 text-center">
+            <Text style={{ color: cssVar.text.muted }}>לא נבחרה תעודה להצגה.</Text>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>מספר תעודה</Text>
+                <Text className="font-semibold">{document.document_number}</Text>
               </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ ...tableStyle, minWidth: 720 }}>
-                  <thead>
-                    <tr>
-                      <th style={tableHeaderStyle}>מקט</th>
-                      <th style={tableHeaderStyle}>פריט</th>
-                      {document.action_type === "TRANSFER" && (
-                        <th style={tableHeaderStyle}>מחסן שולח</th>
-                      )}
-                      <th style={tableHeaderStyle}>מחסן יעד</th>
-                      <th style={tableHeaderStyle}>כמות</th>
-                      <th style={tableHeaderStyle}>מס' מסמך</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {document.lines.map((line) => (
-                      <tr key={line.id}>
-                        <td style={tableCellStyle}>{line.internal_sku || "—"}</td>
-                        <td style={tableCellStyle}>{line.item_name}</td>
-                        {document.action_type === "TRANSFER" && (
-                          <td style={tableCellStyle}>
-                            {line.source_warehouse_name || "—"}
-                          </td>
-                        )}
-                        <td style={tableCellStyle}>
-                          {line.target_warehouse_name || "—"}
-                        </td>
-                        <td style={tableCellStyle}>
-                          {line.quantity?.toLocaleString("he-IL") || "0"}
-                        </td>
-                        <td style={tableCellStyle}>
-                          {line.supplier_document_number || "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>סוג פעולה</Text>
+                <Text>
+                  {ACTION_LABELS[document.action_type] || document.action_type}
+                </Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>תאריך</Text>
+                <Text>{formatDate(document.document_date)}</Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>משתמש מבצע</Text>
+                <Text>
+                  {document.created_by_name ||
+                    document.created_by ||
+                    "—"}
+                </Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+                  ספק / תורם / גורם
+                </Text>
+                <Text>
+                  {document.supplier_name ||
+                    document.donor_name ||
+                    document.external_party ||
+                    document.supplier_identifier ||
+                    document.donor_national_id ||
+                    "—"}
+                </Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>שווי כולל</Text>
+                <Text>{formatCurrency(document.total_value)}</Text>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>מחסן מקור</Text>
+                <Text>{document.source_warehouse_name || "—"}</Text>
+              </div>
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>מחסן יעד</Text>
+                <Text>{document.target_warehouse_name || "—"}</Text>
+              </div>
+              {document.supplier_document_type && (
+                <div>
+                  <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+                    סוג תעודת ספק
+                  </Text>
+                  <Text>{document.supplier_document_type}</Text>
+                </div>
+              )}
+            </div>
+
+            {document.notes && (
+              <div>
+                <Text className="text-xs" style={{ color: cssVar.text.muted }}>הערות</Text>
+                <Text className="whitespace-pre-wrap">{document.notes}</Text>
               </div>
             )}
+
+            <div>
+              <Text className="font-semibold mb-2">שורות התעודה</Text>
+              {document.lines.length === 0 ? (
+                <Card className="p-4 text-center">
+                  <Text style={{ color: cssVar.text.muted }}>לא נמצאו שורות לתעודה זו.</Text>
+                </Card>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table style={{ minWidth: 720 }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableHeaderCell>מקט</TableHeaderCell>
+                        <TableHeaderCell>פריט</TableHeaderCell>
+                        {document.action_type === "TRANSFER" && (
+                          <TableHeaderCell>מחסן שולח</TableHeaderCell>
+                        )}
+                        <TableHeaderCell>מחסן יעד</TableHeaderCell>
+                        <TableHeaderCell>כמות</TableHeaderCell>
+                        <TableHeaderCell>מס' מסמך</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {document.lines.map((line) => (
+                        <TableRow key={line.id}>
+                          <TableCell>{line.internal_sku || "—"}</TableCell>
+                          <TableCell>{line.item_name}</TableCell>
+                          {document.action_type === "TRANSFER" && (
+                            <TableCell>
+                              {line.source_warehouse_name || "—"}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            {line.target_warehouse_name || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {line.quantity?.toLocaleString("he-IL") || "0"}
+                          </TableCell>
+                          <TableCell>
+                            {line.supplier_document_number || "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </Modal>
+        )}
+      </DialogPanel>
+    </Dialog>
   );
 }
-

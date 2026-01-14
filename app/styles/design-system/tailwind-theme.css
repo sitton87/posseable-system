@@ -1,0 +1,163 @@
+/**
+ * PosSEAble Design System - Tailwind Theme Extension
+ * ===================================================
+ * 
+ * קובץ זה מרחיב את Tailwind עם ה-Design Tokens שלנו.
+ * הוא מאפשר שימוש ב-classes כמו:
+ *   - text-ds-primary (במקום text-slate-800)
+ *   - bg-ds-secondary (במקום bg-slate-50)
+ *   - shadow-ds-card (צל מותאם)
+ * 
+ * שימוש: @import בתוך globals.css אחרי design-tokens.css
+ */
+
+@theme inline {
+  /* ===================================================================
+     COLOR UTILITIES - צבעים לשימוש עם Tailwind
+     =================================================================== */
+  
+  /* --- Text Colors --- */
+  /* Usage: text-ds-primary, text-ds-secondary, etc. */
+  --color-ds-text-primary: var(--color-text-primary);
+  --color-ds-text-secondary: var(--color-text-secondary);
+  --color-ds-text-muted: var(--color-text-muted);
+  --color-ds-text-subtle: var(--color-text-subtle);
+  --color-ds-text-inverted: var(--color-text-inverted);
+  
+  /* --- Background Colors --- */
+  /* Usage: bg-ds-primary, bg-ds-secondary, etc. */
+  --color-ds-bg-primary: var(--color-bg-primary);
+  --color-ds-bg-secondary: var(--color-bg-secondary);
+  --color-ds-bg-tertiary: var(--color-bg-tertiary);
+  --color-ds-bg-hover: var(--color-bg-hover);
+  --color-ds-bg-active: var(--color-bg-active);
+  
+  /* --- Brand Colors --- */
+  /* Usage: bg-ds-brand, text-ds-brand, etc. */
+  --color-ds-brand: var(--color-brand-primary);
+  --color-ds-brand-hover: var(--color-brand-primary-hover);
+  --color-ds-brand-active: var(--color-brand-primary-active);
+  --color-ds-brand-light: var(--color-brand-primary-light);
+  --color-ds-brand-muted: var(--color-brand-primary-muted);
+  --color-ds-brand-text: var(--color-brand-primary-text);
+  
+  /* --- Semantic Colors --- */
+  /* Usage: bg-ds-success, text-ds-success-text, etc. */
+  --color-ds-success: var(--color-success);
+  --color-ds-success-hover: var(--color-success-hover);
+  --color-ds-success-light: var(--color-success-light);
+  --color-ds-success-text: var(--color-success-text);
+  
+  --color-ds-warning: var(--color-warning);
+  --color-ds-warning-hover: var(--color-warning-hover);
+  --color-ds-warning-light: var(--color-warning-light);
+  --color-ds-warning-text: var(--color-warning-text);
+  
+  --color-ds-danger: var(--color-danger);
+  --color-ds-danger-hover: var(--color-danger-hover);
+  --color-ds-danger-light: var(--color-danger-light);
+  --color-ds-danger-text: var(--color-danger-text);
+  
+  --color-ds-info: var(--color-info);
+  --color-ds-info-hover: var(--color-info-hover);
+  --color-ds-info-light: var(--color-info-light);
+  --color-ds-info-text: var(--color-info-text);
+  
+  /* --- Border Colors --- */
+  /* Usage: border-ds-primary, border-ds-focus, etc. */
+  --color-ds-border: var(--color-border-primary);
+  --color-ds-border-secondary: var(--color-border-secondary);
+  --color-ds-border-muted: var(--color-border-muted);
+  --color-ds-border-focus: var(--color-border-focus);
+  
+  /* ===================================================================
+     TYPOGRAPHY - טיפוגרפיה
+     =================================================================== */
+  
+  /* Font Families */
+  --font-ds-primary: var(--font-family-primary);
+  --font-ds-heading: var(--font-family-heading);
+  --font-ds-mono: var(--font-family-mono);
+  
+  /* Font Sizes - Usage: text-ds-xs, text-ds-sm, etc. */
+  --text-ds-xs: var(--font-size-xs);
+  --text-ds-sm: var(--font-size-sm);
+  --text-ds-base: var(--font-size-base);
+  --text-ds-lg: var(--font-size-lg);
+  --text-ds-xl: var(--font-size-xl);
+  --text-ds-2xl: var(--font-size-2xl);
+  --text-ds-3xl: var(--font-size-3xl);
+  --text-ds-4xl: var(--font-size-4xl);
+  
+  /* ===================================================================
+     SHADOWS - צללים
+     =================================================================== */
+  
+  /* Usage: shadow-ds-sm, shadow-ds-card, etc. */
+  --shadow-ds-xs: var(--shadow-xs);
+  --shadow-ds-sm: var(--shadow-sm);
+  --shadow-ds-md: var(--shadow-md);
+  --shadow-ds-lg: var(--shadow-lg);
+  --shadow-ds-xl: var(--shadow-xl);
+  --shadow-ds-2xl: var(--shadow-2xl);
+  --shadow-ds-inner: var(--shadow-inner);
+  --shadow-ds-brand: var(--shadow-brand);
+  --shadow-ds-success: var(--shadow-success);
+  --shadow-ds-danger: var(--shadow-danger);
+  
+  /* Component-specific shadows */
+  --shadow-ds-card: var(--card-shadow);
+  --shadow-ds-card-hover: var(--card-shadow-hover);
+  --shadow-ds-modal: var(--modal-shadow);
+  
+  /* ===================================================================
+     BORDER RADIUS - פינות מעוגלות
+     =================================================================== */
+  
+  /* Usage: rounded-ds-sm, rounded-ds-card, etc. */
+  --radius-ds-xs: var(--radius-xs);
+  --radius-ds-sm: var(--radius-sm);
+  --radius-ds-md: var(--radius-md);
+  --radius-ds-lg: var(--radius-lg);
+  --radius-ds-xl: var(--radius-xl);
+  --radius-ds-2xl: var(--radius-2xl);
+  --radius-ds-3xl: var(--radius-3xl);
+  --radius-ds-full: var(--radius-full);
+  
+  /* Component-specific radius */
+  --radius-ds-card: var(--card-radius);
+  --radius-ds-modal: var(--modal-radius);
+  --radius-ds-input: var(--input-radius);
+  --radius-ds-button: var(--button-radius);
+  --radius-ds-badge: var(--badge-radius);
+  
+  /* ===================================================================
+     SPACING - ריווח (אופציונלי - Tailwind כבר מספק סקאלה טובה)
+     =================================================================== */
+  
+  /* אפשר להוסיף ערכי spacing מותאמים אם צריך */
+  /* --spacing-ds-card: var(--card-padding); */
+  /* --spacing-ds-modal: var(--modal-padding); */
+  
+  /* ===================================================================
+     TRANSITIONS - מעברים
+     =================================================================== */
+  
+  /* Usage: transition-ds-fast, transition-ds-normal, etc. */
+  --transition-property-ds-colors: color, background-color, border-color, text-decoration-color, fill, stroke;
+  --transition-property-ds-all: all;
+  
+  /* ===================================================================
+     Z-INDEX - שכבות
+     =================================================================== */
+  
+  --z-ds-dropdown: var(--z-dropdown);
+  --z-ds-sticky: var(--z-sticky);
+  --z-ds-fixed: var(--z-fixed);
+  --z-ds-navbar: var(--z-navbar);
+  --z-ds-modal-backdrop: var(--z-modal-backdrop);
+  --z-ds-modal: var(--z-modal);
+  --z-ds-popover: var(--z-popover);
+  --z-ds-tooltip: var(--z-tooltip);
+}
+

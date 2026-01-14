@@ -1,8 +1,17 @@
 "use client";
 
-import { Modal, Button } from "@/app/components/ui";
-import { inputStyle, labelStyle } from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+import {
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Select,
+  SelectItem,
+  Button,
+  Switch,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import type {
   EquipmentCategory,
   EquipmentFamily,
@@ -123,323 +132,275 @@ export function EquipmentFormModal({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(960px, 95vw)"
-      style={{ padding: spacing.xxl }}
-      escEnabled={escEnabled}
-    >
-      <h3 style={{ marginTop: 0, fontSize: 20, fontWeight: 800 }}>
-        {editingItem ? "עריכת פריט ציוד" : "פריט ציוד חדש"}
-      </h3>
-      <div
-        style={{ display: "flex", flexDirection: "column", gap: spacing.md }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>משפחה*</label>
-            <select
-              style={inputStyle}
-              value={formState.family_code}
-              disabled={!canEdit}
-              onChange={(e) => onChange("family_code", e.target.value)}
-            >
-              <option value="">בחר משפחה</option>
-              {families.map((family) => (
-                <option key={family.code} value={family.code}>
-                  {family.code} · {family.name}
-                </option>
-              ))}
-            </select>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-4xl">
+        <Title className="mb-6">
+          {editingItem ? "עריכת פריט ציוד" : "פריט ציוד חדש"}
+        </Title>
+
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                משפחה <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <Select
+                value={formState.family_code || undefined}
+                onValueChange={(val) => onChange("family_code", val || "")}
+                disabled={!canEdit}
+                placeholder="בחר משפחה"
+              >
+                {families.map((family) => (
+                  <SelectItem key={family.code} value={family.code}>
+                    {family.code} · {family.name}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                קטגוריה <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <Select
+                value={formState.category_code || undefined}
+                onValueChange={(val) => onChange("category_code", val || "")}
+                disabled={!canEdit}
+                placeholder="בחר קטגוריה"
+              >
+                {formCategories.map((category) => (
+                  <SelectItem
+                    key={`${category.family_code}-${category.code}`}
+                    value={category.code}
+                  >
+                    {category.code} · {category.name}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                שם הפריט <span style={{ color: cssVar.status.danger }}>*</span>
+              </Text>
+              <TextInput
+                disabled={!canEdit}
+                value={formState.name}
+                onChange={(e) => onChange("name", e.target.value)}
+                placeholder="למשל: גלשן פאן 8'"
+              />
+            </div>
           </div>
+
           <div>
-            <label style={labelStyle}>קטגוריה*</label>
-            <select
-              style={inputStyle}
-              value={formState.category_code}
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+              תיאור
+            </Text>
+            <Textarea
+              rows={2}
               disabled={!canEdit}
-              onChange={(e) => onChange("category_code", e.target.value)}
-            >
-              <option value="">בחר קטגוריה</option>
-              {formCategories.map((category) => (
-                <option
-                  key={`${category.family_code}-${category.code}`}
-                  value={category.code}
-                >
-                  {category.code} · {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>שם הפריט*</label>
-            <input
-              type="text"
-              style={inputStyle}
-              disabled={!canEdit}
-              value={formState.name}
-              onChange={(e) => onChange("name", e.target.value)}
-              placeholder="למשל: גלשן פאן 8'"
+              value={formState.description}
+              onChange={(e) => onChange("description", e.target.value)}
+              placeholder="מידע נוסף על הפריט..."
             />
           </div>
-        </div>
-        <div>
-          <label style={labelStyle}>תיאור</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 44, maxHeight: 140 }}
-            rows={1}
-            disabled={!canEdit}
-            value={formState.description}
-            onChange={(e) => onChange("description", e.target.value)}
-            placeholder="מידע נוסף על הפריט..."
-          />
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>מצב</label>
-            <select
-              style={inputStyle}
-              disabled={!canEdit}
-              value={formState.condition}
-              onChange={(e) => onChange("condition", e.target.value)}
-            >
-              {CONDITION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                מצב
+              </Text>
+              <Select
+                disabled={!canEdit}
+                value={formState.condition}
+                onValueChange={(val) => onChange("condition", val)}
+              >
+                {CONDITION_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                מקט יצרן
+              </Text>
+              <TextInput
+                disabled={!canEdit}
+                value={formState.manufacturer_sku}
+                onChange={(e) => onChange("manufacturer_sku", e.target.value)}
+              />
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                שם ספק
+              </Text>
+              <Select
+                disabled={!canEdit}
+                value={formState.supplier_identifier || undefined}
+                onValueChange={(val) => handleSupplierChange(val || "")}
+                placeholder="בחר ספק"
+              >
+                {activeSuppliers.map((supplier) => (
+                  <SelectItem
+                    key={supplier.supplier_identifier}
+                    value={supplier.supplier_identifier}
+                  >
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </Select>
+              {!formState.supplier_identifier && formState.manufacturer_name && (
+                <Text className="text-xs mt-1" style={{ color: cssVar.text.muted }}>
+                  ספק נוכחי: {formState.manufacturer_name}
+                </Text>
+              )}
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                מחיר עלות ליחידה
+              </Text>
+              <TextInput
+                type="number"
+                disabled={!canEdit}
+                value={formState.purchase_cost}
+                onChange={(e) => onChange("purchase_cost", e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <label style={labelStyle}>מקט יצרן</label>
-            <input
-              type="text"
-              style={inputStyle}
-              disabled={!canEdit}
-              value={formState.manufacturer_sku}
-              onChange={(e) => onChange("manufacturer_sku", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>שם ספק</label>
-            <select
-              style={inputStyle}
-              disabled={!canEdit}
-              value={formState.supplier_identifier}
-              onChange={(e) => handleSupplierChange(e.target.value)}
-            >
-              <option value="">בחר ספק</option>
-              {activeSuppliers.map((supplier) => (
-                <option
-                  key={supplier.supplier_identifier}
-                  value={supplier.supplier_identifier}
+
+          <div className="border rounded-lg p-4 flex flex-col gap-4" style={{ borderColor: cssVar.border.primary }}>
+            <Text className="font-semibold">אופי שימוש</Text>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  סוג בעלות
+                </Text>
+                <Select
+                  disabled={!canEdit}
+                  value={formState.ownership_type}
+                  onValueChange={(val) =>
+                    handleOwnershipTypeChange(
+                      val as EquipmentFormState["ownership_type"]
+                    )
+                  }
                 >
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-            {!formState.supplier_identifier && formState.manufacturer_name && (
-              <div style={{ fontSize: 12, color: colors.textMuted }}>
-                ספק נוכחי: {formState.manufacturer_name}
+                  {ownershipOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {ownershipLabels[option]}
+                    </SelectItem>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  סוג פריט
+                </Text>
+                <Select
+                  disabled={!canEdit}
+                  value={formState.is_consumable ? "consumable" : "regular"}
+                  onValueChange={(val) =>
+                    handleConsumableChange(val === "consumable")
+                  }
+                >
+                  <SelectItem value="regular">רגיל</SelectItem>
+                  <SelectItem value="consumable">מתכלה</SelectItem>
+                </Select>
+              </div>
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  סטטוס פריט
+                </Text>
+                <div className="flex items-center gap-2 mt-1">
+                  <Switch
+                    checked={formState.is_active}
+                    onChange={(val) => onChange("is_active", val)}
+                    disabled={!canEdit}
+                  />
+                  <Text className="text-sm">פריט פעיל</Text>
+                </div>
+              </div>
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  סימון מק״ט ייחודי
+                </Text>
+                <div className="flex items-center gap-2 mt-1">
+                  <Switch
+                    checked={formState.is_sku_tracked}
+                    onChange={(val) => handleSkuTrackedChange(val)}
+                    disabled={!canEdit}
+                  />
+                  <Text className="text-sm">מנוהל לפי מק״ט ייחודי</Text>
+                </div>
+              </div>
+            </div>
+            {formState.ownership_type === "rental" && (
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  תוקף השכרה
+                </Text>
+                <TextInput
+                  type="date"
+                  disabled={!canEdit}
+                  value={formState.rental_expiry}
+                  onChange={(e) => onChange("rental_expiry", e.target.value)}
+                />
               </div>
             )}
-          </div>
-          <div>
-            <label style={labelStyle}>מחיר עלות ליחידה</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              style={inputStyle}
-              disabled={!canEdit}
-              value={formState.purchase_cost}
-              onChange={(e) => onChange("purchase_cost", e.target.value)}
-            />
-          </div>
-        </div>
-        <div
-          style={{
-            border: `1px solid ${colors.border}`,
-            borderRadius: spacing.sm,
-            padding: spacing.md,
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>אופי שימוש</div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: spacing.md,
-            }}
-          >
-            <div>
-              <label style={labelStyle}>סוג בעלות</label>
-              <select
-                style={inputStyle}
-                disabled={!canEdit}
-                value={formState.ownership_type}
-                onChange={(e) =>
-                  handleOwnershipTypeChange(
-                    e.target.value as EquipmentFormState["ownership_type"]
-                  )
-                }
-              >
-                {ownershipOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {ownershipLabels[option]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>סוג פריט</label>
-              <select
-                style={inputStyle}
-                disabled={!canEdit}
-                value={formState.is_consumable ? "consumable" : "regular"}
-                onChange={(e) =>
-                  handleConsumableChange(e.target.value === "consumable")
-                }
-              >
-                <option value="regular">רגיל</option>
-                <option value="consumable">מתכלה</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>סטטוס פריט</label>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacing.xs / 2,
-                  fontSize: 13,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={formState.is_active}
+            {formState.is_consumable && (
+              <div>
+                <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                  מלאי מינימלי
+                </Text>
+                <TextInput
+                  type="number"
                   disabled={!canEdit}
-                  onChange={(e) => onChange("is_active", e.target.checked)}
+                  value={formState.min_stock}
+                  onChange={(e) => onChange("min_stock", e.target.value)}
                 />
-                פריט פעיל
-              </label>
-            </div>
-            <div>
-              <label style={labelStyle}>סימון מק״ט ייחודי</label>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: spacing.xs / 2,
-                  fontSize: 13,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={formState.is_sku_tracked}
-                  disabled={!canEdit}
-                  onChange={(e) => handleSkuTrackedChange(e.target.checked)}
-                />
-                מנוהל לפי מק״ט ייחודי
-              </label>
-            </div>
+              </div>
+            )}
+            <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+              בחירה ב"השכרה" מנטרלת אופציית מתכלה. ניתן להגדיר קונסיגנציה כמצב ביניים (מתועד בלבד).
+            </Text>
           </div>
-          {formState.ownership_type === "rental" && (
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label style={labelStyle}>תוקף השכרה</label>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                קישור לתמונה / מסמך
+              </Text>
+              <TextInput
+                type="url"
+                disabled={!canEdit}
+                value={formState.default_image_url}
+                onChange={(e) => onChange("default_image_url", e.target.value)}
+              />
               <input
-                type="date"
-                style={inputStyle}
+                type="file"
+                accept="image/*"
+                className="mt-1 text-sm"
                 disabled={!canEdit}
-                value={formState.rental_expiry}
-                onChange={(e) => onChange("rental_expiry", e.target.value)}
+                onChange={handleImageFileChange}
+              />
+              <Text className="text-xs mt-1" style={{ color: cssVar.text.muted }}>
+                ניתן להעלות קובץ עד 2MB או לספק קישור ישיר.
+              </Text>
+            </div>
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                הערות
+              </Text>
+              <Textarea
+                rows={3}
+                disabled={!canEdit}
+                value={formState.notes}
+                onChange={(e) => onChange("notes", e.target.value)}
               />
             </div>
-          )}
-          {formState.is_consumable && (
-            <div>
-              <label style={labelStyle}>מלאי מינימלי</label>
-              <input
-                type="number"
-                min="0"
-                style={inputStyle}
-                disabled={!canEdit}
-                value={formState.min_stock}
-                onChange={(e) => onChange("min_stock", e.target.value)}
-              />
-            </div>
-          )}
-          <div
-            style={{
-              fontSize: 12,
-              color: colors.textMuted,
-            }}
-          >
-            {
-              'בחירה ב"השכרה" מנטרלת אופציית מתכלה. ניתן להגדיר קונסיגנציה כמצב ביניים (מתועד בלבד).'
-            }
           </div>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: spacing.md,
-          }}
-        >
-          <div>
-            <label style={labelStyle}>קישור לתמונה / מסמך</label>
-            <input
-              type="url"
-              style={inputStyle}
-              disabled={!canEdit}
-              value={formState.default_image_url}
-              onChange={(e) => onChange("default_image_url", e.target.value)}
-            />
-            <input
-              type="file"
-              accept="image/*"
-              style={{ marginTop: spacing.xs }}
-              disabled={!canEdit}
-              onChange={handleImageFileChange}
-            />
-            <div style={{ fontSize: 12, color: colors.textMuted }}>
-              ניתן להעלות קובץ עד 2MB או לספק קישור ישיר.
-            </div>
-          </div>
-          <div>
-            <label style={labelStyle}>הערות</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80 }}
-              disabled={!canEdit}
-              value={formState.notes}
-              onChange={(e) => onChange("notes", e.target.value)}
-            />
-          </div>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: spacing.sm,
-          }}
-        >
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
           <Button variant="secondary" onClick={onClose}>
             ביטול
           </Button>
@@ -447,7 +408,7 @@ export function EquipmentFormModal({
             {isSubmitting ? "שומר..." : editingItem ? "עדכן" : "צור פריט"}
           </Button>
         </div>
-      </div>
-    </Modal>
+      </DialogPanel>
+    </Dialog>
   );
 }

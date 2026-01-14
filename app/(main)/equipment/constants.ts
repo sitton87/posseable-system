@@ -1,4 +1,4 @@
-import { colors } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 
 export type ConditionOption = {
   value: string;
@@ -10,7 +10,7 @@ export const CONDITION_OPTIONS: ConditionOption[] = [
   {
     value: "new",
     label: "חדש",
-    badge: { background: colors.successSoft, color: colors.success },
+    badge: { background: cssVar.status.successSoft, color: cssVar.status.success },
   },
   {
     value: "used",
@@ -20,7 +20,7 @@ export const CONDITION_OPTIONS: ConditionOption[] = [
   {
     value: "damaged",
     label: "דורש תיקון",
-    badge: { background: colors.dangerSoft, color: colors.danger },
+    badge: { background: cssVar.status.dangerSoft, color: cssVar.status.danger },
   },
 ];
 

@@ -1,8 +1,10 @@
+"use client";
+
 import { useState } from "react";
 import { Activity } from "@/type";
-import { Section, FormGrid } from "@/app/components/shared/layoutPrimitives";
-import { Button } from "@/app/components/ui";
-import { colors, spacing } from "@/app/styles/foundations";
+import { Section } from "@/app/components/shared/layoutPrimitives";
+import { Card, Title, Text, Textarea, Button } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { toast } from "sonner";
 
 export function SummaryTab({ 
@@ -45,32 +47,32 @@ export function SummaryTab({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-5">
       <Section title="סיכום פעילות">
-        <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
+        <div className="flex flex-col gap-4">
           <div>
-            <label style={{ fontWeight: "bold", display: "block", marginBottom: 4 }}>סיכום כללי</label>
-            <textarea
-              style={{ width: "100%", minHeight: 100, padding: 8, borderRadius: 4, border: `1px solid ${colors.border}` }}
+            <Text className="font-bold mb-1">סיכום כללי</Text>
+            <Textarea
+              rows={4}
               value={formData.summary_general}
               onChange={(e) => setFormData({ ...formData, summary_general: e.target.value })}
               placeholder="איך עברה הפעילות באופן כללי?"
             />
           </div>
           
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.md }}>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label style={{ fontWeight: "bold", display: "block", marginBottom: 4, color: "green" }}>נקודות לשימור</label>
-              <textarea
-                style={{ width: "100%", minHeight: 100, padding: 8, borderRadius: 4, border: `1px solid ${colors.border}` }}
+              <Text className="font-bold mb-1" style={{ color: cssVar.status.success }}>נקודות לשימור</Text>
+              <Textarea
+                rows={4}
                 value={formData.summary_preserve}
                 onChange={(e) => setFormData({ ...formData, summary_preserve: e.target.value })}
               />
             </div>
             <div>
-              <label style={{ fontWeight: "bold", display: "block", marginBottom: 4, color: "red" }}>נקודות לשיפור</label>
-              <textarea
-                style={{ width: "100%", minHeight: 100, padding: 8, borderRadius: 4, border: `1px solid ${colors.border}` }}
+              <Text className="font-bold mb-1" style={{ color: cssVar.status.danger }}>נקודות לשיפור</Text>
+              <Textarea
+                rows={4}
                 value={formData.summary_improve}
                 onChange={(e) => setFormData({ ...formData, summary_improve: e.target.value })}
               />
@@ -79,12 +81,12 @@ export function SummaryTab({
         </div>
       </Section>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: spacing.lg }}>
-        <Button variant="outline" onClick={handleSave} disabled={saving}>
+      <div className="flex justify-between mt-5">
+        <Button variant="secondary" onClick={handleSave} disabled={saving}>
           שמור טיוטה
         </Button>
         {activity.status !== "Completed" && (
-          <Button variant="primary" onClick={handleCompleteActivity} disabled={saving}>
+          <Button onClick={handleCompleteActivity} disabled={saving}>
              סיים פעילות וסגור
           </Button>
         )}
@@ -92,6 +94,3 @@ export function SummaryTab({
     </div>
   );
 }
-
-
-

@@ -2,16 +2,35 @@
 
 import { useState, useEffect } from "react";
 import { SeasonPlan, ActivitySeries, Activity } from "@/type";
-import { Button, Card, Modal } from "@/app/components/ui";
-import { colors, spacing, radii } from "@/app/styles/foundations";
-import { inputStyle, labelStyle } from "@/app/styles/components";
-import { Search, X, Filter, Eye } from "lucide-react";
-import { format } from "date-fns";
+import {
+  Card,
+  Title,
+  Text,
+  TextInput,
+  Select,
+  SelectItem,
+  Button,
+  Badge,
+  Table,
+  TableHead,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { StatusPill } from "@/app/components/shared";
-
-const px = (value: number) => `${value}px`;
-const muted = colors.textMuted;
-const smallButtonStyle = { fontSize: 12, padding: `${px(spacing.xs)} ${px(spacing.sm)}` };
+import {
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  FunnelIcon,
+  EyeIcon,
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import { format } from "date-fns";
 
 const ACTIVITY_KINDS = [
   { value: "surf", label: "גלישה" },
@@ -26,23 +45,19 @@ export default function PlanningSeriesTab() {
   const [seriesList, setSeriesList] = useState<ActivitySeries[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Data needed for forms & display
   const [groups, setGroups] = useState<any[]>([]);
   const [staffList, setStaffList] = useState<any[]>([]);
 
-  // Filters
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | "all">("all");
   const [filterText, setFilterText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterGroup, setFilterGroup] = useState<string>("");
 
-  // Modal State
   const [showModal, setShowModal] = useState(false);
   const [editingSeries, setEditingSeries] = useState<ActivitySeries | null>(null);
   const [seriesModalSeason, setSeriesModalSeason] = useState<SeasonPlan | null>(null);
   const [seriesSaving, setSeriesSaving] = useState(false);
 
-  // Activities View Modal
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [viewingSeries, setViewingSeries] = useState<ActivitySeries | null>(null);
   const [seriesActivities, setSeriesActivities] = useState<Activity[]>([]);
@@ -284,224 +299,197 @@ export default function PlanningSeriesTab() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-5">
       <Card>
-        {/* Header Row: Title + Add Button + Global Season Select */}
-        <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            flexWrap: "wrap", 
-            gap: spacing.md,
-            marginBottom: spacing.md 
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>רשימת סדרות</h2>
-            <select 
-                style={{ ...inputStyle, width: "auto", minWidth: 200, margin: 0 }}
-                value={selectedSeasonId}
-                onChange={(e) => {
-                    const val = e.target.value;
+        <div className="flex justify-between items-center flex-wrap gap-4 mb-4">
+          <div className="flex items-center gap-4">
+            <Title>רשימת סדרות</Title>
+            <Select 
+                value={selectedSeasonId.toString()}
+                onValueChange={(val) => {
                     setSelectedSeasonId(val === "all" ? "all" : Number(val));
                 }}
+                className="w-52"
             >
                 {seasons.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.year})</option>
+                    <SelectItem key={s.id} value={s.id.toString()}>{s.name} ({s.year})</SelectItem>
                 ))}
-            </select>
+            </Select>
           </div>
-          <Button onClick={() => openModal()}>+ הוסף סדרה</Button>
+          <Button icon={PlusIcon} onClick={() => openModal()}>הוסף סדרה</Button>
         </div>
         
-        {/* Filters Row - Integrated nicely */}
-        <div style={{ 
-            display: "flex", 
-            gap: spacing.sm, 
-            paddingTop: spacing.sm, 
-            borderTop: `1px solid ${colors.borderMuted}`, 
-            alignItems: "center", 
-            flexWrap: "wrap" 
-        }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, color: muted }}>
-                <Filter size={14} />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>סינון:</span>
+        <div
+          className="flex gap-2 pt-2 items-center flex-wrap"
+          style={{ borderTop: `1px solid ${cssVar.border.primary}` }}
+        >
+            <div className="flex items-center gap-1" style={{ color: cssVar.text.muted }}>
+                <FunnelIcon className="w-3.5 h-3.5" />
+                <Text className="text-sm font-semibold">סינון:</Text>
             </div>
             
-            <input 
-                type="text" 
+            <TextInput 
                 placeholder="חיפוש לפי שם..." 
-                style={{ ...inputStyle, width: 150, margin: 0, fontSize: 13, height: 36 }}
+                className="w-36"
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
             />
 
-            <select 
-                style={{ ...inputStyle, width: 140, margin: 0, fontSize: 13, height: 36 }}
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+            <Select 
+                value={filterStatus || undefined}
+                onValueChange={(val) => setFilterStatus(val || "")}
+                placeholder="כל הסטטוסים"
+                className="w-36"
             >
-                <option value="">כל הסטטוסים</option>
-                {SERIES_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+                {SERIES_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </Select>
 
-            <select 
-                style={{ ...inputStyle, width: 160, margin: 0, fontSize: 13, height: 36 }}
-                value={filterGroup}
-                onChange={(e) => setFilterGroup(e.target.value)}
+            <Select 
+                value={filterGroup || undefined}
+                onValueChange={(val) => setFilterGroup(val || "")}
+                placeholder="כל הקבוצות"
+                className="w-40"
             >
-                <option value="">כל הקבוצות</option>
-                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+                {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+            </Select>
 
             {(filterText || filterStatus || filterGroup) && (
                 <button 
                     onClick={clearFilters} 
-                    style={{ 
-                        background: "none", 
-                        border: "none", 
-                        fontSize: 12, 
-                        color: colors.danger, 
-                        cursor: "pointer", 
-                        display: "flex", 
-                        alignItems: "center",
-                        gap: 4
-                    }}
+                    className="bg-transparent border-none text-xs cursor-pointer flex items-center gap-1"
+                    style={{ color: cssVar.status.danger }}
                 >
-                    <X size={12} /> ניקוי פילטרים
+                    <XMarkIcon className="w-3 h-3" /> ניקוי פילטרים
                 </button>
             )}
         </div>
         
-        {/* Table */}
-        <div style={{ overflowX: "auto", marginTop: spacing.sm }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
-            <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
-              <tr style={{ color: muted, fontSize: 13 }}>
-                <th style={{ textAlign: "center", padding: 8 }}>שם הסדרה</th>
-                <th style={{ textAlign: "center", padding: 8 }}>קבוצה</th>
-                <th style={{ textAlign: "center", padding: 8 }}>סוג</th>
-                <th style={{ textAlign: "center", padding: 8 }}>תזמון</th>
-                <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
-                <th style={{ textAlign: "center", padding: 8 }}>פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto mt-2">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeaderCell>שם הסדרה</TableHeaderCell>
+                <TableHeaderCell>קבוצה</TableHeaderCell>
+                <TableHeaderCell>סוג</TableHeaderCell>
+                <TableHeaderCell>תזמון</TableHeaderCell>
+                <TableHeaderCell>סטטוס</TableHeaderCell>
+                <TableHeaderCell>פעולות</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {loading ? (
-                 <tr><td colSpan={6} style={{ textAlign: "center", padding: 20 }}>טוען...</td></tr>
+                 <TableRow><TableCell colSpan={6} className="text-center p-5"><Text>טוען...</Text></TableCell></TableRow>
               ) : filteredSeries.length === 0 ? (
-                 <tr><td colSpan={6} style={{ textAlign: "center", padding: 20, color: muted }}>לא נמצאו סדרות.</td></tr>
+                 <TableRow><TableCell colSpan={6} className="text-center p-5"><Text style={{ color: cssVar.text.muted }}>לא נמצאו סדרות.</Text></TableCell></TableRow>
               ) : filteredSeries.map((series) => (
-                  <tr key={series.id} style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}>
-                    <td style={{ textAlign: "center", padding: 8, fontWeight: 600 }}>{series.name}</td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
+                  <TableRow key={series.id}>
+                    <TableCell className="font-semibold">{series.name}</TableCell>
+                    <TableCell>
                         {series.group_name || "-"}
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
+                    </TableCell>
+                    <TableCell>
                       {ACTIVITY_KINDS.find(k => k.value === series.default_activity_kind)?.label || series.default_activity_kind || "-"}
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8, fontSize: 12 }}>
+                    </TableCell>
+                    <TableCell className="text-xs">
                         {series.schedule_type === 'Fixed' ? 
                             `${series.frequency === 'Weekly' ? 'שבועי' : series.frequency === 'Daily' ? 'יומי' : series.frequency === 'Monthly' ? 'חודשי' : series.frequency} (${series.occurrences_count || 0} חזרות)` : 
                             'ידני'}
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
-                       <span style={{ padding: "2px 8px", borderRadius: 999, background: "rgba(16, 185, 129, 0.1)", color: "#059669", fontSize: 12, fontWeight: 600 }}>
+                    </TableCell>
+                    <TableCell>
+                       <Badge color="emerald">
                          {series.status}
-                       </span>
-                    </td>
-                    <td style={{ textAlign: "center", padding: 8 }}>
-                      <div style={{ display: "flex", gap: spacing.xs, justifyContent: "center" }}>
-                        <Button variant="secondary" style={smallButtonStyle} onClick={() => openActivitiesModal(series)} title="צפה בפעילויות"><Eye size={14} /></Button>
-                        <Button variant="secondary" style={smallButtonStyle} onClick={() => openModal(series)} title="עריכה">✏️</Button>
-                        <Button variant="secondary" style={{ ...smallButtonStyle, color: colors.danger }} onClick={() => handleDelete(series)} title="מחיקה">🗑️</Button>
+                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 justify-center">
+                        <Button variant="secondary" size="xs" icon={EyeIcon} onClick={() => openActivitiesModal(series)} title="צפה בפעילויות" />
+                        <Button variant="secondary" size="xs" icon={PencilIcon} onClick={() => openModal(series)} title="עריכה" />
+                        <Button variant="secondary" size="xs" color="rose" icon={TrashIcon} onClick={() => handleDelete(series)} title="מחיקה" />
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </Card>
-      {/* Modal code is identical as before, omitted for brevity in thought but included in write tool */}
-      <Modal
-        open={showModal}
-        onClose={closeModal}
-        width="min(800px, 95vw)"
-        style={{ padding: spacing.xxl, maxHeight: "90vh", overflowY: "auto" }}
-      >
-        {seriesModalSeason && (
-          <>
-            <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800 }}>
-              {editingSeries ? "ערוך סדרת פעילויות" : "הוסף סדרת פעילויות חדשה"}
-            </h3>
-            <div style={{ color: muted, fontSize: 13, marginBottom: spacing.sm }}>
-              עונה: <strong>{seriesModalSeason.name}</strong>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: spacing.md }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: spacing.md }}>
+
+      {/* Series Modal */}
+      <Dialog open={showModal} onClose={closeModal}>
+        <DialogPanel className="max-w-3xl">
+          <Title>
+            {editingSeries ? "ערוך סדרת פעילויות" : "הוסף סדרת פעילויות חדשה"}
+          </Title>
+          {seriesModalSeason && (
+            <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+              עונה: {seriesModalSeason.name}
+            </Text>
+          )}
+          
+          {seriesModalSeason && (
+            <div className="flex flex-col gap-4 mt-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div>
-                  <label style={labelStyle}>שם הסדרה <span style={{ color: colors.danger }}>*</span></label>
-                  <input
-                    type="text"
-                    style={inputStyle}
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+                    שם הסדרה <span style={{ color: cssVar.status.danger }}>*</span>
+                  </Text>
+                  <TextInput
                     value={seriesForm.name}
                     onChange={(e) => setSeriesForm((prev) => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>סטטוס</label>
-                  <select style={inputStyle} value={seriesForm.status} onChange={(e) => setSeriesForm((prev) => ({ ...prev, status: e.target.value }))}>
-                    <option value="">ללא</option>
-                    {SERIES_STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>סטטוס</Text>
+                  <Select value={seriesForm.status || undefined} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, status: val || "" }))}>
+                    {SERIES_STATUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </Select>
                 </div>
                 <div>
-                  <label style={labelStyle}>סוג פעילות</label>
-                  <select style={inputStyle} value={seriesForm.default_activity_kind} onChange={(e) => setSeriesForm((prev) => ({ ...prev, default_activity_kind: e.target.value }))}>
-                    {ACTIVITY_KINDS.map(kind => <option key={kind.value} value={kind.value}>{kind.label}</option>)}
-                  </select>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>סוג פעילות</Text>
+                  <Select value={seriesForm.default_activity_kind} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, default_activity_kind: val }))}>
+                    {ACTIVITY_KINDS.map(kind => <SelectItem key={kind.value} value={kind.value}>{kind.label}</SelectItem>)}
+                  </Select>
                 </div>
                 <div>
-                  <label style={labelStyle}>מנהל/ת סדרה</label>
-                  <select style={inputStyle} value={seriesForm.lead_national_id} onChange={(e) => setSeriesForm((prev) => ({ ...prev, lead_national_id: e.target.value }))}>
-                    <option value="">בחר מנהל/ת</option>
-                    {staffList.map(staff => <option key={staff.national_id} value={staff.national_id}>{staff.full_name}</option>)}
-                  </select>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מנהל/ת סדרה</Text>
+                  <Select value={seriesForm.lead_national_id || undefined} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, lead_national_id: val || "" }))} placeholder="בחר מנהל/ת">
+                    {staffList.map(staff => <SelectItem key={staff.national_id} value={staff.national_id}>{staff.full_name}</SelectItem>)}
+                  </Select>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: spacing.md }}>
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label style={labelStyle}>קבוצה משויכת</label>
-                  <select style={inputStyle} value={seriesForm.group_id} onChange={(e) => setSeriesForm((prev) => ({ ...prev, group_id: e.target.value }))}>
-                    <option value="">בחר קבוצה</option>
-                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>קבוצה משויכת</Text>
+                  <Select value={seriesForm.group_id || undefined} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, group_id: val || "" }))} placeholder="בחר קבוצה">
+                    {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                  </Select>
                 </div>
                 <div>
-                  <label style={labelStyle}>סוג תזמון</label>
-                  <select style={inputStyle} value={seriesForm.schedule_type} onChange={(e) => setSeriesForm((prev) => ({ ...prev, schedule_type: e.target.value }))}>
-                    <option value="Fixed">קבוע (ימים ושעות)</option>
-                    <option value="Manual">ידני</option>
-                  </select>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>סוג תזמון</Text>
+                  <Select value={seriesForm.schedule_type} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, schedule_type: val }))}>
+                    <SelectItem value="Fixed">קבוע (ימים ושעות)</SelectItem>
+                    <SelectItem value="Manual">ידני</SelectItem>
+                  </Select>
                 </div>
                 <div>
-                  <label style={labelStyle}>תדירות</label>
-                  <select style={inputStyle} value={seriesForm.frequency} onChange={(e) => setSeriesForm((prev) => ({ ...prev, frequency: e.target.value }))} disabled={seriesForm.schedule_type === "Manual"}>
-                    <option value="Weekly">שבועי</option>
-                    <option value="Daily">יומי</option>
-                    <option value="Monthly">חודשי</option>
-                  </select>
+                  <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>תדירות</Text>
+                  <Select value={seriesForm.frequency} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, frequency: val }))} disabled={seriesForm.schedule_type === "Manual"}>
+                    <SelectItem value="Weekly">שבועי</SelectItem>
+                    <SelectItem value="Daily">יומי</SelectItem>
+                    <SelectItem value="Monthly">חודשי</SelectItem>
+                  </Select>
                 </div>
               </div>
 
               {seriesForm.schedule_type === "Fixed" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: spacing.md }}>
+                <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label style={labelStyle}>תאריך התחלה (וקביעת יום)</label>
+                      <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>תאריך התחלה (וקביעת יום)</Text>
                       <input
                         type="date"
-                        style={inputStyle}
+                        className="w-full rounded-md border px-3 py-2"
+                        style={{ borderColor: cssVar.border.primary }}
                         value={seriesForm.start_date}
                         min={seriesModalSeason ? new Date(seriesModalSeason.start_date).toISOString().split('T')[0] : undefined}
                         max={seriesModalSeason ? new Date(seriesModalSeason.end_date).toISOString().split('T')[0] : undefined}
@@ -512,31 +500,49 @@ export default function PlanningSeriesTab() {
                         }}
                       />
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing.xs }}>
+                    <div className="grid grid-cols-2 gap-1">
                         <div>
-                          <label style={labelStyle}>שעת התחלה</label>
-                          <input type="time" style={inputStyle} value={seriesForm.default_start_time} onChange={(e) => setSeriesForm((prev) => ({ ...prev, default_start_time: e.target.value }))} />
+                          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>שעת התחלה</Text>
+                          <input
+                            type="time"
+                            className="w-full rounded-md border px-3 py-2"
+                            style={{ borderColor: cssVar.border.primary }}
+                            value={seriesForm.default_start_time}
+                            onChange={(e) => setSeriesForm((prev) => ({ ...prev, default_start_time: e.target.value }))}
+                          />
                         </div>
                         <div>
-                          <label style={labelStyle}>שעת סיום</label>
-                          <input type="time" style={inputStyle} value={seriesForm.default_end_time} onChange={(e) => setSeriesForm((prev) => ({ ...prev, default_end_time: e.target.value }))} />
+                          <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>שעת סיום</Text>
+                          <input
+                            type="time"
+                            className="w-full rounded-md border px-3 py-2"
+                            style={{ borderColor: cssVar.border.primary }}
+                            value={seriesForm.default_end_time}
+                            onChange={(e) => setSeriesForm((prev) => ({ ...prev, default_end_time: e.target.value }))}
+                          />
                         </div>
                     </div>
                     <div>
-                      <label style={labelStyle}>כמות חזרות</label>
-                      <input type="number" style={inputStyle} value={seriesForm.occurrences_count} onChange={(e) => setSeriesForm((prev) => ({ ...prev, occurrences_count: e.target.value }))} min="1" placeholder="כמה פעילויות ליצור?" />
+                      <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>כמות חזרות</Text>
+                      <TextInput
+                        type="number"
+                        value={seriesForm.occurrences_count}
+                        onChange={(e) => setSeriesForm((prev) => ({ ...prev, occurrences_count: e.target.value }))}
+                        placeholder="כמה פעילויות ליצור?"
+                      />
                     </div>
                 </div>
               )}
 
               {seriesForm.schedule_type === "Manual" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}>
-                  <label style={labelStyle}>תאריכים ידניים</label>
+                <div className="flex flex-col gap-2">
+                  <Text className="text-sm" style={{ color: cssVar.text.secondary }}>תאריכים ידניים</Text>
                   {seriesForm.manual_activities.map((activity, index) => (
-                    <div key={index} style={{ display: "flex", gap: spacing.sm, alignItems: "center" }}>
+                    <div key={index} className="flex gap-2 items-center">
                       <input
                         type="date"
-                        style={{ ...inputStyle, flex: 1 }}
+                        className="flex-1 rounded-md border px-3 py-2"
+                        style={{ borderColor: cssVar.border.primary }}
                         value={activity.date}
                         min={seriesModalSeason ? new Date(seriesModalSeason.start_date).toISOString().split('T')[0] : undefined}
                         max={seriesModalSeason ? new Date(seriesModalSeason.end_date).toISOString().split('T')[0] : undefined}
@@ -546,20 +552,32 @@ export default function PlanningSeriesTab() {
                           setSeriesForm(prev => ({ ...prev, manual_activities: newActivities }));
                         }}
                       />
-                      <input type="time" style={{ ...inputStyle, width: 100 }} value={activity.start_time} onChange={(e) => {
+                      <input
+                        type="time"
+                        className="w-24 rounded-md border px-3 py-2"
+                        style={{ borderColor: cssVar.border.primary }}
+                        value={activity.start_time}
+                        onChange={(e) => {
                           const newActivities = [...seriesForm.manual_activities];
                           newActivities[index].start_time = e.target.value;
                           setSeriesForm(prev => ({ ...prev, manual_activities: newActivities }));
-                      }} />
-                      <input type="time" style={{ ...inputStyle, width: 100 }} value={activity.end_time} onChange={(e) => {
+                        }}
+                      />
+                      <input
+                        type="time"
+                        className="w-24 rounded-md border px-3 py-2"
+                        style={{ borderColor: cssVar.border.primary }}
+                        value={activity.end_time}
+                        onChange={(e) => {
                           const newActivities = [...seriesForm.manual_activities];
                           newActivities[index].end_time = e.target.value;
                           setSeriesForm(prev => ({ ...prev, manual_activities: newActivities }));
-                      }} />
-                      <Button variant="secondary" style={{ padding: "4px 8px", color: colors.danger }} onClick={() => {
+                        }}
+                      />
+                      <Button variant="secondary" size="xs" color="rose" icon={TrashIcon} onClick={() => {
                           const newActivities = seriesForm.manual_activities.filter((_, i) => i !== index);
                           setSeriesForm(prev => ({ ...prev, manual_activities: newActivities }));
-                      }}>🗑️</Button>
+                      }} />
                     </div>
                   ))}
                   <Button variant="secondary" onClick={() => {
@@ -567,74 +585,75 @@ export default function PlanningSeriesTab() {
                   }}>+ הוסף תאריך</Button>
                 </div>
               )}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="secondary" onClick={closeModal}>ביטול</Button>
+            <Button onClick={handleSubmit} disabled={seriesSaving}>{seriesSaving ? "שומר..." : editingSeries ? "עדכן" : "הוסף"}</Button>
+          </div>
+        </DialogPanel>
+      </Dialog>
 
-              <div style={{ display: "flex", gap: spacing.md, justifyContent: "flex-end", marginTop: spacing.md }}>
-                <Button variant="secondary" onClick={closeModal}>ביטול</Button>
-                <Button onClick={handleSubmit} disabled={seriesSaving}>{seriesSaving ? "שומר..." : editingSeries ? "עדכן" : "הוסף"}</Button>
-              </div>
-            </div>
-          </>
-        )}
-      </Modal>
-
-      <Modal
-        open={showActivitiesModal}
-        onClose={() => setShowActivitiesModal(false)}
-        width="min(900px, 95vw)"
-        style={{ padding: spacing.xl, maxHeight: "90vh", overflowY: "auto" }}
-      >
-        <h3 style={{ margin: "0 0 4px 0" }}>פעילויות בסדרה: {viewingSeries?.name}</h3>
-        <p style={{ margin: "0 0 16px 0", fontSize: 13, color: muted }}>רשימת כל הפעילויות שנוצרו עבור סדרה זו.</p>
-        
-        {loadingActivities ? (
-            <div style={{ textAlign: "center", padding: 20, color: muted }}>טוען פעילויות...</div>
-        ) : seriesActivities.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 20, color: muted, border: `1px dashed ${colors.border}`, borderRadius: radii.card }}>
-                לא נמצאו פעילויות משויכות.
-            </div>
-        ) : (
-            <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead>
-                        <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
-                            <th style={{ textAlign: "center", padding: 8 }}>תאריך</th>
-                            <th style={{ textAlign: "center", padding: 8 }}>שעה</th>
-                            <th style={{ textAlign: "center", padding: 8 }}>מיקום</th>
-                            <th style={{ textAlign: "center", padding: 8 }}>משתתפים</th>
-                            <th style={{ textAlign: "center", padding: 8 }}>סטטוס</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {seriesActivities.map(activity => (
-                            <tr key={activity.id} style={{ borderBottom: `1px solid ${colors.borderMuted}` }}>
-                                <td style={{ textAlign: "center", padding: 8 }}>{format(new Date(activity.activity_date), "dd/MM/yyyy")}</td>
-                                <td style={{ textAlign: "center", padding: 8 }}>{activity.start_time?.slice(0,5) || "-"} - {activity.end_time?.slice(0,5) || "-"}</td>
-                                <td style={{ textAlign: "center", padding: 8 }}>{activity.location || "-"}</td>
-                                <td style={{ textAlign: "center", padding: 8 }}>{activity.participant_count || 0}</td>
-                                <td style={{ textAlign: "center", padding: 8 }}>
-                                    <StatusPill tone={
-                                        activity.status === 'Completed' ? 'success' : 
-                                        activity.status === 'Cancelled' ? 'error' : 
-                                        activity.status === 'In Progress' ? 'info' : 'neutral'
-                                    }>
-                                        {activity.status === 'Planned' ? 'מתוכנן' : 
-                                         activity.status === 'Completed' ? 'הושלם' : 
-                                         activity.status === 'Cancelled' ? 'בוטל' : 
-                                         activity.status === 'In Progress' ? 'בביצוע' : activity.status}
-                                    </StatusPill>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        )}
-        
-        <div style={{ marginTop: spacing.lg, textAlign: "right" }}>
+      {/* Activities View Modal */}
+      <Dialog open={showActivitiesModal} onClose={() => setShowActivitiesModal(false)}>
+        <DialogPanel className="max-w-3xl">
+          <Title>פעילויות בסדרה: {viewingSeries?.name || ''}</Title>
+          <Text className="text-sm" style={{ color: cssVar.text.muted }}>
+            רשימת כל הפעילויות שנוצרו עבור סדרה זו.
+          </Text>
+          
+          <div className="mt-4">
+            {loadingActivities ? (
+                <div className="text-center p-5">
+                  <Text style={{ color: cssVar.text.muted }}>טוען פעילויות...</Text>
+                </div>
+            ) : seriesActivities.length === 0 ? (
+                <Card className="text-center p-5 border-dashed">
+                    <Text style={{ color: cssVar.text.muted }}>לא נמצאו פעילויות משויכות.</Text>
+                </Card>
+            ) : (
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableHeaderCell>תאריך</TableHeaderCell>
+                                <TableHeaderCell>שעה</TableHeaderCell>
+                                <TableHeaderCell>מיקום</TableHeaderCell>
+                                <TableHeaderCell>משתתפים</TableHeaderCell>
+                                <TableHeaderCell>סטטוס</TableHeaderCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {seriesActivities.map(activity => (
+                                <TableRow key={activity.id}>
+                                    <TableCell>{format(new Date(activity.activity_date), "dd/MM/yyyy")}</TableCell>
+                                    <TableCell>{activity.start_time?.slice(0,5) || "-"} - {activity.end_time?.slice(0,5) || "-"}</TableCell>
+                                    <TableCell>{activity.location || "-"}</TableCell>
+                                    <TableCell>{activity.participant_count || 0}</TableCell>
+                                    <TableCell>
+                                        <StatusPill tone={
+                                            activity.status === 'Completed' ? 'success' : 
+                                            activity.status === 'Cancelled' ? 'error' : 
+                                            activity.status === 'In Progress' ? 'info' : 'neutral'
+                                        }>
+                                            {activity.status === 'Planned' ? 'מתוכנן' : 
+                                             activity.status === 'Completed' ? 'הושלם' : 
+                                             activity.status === 'Cancelled' ? 'בוטל' : 
+                                             activity.status === 'In Progress' ? 'בביצוע' : activity.status}
+                                        </StatusPill>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
+          </div>
+          <div className="flex justify-end mt-6">
             <Button variant="secondary" onClick={() => setShowActivitiesModal(false)}>סגור</Button>
-        </div>
-      </Modal>
+          </div>
+        </DialogPanel>
+      </Dialog>
     </div>
   );
 }
-

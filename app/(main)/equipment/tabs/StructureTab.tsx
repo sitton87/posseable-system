@@ -1,15 +1,22 @@
 "use client";
 
-import { Card, Button } from "@/app/components/ui";
 import {
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+  Card,
+  Title,
+  Text,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import type { StructureFormState } from "../types";
 import type { Warehouse } from "@/type";
 import { WarehouseManagementCard } from "../components/WarehouseManagementCard";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 type SummaryEntry = {
   code: string;
@@ -30,8 +37,6 @@ type StructureTabProps = {
   onManageWarehouse?: (warehouse: Warehouse) => void;
 };
 
-const muted = colors.textMuted;
-
 export function StructureTab({
   familiesWithCounts,
   categoriesWithCounts,
@@ -43,110 +48,82 @@ export function StructureTab({
   onManageWarehouse,
 }: StructureTabProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-ds-spacing-5">
       <Card>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: spacing.sm,
-          marginBottom: spacing.md,
-        }}
-      >
-        <div>
-          <h3 style={{ margin: 0 }}>ניהול משפחות וקטגוריות</h3>
-          <p style={{ margin: 0, color: muted, fontSize: 13 }}>
-            לא ניתן למחוק או לעדכן מבנים אליהם מקושרים פריטים פעילים
-          </p>
-        </div>
-        <Button
-          onClick={() => onOpenStructureModal("family")}
-          disabled={!canEdit}
-        >
-          + משפחה / קטגוריה חדשה
-        </Button>
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: spacing.md,
-        }}
-      >
-        <div>
-          <h4 style={{ margin: "0 0 8px 0" }}>משפחות קיימות</h4>
-          <div
-            style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: spacing.sm,
-              maxHeight: 260,
-              overflowY: "auto",
-            }}
-          >
-            <table style={{ ...tableStyle, margin: 0 }}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>קוד</th>
-                  <th style={tableHeaderStyle}>שם</th>
-                  <th style={tableHeaderStyle}>סוג ציוד</th>
-                  <th style={tableHeaderStyle}>פריטים</th>
-                </tr>
-              </thead>
-              <tbody>
-                {familiesWithCounts.map((family) => (
-                  <tr key={family.code}>
-                    <td style={tableCellStyle}>{family.code}</td>
-                    <td style={tableCellStyle}>{family.name}</td>
-                    <td style={tableCellStyle}>
-                      {family.equipment_type === "sea"
-                        ? "ציוד ים"
-                        : family.equipment_type === "support"
-                        ? "ציוד מסייע"
-                        : "—"}
-                    </td>
-                    <td style={tableCellStyle}>{family.itemCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="flex justify-between items-center flex-wrap gap-ds-spacing-2 mb-ds-spacing-4">
+          <div>
+            <Title>ניהול משפחות וקטגוריות</Title>
+            <Text className="mt-1">
+              לא ניתן למחוק או לעדכן מבנים אליהם מקושרים פריטים פעילים
+            </Text>
           </div>
-        </div>
-        <div>
-          <h4 style={{ margin: "0 0 8px 0" }}>קטגוריות קיימות</h4>
-          <div
-            style={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: spacing.sm,
-              maxHeight: 260,
-              overflowY: "auto",
-            }}
+          <Button
+            icon={PlusIcon}
+            onClick={() => onOpenStructureModal("family")}
+            disabled={!canEdit}
           >
-            <table style={{ ...tableStyle, margin: 0 }}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderStyle}>משפחה</th>
-                  <th style={tableHeaderStyle}>קוד</th>
-                  <th style={tableHeaderStyle}>שם</th>
-                  <th style={tableHeaderStyle}>פריטים</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categoriesWithCounts.map((category) => (
-                  <tr
-                    key={`${category.family_code}-${category.code}`}
-                  >
-                    <td style={tableCellStyle}>{category.family_code}</td>
-                    <td style={tableCellStyle}>{category.code}</td>
-                    <td style={tableCellStyle}>{category.name}</td>
-                    <td style={tableCellStyle}>{category.itemCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            משפחה / קטגוריה חדשה
+          </Button>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-ds-spacing-4">
+          <div>
+            <Text className="font-semibold mb-2">משפחות קיימות</Text>
+            <div className="border rounded-lg max-h-[260px] overflow-y-auto" style={{ borderColor: cssVar.border.primary }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>קוד</TableHeaderCell>
+                    <TableHeaderCell>שם</TableHeaderCell>
+                    <TableHeaderCell>סוג ציוד</TableHeaderCell>
+                    <TableHeaderCell>פריטים</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {familiesWithCounts.map((family) => (
+                    <TableRow key={family.code}>
+                      <TableCell>{family.code}</TableCell>
+                      <TableCell>{family.name}</TableCell>
+                      <TableCell>
+                        {family.equipment_type === "sea"
+                          ? "ציוד ים"
+                          : family.equipment_type === "support"
+                          ? "ציוד מסייע"
+                          : "—"}
+                      </TableCell>
+                      <TableCell>{family.itemCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div>
+            <Text className="font-semibold mb-2">קטגוריות קיימות</Text>
+            <div className="border rounded-lg max-h-[260px] overflow-y-auto" style={{ borderColor: cssVar.border.primary }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>משפחה</TableHeaderCell>
+                    <TableHeaderCell>קוד</TableHeaderCell>
+                    <TableHeaderCell>שם</TableHeaderCell>
+                    <TableHeaderCell>פריטים</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {categoriesWithCounts.map((category) => (
+                    <TableRow key={`${category.family_code}-${category.code}`}>
+                      <TableCell>{category.family_code}</TableCell>
+                      <TableCell>{category.code}</TableCell>
+                      <TableCell>{category.name}</TableCell>
+                      <TableCell>{category.itemCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -162,4 +139,3 @@ export function StructureTab({
     </div>
   );
 }
-

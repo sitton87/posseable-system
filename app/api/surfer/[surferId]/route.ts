@@ -4,9 +4,10 @@ import { ensurePermissionResponse } from "@/lib/server/accessControl";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { surferId: string } }
+  props: { params: Promise<{ surferId: string }> }
 ) {
   try {
+    const params = await props.params;
     const permission = await ensurePermissionResponse("surfers", "read");
     if (!permission.allowed) return permission.response;
 

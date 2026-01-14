@@ -1,16 +1,23 @@
 "use client";
 
-import { Button, Card } from "@/app/components/ui";
 import {
-  badgeStyle,
-  tableCellStyle,
-  tableHeaderStyle,
-  tableStyle,
-} from "@/app/styles/components";
-import { colors, spacing } from "@/app/styles/foundations";
+  Card,
+  Title,
+  Text,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  Badge,
+} from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import { formatCurrency } from "../utils";
 import type { Warehouse } from "@/type";
+import { PlusIcon, PencilIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 
 type WarehouseManagementCardProps = {
   warehouses: Warehouse[];
@@ -35,122 +42,94 @@ export function WarehouseManagementCard({
 
   return (
     <Card>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: spacing.sm,
-          marginBottom: spacing.md,
-        }}
-      >
+      <div className="flex justify-between items-center flex-wrap gap-ds-spacing-2 mb-ds-spacing-4">
         <div>
-          <h3 style={{ margin: 0 }}>מחסנים ומיקומים</h3>
-          <p style={{ margin: 0, color: colors.textMuted, fontSize: 13 }}>
+          <Title>מחסנים ומיקומים</Title>
+          <Text className="mt-1">
             ניהול מחסנים כולל פרטי קשר ועלויות שכירות
-          </p>
+          </Text>
         </div>
-        <Button onClick={onCreateWarehouse} disabled={!canCreate}>
-          + מחסן חדש
+        <Button icon={PlusIcon} onClick={onCreateWarehouse} disabled={!canCreate}>
+          מחסן חדש
         </Button>
       </div>
+
       {warehouses.length === 0 ? (
-        <div
-          style={{
-            padding: spacing.lg,
-            background: colors.surfaceAlt,
-            color: colors.textMuted,
-            borderRadius: spacing.sm,
-            textAlign: "center",
-          }}
-        >
+        <div className="p-5 rounded-lg text-center" style={{ backgroundColor: cssVar.bg.secondary, color: cssVar.text.muted }}>
           אין מחסנים פעילים במערכת. הוסף מחסן חדש כדי לאפשר קליטת מלאי.
         </div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={tableHeaderStyle}>קוד</th>
-                <th style={tableHeaderStyle}>שם</th>
-                <th style={tableHeaderStyle}>עיר</th>
-                <th style={tableHeaderStyle}>מנהל</th>
-                <th style={tableHeaderStyle}>טלפון</th>
-                <th style={tableHeaderStyle}>סטטוס</th>
-                <th style={tableHeaderStyle}>שווי מלאי</th>
-                {showActions && (
-                  <th style={{ ...tableHeaderStyle, textAlign: "center" }}>
-                    פעולות
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {warehouses.map((warehouse) => (
-                <tr key={warehouse.id}>
-                  <td style={tableCellStyle}>{warehouse.code}</td>
-                  <td style={tableCellStyle}>{warehouse.name}</td>
-                  <td style={tableCellStyle}>{warehouse.city || "—"}</td>
-                  <td style={tableCellStyle}>
-                    {warehouse.manager_name || warehouse.contact_name || "—"}
-                  </td>
-                  <td style={tableCellStyle}>
-                    {formatPhoneNumber(
-                      warehouse.manager_phone || warehouse.contact_phone || ""
-                    )}
-                  </td>
-                  <td style={tableCellStyle}>
-                    <span
-                      style={badgeStyle(
-                        warehouse.is_active
-                          ? colors.successSoft
-                          : colors.dangerSoft,
-                        warehouse.is_active ? colors.success : colors.danger
-                      )}
-                    >
-                      {warehouse.is_active ? "פעיל" : "לא פעיל"}
-                    </span>
-                  </td>
-                  <td style={tableCellStyle}>
-                    {formatCurrency(warehouse.total_value)}
-                  </td>
-                  {showActions && (
-                    <td style={{ ...tableCellStyle, textAlign: "center" }}>
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          gap: spacing.xs,
-                          flexWrap: "wrap",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {onManageWarehouse && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => onManageWarehouse(warehouse)}
-                            disabled={!canManage}
-                          >
-                            ניהול מלאי
-                          </Button>
-                        )}
-                        {onEditWarehouse && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => onEditWarehouse(warehouse)}
-                            disabled={!canEditDetails}
-                          >
-                            עריכת פרטים
-                          </Button>
-                        )}
-                      </div>
-                    </td>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>קוד</TableHeaderCell>
+              <TableHeaderCell>שם</TableHeaderCell>
+              <TableHeaderCell>עיר</TableHeaderCell>
+              <TableHeaderCell>מנהל</TableHeaderCell>
+              <TableHeaderCell>טלפון</TableHeaderCell>
+              <TableHeaderCell>סטטוס</TableHeaderCell>
+              <TableHeaderCell>שווי מלאי</TableHeaderCell>
+              {showActions && (
+                <TableHeaderCell className="text-center">
+                  פעולות
+                </TableHeaderCell>
+              )}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {warehouses.map((warehouse) => (
+              <TableRow key={warehouse.id}>
+                <TableCell>{warehouse.code}</TableCell>
+                <TableCell>{warehouse.name}</TableCell>
+                <TableCell>{warehouse.city || "—"}</TableCell>
+                <TableCell>
+                  {warehouse.manager_name || warehouse.contact_name || "—"}
+                </TableCell>
+                <TableCell>
+                  {formatPhoneNumber(
+                    warehouse.manager_phone || warehouse.contact_phone || ""
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                </TableCell>
+                <TableCell>
+                  <Badge color={warehouse.is_active ? "emerald" : "gray"} size="sm">
+                    {warehouse.is_active ? "פעיל" : "לא פעיל"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {formatCurrency(warehouse.total_value)}
+                </TableCell>
+                {showActions && (
+                  <TableCell className="text-center">
+                    <div className="inline-flex gap-1 flex-wrap justify-center">
+                      {onManageWarehouse && (
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          icon={Cog6ToothIcon}
+                          onClick={() => onManageWarehouse(warehouse)}
+                          disabled={!canManage}
+                        >
+                          ניהול מלאי
+                        </Button>
+                      )}
+                      {onEditWarehouse && (
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          icon={PencilIcon}
+                          onClick={() => onEditWarehouse(warehouse)}
+                          disabled={!canEditDetails}
+                        >
+                          עריכת פרטים
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </Card>
   );

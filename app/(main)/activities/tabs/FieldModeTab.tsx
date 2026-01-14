@@ -1,11 +1,11 @@
 "use client";
 
-import { colors, spacing } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 import { Section } from "@/app/components/shared/layoutPrimitives";
 import { useState, useEffect } from "react";
 import { Activity } from "@/type";
 import { format } from "date-fns";
-import { Card, Button } from "@/app/components/ui";
+import { Card, Title, Text, Button } from "@tremor/react";
 import { useRouter } from "next/navigation";
 
 export default function FieldStatusTab() {
@@ -21,7 +21,6 @@ export default function FieldStatusTab() {
   async function fetchActivities() {
     try {
       setLoading(true);
-      // Fetch all planned activities
       const res = await fetch("/api/activities?status=Planned");
       const data = await res.json();
       if (data.success) {
@@ -48,12 +47,12 @@ export default function FieldStatusTab() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: spacing.lg }}>
+    <div className="flex flex-col gap-6">
       <Section title={`פעילויות היום (${new Date().toLocaleDateString('he-IL')})`}>
         {loading ? (
-          <div>טוען...</div>
+          <Text>טוען...</Text>
         ) : todaysActivities.length === 0 ? (
-          <div style={{ padding: spacing.md, color: colors.textMuted }}>אין פעילויות להיום</div>
+          <Text className="p-4" style={{ color: cssVar.text.muted }}>אין פעילויות להיום</Text>
         ) : (
           todaysActivities.map(activity => (
             <ActivityCard key={activity.id} activity={activity} onSelect={() => navigateToActivity(activity.id)} isToday />
@@ -63,9 +62,9 @@ export default function FieldStatusTab() {
 
       <Section title="פעילויות עתידיות">
         {loading ? (
-          <div>טוען...</div>
+          <Text>טוען...</Text>
         ) : futureActivities.length === 0 ? (
-          <div style={{ padding: spacing.md, color: colors.textMuted }}>אין פעילויות עתידיות</div>
+          <Text className="p-4" style={{ color: cssVar.text.muted }}>אין פעילויות עתידיות</Text>
         ) : (
           futureActivities.map(activity => (
             <ActivityCard key={activity.id} activity={activity} onSelect={() => navigateToActivity(activity.id)} />
@@ -78,37 +77,29 @@ export default function FieldStatusTab() {
 
 function ActivityCard({ activity, onSelect, isToday }: { activity: Activity; onSelect: () => void; isToday?: boolean }) {
   return (
-    <div style={{ 
-      background: "white", 
-      padding: spacing.lg, 
-      borderRadius: 8, 
-      border: `1px solid ${colors.border}`,
-      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-      marginBottom: spacing.md,
-      borderRight: isToday ? `4px solid ${colors.primary}` : undefined,
-      cursor: "pointer",
-      transition: "transform 0.1s"
-    }}
-    onClick={onSelect}
-    onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-    onMouseLeave={(e) => e.currentTarget.style.transform = "none"}
+    <Card 
+      className="p-4 mb-4 cursor-pointer transition-transform hover:-translate-y-0.5"
+      style={{ 
+        borderRight: isToday ? `4px solid ${cssVar.brand.primary}` : undefined,
+      }}
+      onClick={onSelect}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="flex justify-between items-start">
         <div>
-          <div style={{ fontWeight: "bold", fontSize: 18 }}>{activity.group_name || "פעילות כללית"}</div>
-          <div style={{ color: colors.textMuted }}>
+          <Title>{activity.group_name || "פעילות כללית"}</Title>
+          <Text style={{ color: cssVar.text.muted }}>
             {format(new Date(activity.activity_date), "dd/MM/yyyy")} | {activity.start_time?.slice(0, 5)} - {activity.end_time?.slice(0, 5)}
-          </div>
-          <div style={{ marginTop: 4 }}>{activity.location} | {activity.kind}</div>
-          <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>
+          </Text>
+          <Text className="mt-1">{activity.location} | {activity.kind}</Text>
+          <Text className="text-sm mt-1" style={{ color: cssVar.text.muted }}>
             מנהל: {activity.activity_manager_name || "לא משובץ"}
-          </div>
+          </Text>
         </div>
         
-        <Button onClick={(e) => { e.stopPropagation(); onSelect(); }} variant={isToday ? "primary" : "outline"}>
+        <Button onClick={(e) => { e.stopPropagation(); onSelect(); }} variant={isToday ? "primary" : "secondary"}>
           פרטי פעילות
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

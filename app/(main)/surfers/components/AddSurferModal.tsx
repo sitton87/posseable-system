@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Title, Text, TextInput, Button } from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 export default function AddSurferModal({ onSubmit }: { onSubmit: Function }) {
   const [open, setOpen] = useState(false);
@@ -24,66 +28,62 @@ export default function AddSurferModal({ onSubmit }: { onSubmit: Function }) {
 
   return (
     <>
-      <button
-        className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
-        onClick={() => setOpen(true)}
-      >
-        ➕ הוסף גולש
-      </button>
+      <Button icon={PlusIcon} onClick={() => setOpen(true)}>
+        הוסף גולש
+      </Button>
 
-      {open && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded shadow-xl w-96">
-            <h2 className="text-xl font-bold mb-4">הוספת גולש חדש</h2>
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogPanel className="max-w-md">
+          <Title className="mb-4">הוספת גולש חדש</Title>
 
-            <div className="flex flex-col gap-2">
-              <input
-                className="border p-2 rounded"
+          <div className="flex flex-col gap-4">
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>תעודת זהות</Text>
+              <TextInput
                 placeholder="תעודת זהות"
                 value={national_id}
                 onChange={(e) => setNationalId(e.target.value)}
               />
+            </div>
 
-              <input
-                className="border p-2 rounded"
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>שם מלא</Text>
+              <TextInput
                 placeholder="שם מלא"
                 value={full_name}
                 onChange={(e) => setFullName(e.target.value)}
               />
+            </div>
 
-              <input
-                className="border p-2 rounded"
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>טלפון</Text>
+              <TextInput
                 placeholder="טלפון"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
+            </div>
 
-              <input
-                className="border p-2 rounded"
+            <div>
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>אימייל</Text>
+              <TextInput
                 placeholder="אימייל"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-
-            <div className="flex justify-between mt-4">
-              <button
-                className="px-4 py-2 bg-gray-300 rounded"
-                onClick={() => setOpen(false)}
-              >
-                ביטול
-              </button>
-
-              <button
-                className="px-4 py-2 bg-green-600 text-white rounded"
-                onClick={handleSave}
-              >
-                שמירה
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              ביטול
+            </Button>
+            <Button onClick={handleSave}>
+              שמירה
+            </Button>
+          </div>
+        </DialogPanel>
+      </Dialog>
     </>
   );
 }

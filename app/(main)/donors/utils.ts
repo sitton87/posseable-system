@@ -1,8 +1,5 @@
-import { colors } from "@/app/styles/foundations";
 import { DonorFormState, DonorStats, DonorTask } from "./types";
 import { Donor } from "@/type";
-
-export const muted = colors.textMuted;
 
 export const createEmptyDonorForm = (): DonorFormState => ({
   national_id: "",
@@ -128,5 +125,3 @@ export const buildTasks = (donors: Donor[]): DonorTask[] => {
 
   return tasks;
 };
-
-

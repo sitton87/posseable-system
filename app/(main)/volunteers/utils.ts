@@ -6,9 +6,8 @@ export const volunteerDraftType = "volunteer";
 export const defaultStats: VolunteerStats = {
   total: 0,
   active: 0,
-  approved: 0,
-  pending: 0,
-  grouped: 0,
+  staff: 0,
+  management: 0,
 };
 
 export const TASK_STATUSES: { value: NoteStatus; label: string; tone: string }[] = [
@@ -71,10 +70,9 @@ export const tryParseJson = async (res: Response): Promise<SafeJsonResult> => {
 export const deriveStatsFromVolunteers = (items: Volunteer[]): VolunteerStats => {
   const total = items.length;
   const active = items.filter((v) => v.active).length;
-  const approved = items.filter((v) => v.status === "מאושר").length;
-  const pending = items.filter((v) => v.status === "בהמתנה").length;
-  const grouped = items.filter((v) => v.group_id || v.group_name).length;
-  return { total, active, approved, pending, grouped };
+  const staff = items.filter((v) => v.classification === "staff").length;
+  const management = items.filter((v) => v.classification === "management").length;
+  return { total, active, staff, management };
 };
 
 export const createEmptyForm = (): VolunteerFormState => ({
@@ -82,12 +80,13 @@ export const createEmptyForm = (): VolunteerFormState => ({
   full_name: "",
   phone: "",
   email: "",
-  residence: "",
-  program: "",
-  group_id: "",
-  status: "בהמתנה",
+  street: "",
+  house_number: "",
+  city: "",
   active: true,
   notes: "",
   classification: "volunteer",
+  volunteer_type: "",
+  profession: "",
+  availability: "",
 });
-

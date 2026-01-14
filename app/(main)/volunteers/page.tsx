@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Modal } from "@/app/components/ui";
-import { spacing } from "@/app/styles/foundations";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { numericValues } from "@/app/styles/design-system";
 import { useDraftManager } from "@/app/hooks/useDraftManager";
 
 import {
@@ -47,7 +47,6 @@ export default function VolunteersPage() {
   const [filters, setFilters] = useState<VolunteerFilters>({
     search: "",
     status: "all",
-    program: "",
     classification: "all",
   });
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
@@ -88,14 +87,11 @@ export default function VolunteersPage() {
 
       const params = new URLSearchParams();
       if (filters.search) params.append("search", filters.search);
-      if (filters.program) params.append("program", filters.program);
       if (filters.classification && filters.classification !== "all") {
         params.append("classification", filters.classification);
       }
       if (filters.status === "active") params.append("active", "true");
       if (filters.status === "inactive") params.append("active", "false");
-      if (filters.status === "approved") params.append("status", "מאושר");
-      if (filters.status === "pending") params.append("status", "בהמתנה");
 
       const res = await fetch(`/api/volunteers?${params.toString()}`, {
         credentials: "include",
@@ -166,7 +162,6 @@ export default function VolunteersPage() {
     setFilters({
       search: "",
       status: "all",
-      program: "",
       classification: "all",
     });
   };
@@ -197,13 +192,15 @@ export default function VolunteersPage() {
       full_name: volunteer.full_name,
       phone: volunteer.phone || "",
       email: volunteer.email || "",
-      residence: volunteer.residence || "",
-      program: volunteer.program || "",
-      group_id: volunteer.group_id || "",
-      status: volunteer.status || "בהמתנה",
+      street: volunteer.street || "",
+      house_number: volunteer.house_number || "",
+      city: volunteer.city || "",
       active: volunteer.active,
       notes: volunteer.notes || "",
       classification: volunteer.classification || "volunteer",
+      volunteer_type: volunteer.volunteer_type || "",
+      profession: volunteer.profession || "",
+      availability: volunteer.availability || "",
     });
     setCurrentDraftId(volunteer.national_id);
     setFormDirty(false);
@@ -252,13 +249,15 @@ export default function VolunteersPage() {
       full_name: formState.full_name,
       phone: formState.phone || null,
       email: formState.email || null,
-      residence: formState.residence || null,
-      program: formState.program || null,
-      group_id: formState.group_id || null,
-      status: formState.status || null,
+      street: formState.street || null,
+      house_number: formState.house_number || null,
+      city: formState.city || null,
       active: formState.active,
       notes: formState.notes || null,
       classification: formState.classification || "volunteer",
+      volunteer_type: formState.volunteer_type || null,
+      profession: formState.profession || null,
+      availability: formState.availability || null,
     };
 
     try {
@@ -350,14 +349,7 @@ export default function VolunteersPage() {
   }, []);
 
   return (
-    <div
-      style={{
-        padding: spacing.xl,
-        display: "flex",
-        flexDirection: "column",
-        gap: spacing.lg,
-      }}
-    >
+    <div className="p-ds-spacing-xl flex flex-col gap-ds-spacing-lg">
       {activeTab === "home" && (
         <VolunteersHomeTab
           loading={summaryLoading}

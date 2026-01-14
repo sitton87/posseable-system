@@ -1,11 +1,23 @@
 "use client";
 
-import { Button, Modal } from "@/app/components/ui";
-import { inputStyle } from "@/app/styles/components";
-import { spacing } from "@/app/styles/foundations";
+import {
+  Title,
+  Text,
+  TextInput,
+  Button,
+  Flex,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { cssVar } from "@/app/styles/design-system";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import { Donor } from "@/type";
-import { muted, smallButtonStyle } from "../utils";
 
 type DonorSelectionModalProps = {
   open: boolean;
@@ -36,111 +48,87 @@ export default function DonorSelectionModal({
   });
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      width="min(720px, 95vw)"
-      style={{ padding: spacing.xxl }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: spacing.md,
-          gap: spacing.md,
-          flexWrap: "wrap",
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>בחר תורם</h3>
-        <Button
-          variant="secondary"
-          onClick={onClose}
-          type="button"
-        >
-          ✕ סגור
-        </Button>
-      </div>
-      <div style={{ marginBottom: spacing.sm }}>
-        <input
-          type="text"
-          style={inputStyle}
-          placeholder="חפש לפי שם או ת.ז"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "separate",
-          borderSpacing: "0 8px",
-        }}
-      >
-        <thead style={{ borderBottom: "2px solid rgba(15,23,42,0.15)" }}>
-          <tr style={{ color: muted, fontSize: 13 }}>
-            <th style={{ textAlign: "center", padding: 8 }}>שם</th>
-            <th style={{ textAlign: "center", padding: 8 }}>טלפון</th>
-            <th style={{ textAlign: "center", padding: 8 }}>אימייל</th>
-            <th style={{ textAlign: "center", padding: 8 }}>פעולה</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredDonors.map((donor) => {
-            const alreadySelected = selectedDonorIds.includes(donor.national_id);
-            return (
-              <tr
-                key={donor.national_id}
-                style={{ borderTop: "1px solid rgba(15,23,42,0.08)" }}
-              >
-                <td style={{ padding: 8 }}>
-                  <div style={{ fontWeight: 600 }}>{donor.full_name}</div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: muted,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {donor.national_id}
-                  </div>
-                </td>
-                <td style={{ textAlign: "center", padding: 8 }}>
-                  {formatPhoneNumber(donor.phone)}
-                </td>
-                <td style={{ textAlign: "center", padding: 8 }}>
-                  {donor.email || "—"}
-                </td>
-                <td style={{ textAlign: "center", padding: 8 }}>
-                  <Button
-                    variant="secondary"
-                    style={{ ...smallButtonStyle, padding: "6px 12px" }}
-                    onClick={() => onSelect(donor)}
-                    disabled={alreadySelected}
-                  >
-                    {alreadySelected ? "נבחר" : "בחר"}
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-          {filteredDonors.length === 0 && (
-            <tr>
-              <td
-                colSpan={4}
-                style={{ textAlign: "center", padding: 20, color: muted }}
-              >
-                {search
-                  ? "לא נמצאו תורמים תואמים לחיפוש."
-                  : "אין תורמים פעילים להצגה."}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </Modal>
+    <Dialog open={open} onClose={onClose}>
+      <DialogPanel className="max-w-2xl">
+        {/* Header */}
+        <Flex justifyContent="between" alignItems="center" className="mb-6 flex-wrap gap-4">
+          <Title>בחר תורם</Title>
+          <Button variant="secondary" onClick={onClose}>
+            ✕ סגור
+          </Button>
+        </Flex>
+
+        {/* Search */}
+        <div className="mb-4">
+          <TextInput
+            icon={MagnifyingGlassIcon}
+            placeholder="חפש לפי שם או ת.ז"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Table */}
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell className="text-center">שם</TableHeaderCell>
+              <TableHeaderCell className="text-center">טלפון</TableHeaderCell>
+              <TableHeaderCell className="text-center">אימייל</TableHeaderCell>
+              <TableHeaderCell className="text-center">פעולה</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredDonors.map((donor) => {
+              const alreadySelected = selectedDonorIds.includes(donor.national_id);
+              return (
+                <TableRow
+                  key={donor.national_id}
+                  className="transition-colors hover:bg-tremor-background-subtle"
+                >
+                  <TableCell>
+                    <div className="font-semibold" style={{ color: cssVar.text.primary }}>
+                      {donor.full_name}
+                    </div>
+                    <div className="text-xs font-mono" style={{ color: cssVar.text.muted }}>
+                      {donor.national_id}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {formatPhoneNumber(donor.phone)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {donor.email || "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="secondary"
+                      size="xs"
+                      onClick={() => onSelect(donor)}
+                      disabled={alreadySelected}
+                    >
+                      {alreadySelected ? "נבחר" : "בחר"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {filteredDonors.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center py-10"
+                  style={{ color: cssVar.text.muted }}
+                >
+                  {search
+                    ? "לא נמצאו תורמים תואמים לחיפוש."
+                    : "אין תורמים פעילים להצגה."}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </DialogPanel>
+    </Dialog>
   );
 }
-
-
-

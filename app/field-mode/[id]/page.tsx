@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { colors, spacing } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 import { Toaster, toast } from "sonner";
 import { ArrowRight, Check, X, Phone, AlertTriangle, Info, Clock, Users } from "lucide-react";
 import { Modal } from "@/app/components/ui";
@@ -271,7 +271,7 @@ export default function FieldModePage() {
                         <hr style={{ borderColor: "#eee", width: "100%" }} />
                         <div style={{ textAlign: "right" }}>
                             <strong>חונך מוביל:</strong> {selectedSurfer.lead_volunteer_name}<br/>
-                            {selectedSurfer.lead_volunteer_phone && <a href={`tel:${selectedSurfer.lead_volunteer_phone}`} style={{ color: colors.primary }}>חייג לחונך</a>}
+                            {selectedSurfer.lead_volunteer_phone && <a href={`tel:${selectedSurfer.lead_volunteer_phone}`} style={{ color: cssVar.brand.primary }}>חייג לחונך</a>}
                         </div>
                     </div>
                 )}

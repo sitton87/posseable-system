@@ -1,101 +1,26 @@
 ﻿"use client";
 
-import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
-import { Card } from "@/app/components/ui";
-import { colors, spacing, radii, shadows } from "@/app/styles/foundations";
-
-const px = (value: number) => `${value}px`;
-const muted = colors.textMuted;
-
-const layoutStyle: CSSProperties = {
-  padding: spacing.xl,
-  display: "flex",
-  flexDirection: "column",
-  gap: spacing.lg,
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: px(spacing.xs),
-};
-
-const headingStyle: CSSProperties = {
-  margin: 0,
-  fontSize: px(28),
-  fontWeight: 800,
-  color: colors.textPrimary,
-};
-
-const statGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  gap: spacing.lg,
-};
-
-const detailGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  gap: spacing.lg,
-};
-
-const statCardStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: spacing.md,
-  padding: spacing.lg,
-};
-
-const statValueStyle: CSSProperties = {
-  fontSize: px(28),
-  fontWeight: 800,
-};
-
-const statMetaStyle: CSSProperties = {
-  fontSize: px(13),
-  color: muted,
-  display: "flex",
-  justifyContent: "space-between",
-  marginBottom: px(4),
-};
-
-const detailListStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: spacing.sm,
-};
-
-const detailItemStyle: CSSProperties = {
-  padding: spacing.md,
-  borderRadius: radii.card,
-  border: `1px solid ${colors.borderMuted}`,
-  background: colors.surfaceAlt,
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-};
-
-const quickActionsGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-  gap: spacing.md,
-  marginTop: spacing.md,
-};
-
-const quickActionStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: px(spacing.xs),
-  padding: spacing.lg,
-  borderRadius: radii.card,
-  border: `1px solid ${colors.borderMuted}`,
-  textDecoration: "none",
-  fontWeight: 600,
-  transition: "transform 0.15s ease, box-shadow 0.15s ease",
-};
+import {
+  Card,
+  Grid,
+  Title,
+  Text,
+  Metric,
+  Flex,
+  Badge,
+  Icon,
+} from "@tremor/react";
+import {
+  UserGroupIcon,
+  UserIcon,
+  CalendarIcon,
+  WrenchScrewdriverIcon,
+  HeartIcon,
+  TruckIcon,
+} from "@heroicons/react/24/outline";
+import Link from "next/link";
+import { tw } from "@/app/styles/design-system";
 
 type DashboardStats = {
   volunteers: { total: number; active: number };
@@ -147,335 +72,232 @@ export default function DashboardView() {
     {
       href: "/volunteers",
       label: "הוסף מתנדב",
-      icon: "👥",
-      background: colors.primarySoft,
-      color: colors.primary,
+      icon: UserGroupIcon,
+      color: "blue",
     },
     {
       href: "/surfers",
       label: "הוסף גולש",
-      icon: "🏄",
-      background: colors.surfaceAlt,
-      color: colors.accent,
+      icon: UserIcon,
+      color: "cyan",
     },
     {
       href: "/activities",
       label: "תזמן פעילות",
-      icon: "📅",
-      background: colors.primarySoft,
-      color: colors.primary,
+      icon: CalendarIcon,
+      color: "blue",
     },
     {
       href: "/equipment",
       label: "נהל ציוד",
-      icon: "🛠️",
-      background: colors.successSoft,
-      color: colors.success,
+      icon: WrenchScrewdriverIcon,
+      color: "emerald",
     },
   ];
 
   if (loading) {
     return (
-      <div style={layoutStyle}>
-        <div style={{ textAlign: "center", color: muted }}>טוען נתונים...</div>
+      <div className="p-10 flex justify-center text-ds-text-muted">
+        טוען נתונים...
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div style={layoutStyle}>
-        <div style={{ textAlign: "center", color: colors.danger }}>
-          שגיאה בטעינת נתונים
-        </div>
+      <div className="p-10 flex justify-center text-ds-danger">
+        שגיאה בטעינת נתונים
       </div>
     );
   }
 
   return (
-    <div style={layoutStyle}>
-      <div style={headerStyle}>
-        <h1 style={headingStyle}>ברוך הבא למערכת PosSEAble</h1>
-        <p style={{ margin: 0, color: muted }}>סקירה כללית של המערכת</p>
+    <main className="p-6 sm:p-10 bg-ds-bg-secondary min-h-screen" dir="rtl">
+      <div className="mb-8">
+        <Title className="text-2xl font-bold text-ds-text-primary">ברוך הבא למערכת PosSEAble</Title>
+        <Text className="text-ds-text-muted">סקירה כללית של המערכת</Text>
       </div>
 
-      <div style={statGridStyle}>
-        <Card style={statCardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
-              🏃 מתנדבים
-            </h3>
-            <span style={{ ...statValueStyle, color: colors.primary }}>
-              {stats.volunteers.total}
-            </span>
-          </div>
-          <div>
-            <div style={statMetaStyle}>
-              <span>פעילים:</span>
-              <span style={{ color: colors.success, fontWeight: 700 }}>
-                {stats.volunteers.active}
-              </span>
+      <Grid numItems={1} numItemsSm={2} numItemsLg={3} className="gap-6">
+        {/* Volunteers */}
+        <Card decoration="top" decorationColor="blue">
+          <Flex alignItems="start">
+            <div>
+              <Text className="text-sm font-medium text-ds-text-muted uppercase tracking-wide">מתנדבים</Text>
+              <Metric className="text-3xl font-bold text-ds-text-primary mt-1">{stats.volunteers.total}</Metric>
             </div>
-            <div style={statMetaStyle}>
-              <span>לא פעילים:</span>
-              <span>{stats.volunteers.total - stats.volunteers.active}</span>
-            </div>
-          </div>
+            <Icon icon={UserGroupIcon} variant="light" size="lg" color="blue" />
+          </Flex>
+          <Flex className="mt-6">
+            <Text className="text-sm text-ds-text-secondary">פעילים</Text>
+            <Text className="font-bold text-ds-success">
+              {stats.volunteers.active}
+            </Text>
+          </Flex>
+          <Flex className="mt-1">
+            <Text className="text-sm text-ds-text-secondary">לא פעילים</Text>
+            <Text className="text-ds-text-primary">{stats.volunteers.total - stats.volunteers.active}</Text>
+          </Flex>
         </Card>
 
-        <Card style={statCardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
-              🏄 גולשים
-            </h3>
-            <span style={{ ...statValueStyle, color: colors.accent }}>
-              {stats.surfers.total}
-            </span>
-          </div>
-          <div>
-            <div style={statMetaStyle}>
-              <span>פעילים:</span>
-              <span style={{ color: colors.success, fontWeight: 700 }}>
-                {stats.surfers.active}
-              </span>
+        {/* Surfers */}
+        <Card decoration="top" decorationColor="cyan">
+          <Flex alignItems="start">
+            <div>
+              <Text className="text-sm font-medium text-ds-text-muted uppercase tracking-wide">גולשים</Text>
+              <Metric className="text-3xl font-bold text-ds-text-primary mt-1">{stats.surfers.total}</Metric>
             </div>
-            <div style={statMetaStyle}>
-              <span>לא פעילים:</span>
-              <span>{stats.surfers.total - stats.surfers.active}</span>
-            </div>
-          </div>
+            <Icon icon={UserIcon} variant="light" size="lg" color="cyan" />
+          </Flex>
+          <Flex className="mt-6">
+            <Text className="text-sm text-ds-text-secondary">פעילים</Text>
+            <Text className="font-bold text-ds-success">
+              {stats.surfers.active}
+            </Text>
+          </Flex>
+          <Flex className="mt-1">
+            <Text className="text-sm text-ds-text-secondary">לא פעילים</Text>
+            <Text className="text-ds-text-primary">{stats.surfers.total - stats.surfers.active}</Text>
+          </Flex>
         </Card>
 
-        <Card style={statCardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
-              📅 פעילויות
-            </h3>
-            <span style={{ ...statValueStyle, color: colors.primary }}>
-              {stats.activities.total}
-            </span>
-          </div>
-          <div>
-            <div style={statMetaStyle}>
-              <span>קרובות:</span>
-              <span style={{ color: colors.warning, fontWeight: 700 }}>
-                {stats.activities.upcoming}
-              </span>
+        {/* Activities */}
+        <Card decoration="top" decorationColor="indigo">
+          <Flex alignItems="start">
+            <div>
+              <Text className="text-sm font-medium text-ds-text-muted uppercase tracking-wide">פעילויות</Text>
+              <Metric className="text-3xl font-bold text-ds-text-primary mt-1">{stats.activities.total}</Metric>
             </div>
-            <div style={statMetaStyle}>
-              <span>סה&quot;כ:</span>
-              <span>{stats.activities.total}</span>
-            </div>
-          </div>
+            <Icon icon={CalendarIcon} variant="light" size="lg" color="indigo" />
+          </Flex>
+          <Flex className="mt-6">
+            <Text className="text-sm text-ds-text-secondary">פעילויות קרובות</Text>
+            <Badge color="amber">{stats.activities.upcoming}</Badge>
+          </Flex>
         </Card>
 
-        <Card style={statCardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
-              🛠️ ציוד
-            </h3>
-            <span style={{ ...statValueStyle, color: colors.success }}>
-              {stats.equipment.total}
-            </span>
-          </div>
-          <div>
-            <div style={statMetaStyle}>
-              <span>תקין:</span>
-              <span style={{ color: colors.success, fontWeight: 700 }}>
-                {stats.equipment.total - stats.equipment.needsRepair}
-              </span>
+        {/* Equipment */}
+        <Card decoration="top" decorationColor="emerald">
+          <Flex alignItems="start">
+            <div>
+              <Text className="text-sm font-medium text-ds-text-muted uppercase tracking-wide">ציוד</Text>
+              <Metric className="text-3xl font-bold text-ds-text-primary mt-1">{stats.equipment.total}</Metric>
             </div>
-            <div style={statMetaStyle}>
-              <span>דורש תיקון:</span>
-              <span style={{ color: colors.danger }}>
-                {stats.equipment.needsRepair}
-              </span>
-            </div>
-          </div>
+            <Icon
+              icon={WrenchScrewdriverIcon}
+              variant="light"
+              size="lg"
+              color="emerald"
+            />
+          </Flex>
+          <Flex className="mt-6">
+            <Text className="text-sm text-ds-text-secondary">תקין</Text>
+            <Text className="font-bold text-ds-success">
+              {stats.equipment.total - stats.equipment.needsRepair}
+            </Text>
+          </Flex>
+          <Flex className="mt-1">
+            <Text className="text-sm text-ds-text-secondary">דורש תיקון</Text>
+            <Text className="font-bold text-ds-danger">
+              {stats.equipment.needsRepair}
+            </Text>
+          </Flex>
         </Card>
 
-        <Card style={statCardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
-              ❤️ תורמים
-            </h3>
-            <span style={{ ...statValueStyle, color: colors.danger }}>
-              {stats.donors.total}
-            </span>
-          </div>
-          <div>
-            <div style={statMetaStyle}>
-              <span>פעילים:</span>
-              <span style={{ color: colors.success, fontWeight: 700 }}>
-                {stats.donors.active}
-              </span>
+        {/* Donors */}
+        <Card decoration="top" decorationColor="rose">
+          <Flex alignItems="start">
+            <div>
+              <Text className="text-sm font-medium text-ds-text-muted uppercase tracking-wide">תורמים</Text>
+              <Metric className="text-3xl font-bold text-ds-text-primary mt-1">{stats.donors.total}</Metric>
             </div>
-            <div style={statMetaStyle}>
-              <span>לא פעילים:</span>
-              <span>{stats.donors.total - stats.donors.active}</span>
-            </div>
-          </div>
+            <Icon icon={HeartIcon} variant="light" size="lg" color="rose" />
+          </Flex>
+          <Flex className="mt-6">
+            <Text className="text-sm text-ds-text-secondary">פעילים</Text>
+            <Text className="font-bold text-ds-success">
+              {stats.donors.active}
+            </Text>
+          </Flex>
         </Card>
 
-        <Card style={statCardStyle}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "baseline",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 700 }}>
-              🤝 ספקים
-            </h3>
-            <span style={{ ...statValueStyle, color: colors.primary }}>
-              {stats.suppliers.total}
-            </span>
-          </div>
-          <div>
-            <div style={statMetaStyle}>
-              <span>פעילים:</span>
-              <span style={{ color: colors.success, fontWeight: 700 }}>
-                {stats.suppliers.active}
-              </span>
+        {/* Suppliers */}
+        <Card decoration="top" decorationColor="slate">
+          <Flex alignItems="start">
+            <div>
+              <Text className="text-sm font-medium text-ds-text-muted uppercase tracking-wide">ספקים</Text>
+              <Metric className="text-3xl font-bold text-ds-text-primary mt-1">{stats.suppliers.total}</Metric>
             </div>
-            <div style={statMetaStyle}>
-              <span>לא פעילים:</span>
-              <span>{stats.suppliers.total - stats.suppliers.active}</span>
-            </div>
-          </div>
+            <Icon icon={TruckIcon} variant="light" size="lg" color="slate" />
+          </Flex>
+          <Flex className="mt-6">
+            <Text className="text-sm text-ds-text-secondary">פעילים</Text>
+            <Text className="font-bold text-ds-success">
+              {stats.suppliers.active}
+            </Text>
+          </Flex>
         </Card>
-      </div>
+      </Grid>
 
-      <div style={detailGridStyle}>
-        <Card
-          style={{
-            padding: spacing.lg,
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>
-            גולשים לפי קבוצה
-          </h3>
-          <div style={detailListStyle}>
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <Title className="text-ds-text-primary">גולשים לפי קבוצה</Title>
+          <div className="mt-4 space-y-2">
             {Object.entries(stats.surfers.byGroup).map(([group, count]) => (
-              <div key={group} style={detailItemStyle}>
-                <span style={{ fontWeight: 600, color: colors.textPrimary }}>
-                  {group}
-                </span>
-                <span
-                  style={{
-                    fontSize: px(18),
-                    fontWeight: 800,
-                    color: colors.accent,
-                  }}
-                >
-                  {count}
-                </span>
-              </div>
+              <Flex key={group} className="p-2 hover:bg-ds-bg-hover rounded-lg transition-colors">
+                <Text className="font-medium text-ds-text-primary">{group}</Text>
+                <Text className="font-bold text-ds-text-primary">{count}</Text>
+              </Flex>
             ))}
             {Object.keys(stats.surfers.byGroup).length === 0 && (
-              <div style={{ textAlign: "center", color: muted }}>
-                אין נתונים זמינים
-              </div>
+              <Text className="text-center italic mt-4 text-ds-text-muted">אין נתונים זמינים</Text>
             )}
           </div>
         </Card>
 
-        <Card
-          style={{
-            padding: spacing.lg,
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.md,
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: px(16), fontWeight: 800 }}>
-            פעילויות לפי סוג
-          </h3>
-          <div style={detailListStyle}>
+        <Card>
+          <Title className="text-ds-text-primary">פעילויות לפי סוג</Title>
+          <div className="mt-4 space-y-2">
             {Object.entries(stats.activities.byKind).map(([kind, count]) => (
-              <div key={kind} style={detailItemStyle}>
-                <span style={{ fontWeight: 600, color: colors.textPrimary }}>
+              <Flex key={kind} className="p-2 hover:bg-ds-bg-hover rounded-lg transition-colors">
+                <Text className="font-medium text-ds-text-primary">
                   {ACTIVITY_KIND_LABELS[kind] || kind}
-                </span>
-                <span
-                  style={{
-                    fontSize: px(18),
-                    fontWeight: 800,
-                    color: colors.primary,
-                  }}
-                >
-                  {count}
-                </span>
-              </div>
+                </Text>
+                <Text className="font-bold text-ds-text-primary">{count}</Text>
+              </Flex>
             ))}
             {Object.keys(stats.activities.byKind).length === 0 && (
-              <div style={{ textAlign: "center", color: muted }}>
-                אין נתונים זמינים
-              </div>
+              <Text className="text-center italic mt-4 text-ds-text-muted">אין נתונים זמינים</Text>
             )}
           </div>
         </Card>
       </div>
 
-      <Card style={{ padding: spacing.lg }}>
-        <h3 style={{ margin: "0 0 8px 0", fontSize: px(16), fontWeight: 800 }}>
-          פעולות מהירות
-        </h3>
-        <p style={{ margin: 0, color: muted }}>
-          גישה מהירה למסכים המרכזיים של המערכת
-        </p>
-        <div style={quickActionsGridStyle}>
-          {quickActions.map((action) => (
-            <a
-              key={action.href}
-              href={action.href}
-              style={{
-                ...quickActionStyle,
-                background: action.background,
-                color: action.color,
-                boxShadow: shadows.card,
-              }}
-            >
-              <div style={{ fontSize: px(28) }}>{action.icon}</div>
-              <div>{action.label}</div>
-            </a>
-          ))}
-        </div>
-      </Card>
-    </div>
+      <div className="mt-6">
+        <Card>
+          <Title className="text-ds-text-primary">פעולות מהירות</Title>
+          <Text className="text-ds-text-muted">גישה מהירה למסכים המרכזיים של המערכת</Text>
+          <Grid numItems={1} numItemsSm={2} numItemsMd={4} className="gap-4 mt-4">
+            {quickActions.map((action) => (
+              <Link key={action.href} href={action.href} className="block">
+                <Card
+                  className="hover:bg-ds-bg-hover transition-colors cursor-pointer h-full flex flex-col items-center justify-center py-6 gap-3 border border-ds-border ring-0 shadow-none hover:shadow-ds-sm"
+                  decoration="left"
+                  decorationColor={action.color}
+                >
+                  <Icon
+                    icon={action.icon}
+                    size="xl"
+                    color={action.color}
+                    variant="simple"
+                  />
+                  <Text className="font-medium text-ds-text-primary">{action.label}</Text>
+                </Card>
+              </Link>
+            ))}
+          </Grid>
+        </Card>
+      </div>
+    </main>
   );
 }

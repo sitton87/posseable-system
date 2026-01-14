@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Donor } from "@/type";
 import { useDraftManager } from "@/app/hooks/useDraftManager";
-import { spacing } from "@/app/styles/foundations";
+import { cssVar } from "@/app/styles/design-system";
 import {
   DonorFormState,
   DonorStats,
@@ -294,31 +294,8 @@ export default function DonorsPage() {
     setShowModal(true);
   };
 
-  // Note: tasks state is set but not directly used for toggling in the refactored main page.
-  // The TasksBoard component handles its own state internally via API.
-  // We keep it here if we want to pass initial tasks or refresh them.
-  // However, TasksBoard fetches its own data now.
-  // But wait, in the original code, TasksBoard was passed `entities` and a `title`, but handled tasks internally.
-  // The `tasks` state in `DonorsPage` was calculated using `buildTasks` but seemingly not passed to `TasksBoard`.
-  // Wait, let me check the original code for `TasksBoard` usage.
-  // <TasksBoard entityType="donor" entities={donorEntities} title="משימות ופתקים (תורמים)" />
-  // It seems `tasks` state in `DonorsPage` was actually UNUSED in the JSX!
-  // It was set in `fetchDonors` but not passed anywhere.
-  // `TasksBoard` fetches its own data.
-  // The `buildTasks` function returns "suggested" tasks based on logic, but `TasksBoard` displays notes from DB.
-  // It seems `buildTasks` was logic for "smart tasks" that maybe should be created in the DB?
-  // Or maybe it was a leftover.
-  // I will keep `buildTasks` and the state just to be safe and match original logic, but it seems unused for rendering.
-
   return (
-    <div
-      style={{
-        padding: spacing.xl,
-        display: "flex",
-        flexDirection: "column",
-        gap: spacing.lg,
-      }}
-    >
+    <div className="p-6 sm:p-10 flex flex-col gap-6">
       {activeTab === "home" && (
         <DonorsHomeTab
           stats={stats}

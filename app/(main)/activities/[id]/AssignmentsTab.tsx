@@ -3,10 +3,25 @@
 import { useState, useEffect } from "react";
 import { Activity, Surfer, Volunteer } from "@/type";
 import { Section } from "@/app/components/shared/layoutPrimitives";
-import { Button, Select } from "@/app/components/ui";
-import { colors, spacing } from "@/app/styles/foundations";
+import {
+  Card,
+  Title,
+  Text,
+  TextInput,
+  Select,
+  SelectItem,
+  Button,
+} from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 import { toast } from "sonner";
-import { User, Users, Shield, Trash2, Plus, ArrowRight, GripVertical, CheckCircle2 } from "lucide-react";
+import {
+  UserIcon,
+  UsersIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+  PlusIcon,
+  ArrowRightIcon,
+} from "@heroicons/react/24/outline";
 
 interface AssignmentsTabProps {
   activity: Activity;
@@ -34,12 +49,10 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Assignment selection state
   const [selectedSurferId, setSelectedSurferId] = useState<string | null>(null);
   const [newVolunteerId, setNewVolunteerId] = useState("");
-  const [newRole, setNewRole] = useState("support"); // support, lead
+  const [newRole, setNewRole] = useState("support");
 
-  // DnD State
   const [draggedVolunteerId, setDraggedVolunteerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,12 +62,10 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-        // 1. Load Group Surfers
         if (activity.group_id) {
             const surfersRes = await fetch(`/api/groups?includeSurfers=true`);
             const surfersData = await surfersRes.json();
             if (surfersData.success) {
-                // Normalize IDs for comparison
                 const activityGroupId = String(activity.group_id).toLowerCase();
                 const group = surfersData.groups.find((g: any) => 
                     String(g.id).toLowerCase() === activityGroupId
@@ -68,19 +79,16 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
             }
         }
 
-        // 2. Load Registrations
         const regRes = await fetch(`/api/activities/registrations?activity_id=${activity.id}`);
         const regData = await regRes.json();
         if (regData.success) setRegistrations(regData.registrations);
 
-        // 3. Load Assignments
         const actRes = await fetch(`/api/activities/${activity.id}`);
         const actData = await actRes.json();
         if(actData.success && actData.activity.assignments) {
             setAssignments(actData.activity.assignments);
         }
 
-        // 4. Load Volunteers
         const volRes = await fetch("/api/volunteers?active=true");
         const volData = await volRes.json();
         if (volData.success) setVolunteers(volData.volunteers);
@@ -116,12 +124,6 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
       if (isAssigned) {
           toast.error("המתנדב כבר משובץ לגולש אחר");
           return;
-      }
-
-      // Check lead role permission
-      if (role === "lead") {
-          const volunteer = volunteers.find(v => v.national_id === vId);
-          // Optional: Add logic here to block if needed
       }
 
       try {
@@ -171,18 +173,17 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
   const selectedSurfer = groupSurfers.find(s => s.national_id === selectedSurferId);
   const selectedSurferAssignments = assignments.filter(a => a.surfer_id === selectedSurferId);
 
-  // Filter available volunteers
   const assignedVolunteerIds = new Set(assignments.map(a => a.volunteer_id));
   const availableVolunteers = volunteers.filter(v => !assignedVolunteerIds.has(v.national_id));
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr 1fr", gap: spacing.lg, alignItems: "start", height: "calc(100vh - 200px)", minHeight: 600 }}>
+    <div className="grid grid-cols-[1fr_1.5fr_1fr] gap-5 items-start h-[calc(100vh-200px)] min-h-[600px]">
       
       {/* Column 1 (Right): Surfers Attendance */}
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div className="flex flex-col h-full overflow-hidden">
         <Section title="נוכחות גולשים">
-            <div style={{ overflowY: "auto", flex: 1, paddingRight: 4, display: "flex", flexDirection: "column", gap: spacing.sm }}>
-                {groupSurfers.length === 0 && <div style={{ color: colors.textMuted }}>אין גולשים בקבוצה זו</div>}
+            <div className="overflow-y-auto flex-1 pr-1 flex flex-col gap-2">
+                {groupSurfers.length === 0 && <Text style={{ color: cssVar.text.muted }}>אין גולשים בקבוצה זו</Text>}
                 {groupSurfers.map(surfer => {
                     const reg = registrations.find(r => r.surfer_id === surfer.national_id);
                     const isAttending = !!reg;
@@ -190,46 +191,39 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
                     const hasLead = surferAssignments.some(a => a.role === 'lead');
                     
                     return (
-                        <div 
+                        <Card 
                             key={surfer.national_id}
                             onDragOver={isAttending ? onDragOver : undefined}
                             onDrop={isAttending ? (e) => onDrop(e, surfer.national_id) : undefined}
-                            style={{
-                                padding: spacing.sm,
-                                border: `1px solid ${selectedSurferId === surfer.national_id ? colors.primary : (isAttending ? colors.border : "transparent")}`,
-                                borderRadius: 6,
-                                background: isAttending ? (selectedSurferId === surfer.national_id ? colors.surfaceAlt : "white") : "#f9fafb",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                cursor: isAttending ? "pointer" : "default",
-                                opacity: isAttending ? 1 : 0.7,
-                                transition: "all 0.2s"
-                            }}
+                            className={`p-2 flex items-center justify-between transition-all ${
+                              selectedSurferId === surfer.national_id 
+                                ? 'ring-2 ring-tremor-brand' 
+                                : ''
+                            } ${isAttending ? 'cursor-pointer opacity-100' : 'cursor-default opacity-70'}`}
                             onClick={() => isAttending && setSelectedSurferId(surfer.national_id)}
                         >
-                            <div style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
+                            <div className="flex items-center gap-2">
                                 <input 
                                     type="checkbox" 
                                     checked={isAttending}
                                     onChange={(e) => {
-                                        e.stopPropagation(); // Prevent row click
+                                        e.stopPropagation();
                                         toggleAttendance(surfer.national_id, reg?.id);
                                     }}
-                                    style={{ width: 18, height: 18, cursor: "pointer" }}
+                                    className="w-4 h-4 cursor-pointer"
                                 />
                                 <div>
-                                    <div style={{ fontWeight: 500 }}>{surfer.full_name}</div>
+                                    <Text className="font-medium">{surfer.full_name}</Text>
                                     {isAttending && (
-                                        <div style={{ fontSize: 12, color: colors.textMuted, display: "flex", gap: 4 }}>
-                                            <Users size={12} /> {surferAssignments.length} מתנדבים
-                                            {!hasLead && <span style={{ color: colors.warning }}> (חסר מוביל)</span>}
-                                        </div>
+                                        <Text className="text-xs" style={{ color: cssVar.text.muted }}>
+                                            <UsersIcon className="w-3 h-3 inline mr-1" /> {surferAssignments.length} מתנדבים
+                                            {!hasLead && <span style={{ color: cssVar.status.warning }}> (חסר מוביל)</span>}
+                                        </Text>
                                     )}
                                 </div>
                             </div>
-                            {isAttending && <ArrowRight size={16} color={colors.textMuted} />}
-                        </div>
+                            {isAttending && <ArrowRightIcon className="w-4 h-4" style={{ color: cssVar.text.muted }} />}
+                        </Card>
                     );
                 })}
             </div>
@@ -237,134 +231,124 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
       </div>
 
       {/* Column 2 (Middle): Assignment Details */}
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div className="flex flex-col h-full overflow-hidden">
         {selectedSurfer ? (
             <Section title={`שיבוץ צוות ל${selectedSurfer.full_name}`}>
-                <div style={{ display: "flex", gap: spacing.md, marginBottom: spacing.lg, alignItems: "flex-end" }}>
-                    <div style={{ flex: 2 }}>
-                        <Select 
-                            label="מתנדב"
-                            value={newVolunteerId}
-                            onChange={(e) => setNewVolunteerId(e.target.value)}
-                            options={[
-                                { value: "", label: "בחר מתנדב..." },
-                                ...availableVolunteers.map(v => ({ value: v.national_id, label: v.full_name }))
-                            ]}
-                        />
+                <div className="flex gap-4 mb-5 items-end">
+                    <div className="flex-[2]">
+                        <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>מתנדב</Text>
+                        <Select
+                            value={newVolunteerId || undefined}
+                            onValueChange={(val) => setNewVolunteerId(val || "")}
+                            placeholder="בחר מתנדב..."
+                        >
+                            {availableVolunteers.map(v => (
+                                <SelectItem key={v.national_id} value={v.national_id}>{v.full_name}</SelectItem>
+                            ))}
+                        </Select>
                     </div>
-                    <div style={{ flex: 1 }}>
-                        <Select 
-                            label="תפקיד"
+                    <div className="flex-1">
+                        <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>תפקיד</Text>
+                        <Select
                             value={newRole}
-                            onChange={(e) => setNewRole(e.target.value)}
-                            options={[
-                                { value: "support", label: "תומך" },
-                                { value: "lead", label: "מוביל צוות" },
-                            ]}
-                        />
+                            onValueChange={(val) => setNewRole(val)}
+                        >
+                            <SelectItem value="support">תומך</SelectItem>
+                            <SelectItem value="lead">מוביל צוות</SelectItem>
+                        </Select>
                     </div>
-                    <Button onClick={() => handleAddAssignment(newVolunteerId, newRole, selectedSurfer.national_id)} disabled={!newVolunteerId}>
-                        <Plus size={16} style={{ marginLeft: 6 }} /> הוסף
+                    <Button icon={PlusIcon} onClick={() => handleAddAssignment(newVolunteerId, newRole, selectedSurfer.national_id)} disabled={!newVolunteerId}>
+                        הוסף
                     </Button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm, overflowY: "auto", maxHeight: 400 }}>
-                    {selectedSurferAssignments.length === 0 && <div style={{ color: colors.textMuted }}>טרם שובצו מתנדבים (גרור מתנדב לכאן)</div>}
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-96">
+                    {selectedSurferAssignments.length === 0 && <Text style={{ color: cssVar.text.muted }}>טרם שובצו מתנדבים (גרור מתנדב לכאן)</Text>}
                     {selectedSurferAssignments.map(assign => (
-                        <div key={assign.id} style={{ 
-                            display: "flex", 
-                            justifyContent: "space-between", 
-                            alignItems: "center",
-                            padding: spacing.sm,
-                            background: "white",
-                            border: `1px solid ${colors.border}`,
-                            borderRadius: 6
-                        }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: spacing.md }}>
-                                {assign.role === 'lead' ? <Shield size={18} color={colors.primary} /> : <User size={18} color={colors.textMuted} />}
-                                <span style={{ fontWeight: assign.role === 'lead' ? 600 : 400 }}>{assign.volunteer_name}</span>
-                                <span style={{ fontSize: 12, color: colors.textMuted, background: colors.surfaceAlt, padding: "2px 6px", borderRadius: 4 }}>
+                        <Card key={assign.id} className="p-2 flex justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                {assign.role === 'lead' ? (
+                                    <ShieldCheckIcon className="w-5 h-5" style={{ color: cssVar.brand.primary }} />
+                                ) : (
+                                    <UserIcon className="w-5 h-5" style={{ color: cssVar.text.muted }} />
+                                )}
+                                <Text className={assign.role === 'lead' ? 'font-semibold' : ''}>{assign.volunteer_name}</Text>
+                                <span
+                                    className="text-xs px-1.5 py-0.5 rounded"
+                                    style={{ backgroundColor: cssVar.bg.secondary }}
+                                >
                                     {assign.role === 'lead' ? 'מוביל' : 'תומך'}
                                 </span>
                             </div>
                             <button 
                                 onClick={() => handleRemoveAssignment(assign.id)}
-                                style={{ border: "none", background: "none", color: colors.danger, cursor: "pointer" }}
+                                className="border-none bg-transparent cursor-pointer"
+                                style={{ color: cssVar.status.danger }}
                             >
-                                <Trash2 size={16} />
+                                <TrashIcon className="w-4 h-4" />
                             </button>
-                        </div>
+                        </Card>
                     ))}
                 </div>
                 
-                <div style={{ marginTop: spacing.xl, paddingTop: spacing.lg, borderTop: `1px dashed ${colors.border}` }}>
-                    <h4 style={{ fontSize: 14, margin: "0 0 8px 0" }}>ציוד אישי</h4>
-                    <div style={{ color: colors.textMuted, fontStyle: "italic", fontSize: 13 }}>
+                <div
+                    className="mt-6 pt-5 border-t border-dashed"
+                    style={{ borderColor: cssVar.border.primary }}
+                >
+                    <Text className="text-sm font-semibold mb-2">ציוד אישי</Text>
+                    <Text className="italic text-sm" style={{ color: cssVar.text.muted }}>
                         כאן תהיה אפשרות להגדיר גלשן ואפוד ספציפיים לגולש זה.
-                    </div>
+                    </Text>
                 </div>
             </Section>
         ) : (
-            <div style={{ 
-                height: "100%", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                color: colors.textMuted, 
-                border: `2px dashed ${colors.border}`,
-                borderRadius: 8,
-                textAlign: "center",
-                padding: 20
-            }}>
-                בחר גולש מרשימת הנוכחות כדי לנהל את השיבוץ שלו, או גרור מתנדב על שם הגולש.
-            </div>
+            <Card className="h-full flex items-center justify-center border-2 border-dashed text-center p-5">
+                <Text style={{ color: cssVar.text.muted }}>
+                    בחר גולש מרשימת הנוכחות כדי לנהל את השיבוץ שלו, או גרור מתנדב על שם הגולש.
+                </Text>
+            </Card>
         )}
       </div>
 
       {/* Column 3 (Left): Volunteers Bank */}
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <div className="flex flex-col h-full overflow-hidden">
           <Section title={`מאגר מתנדבים זמינים (${availableVolunteers.length})`}>
-              <div style={{ overflowY: "auto", flex: 1, paddingRight: 4 }}>
-                  <input 
-                    type="text" 
+              <div className="overflow-y-auto flex-1 pr-1">
+                  <TextInput 
                     placeholder="חיפוש מתנדב..." 
-                    style={{ width: "100%", padding: 8, marginBottom: 8, borderRadius: 4, border: `1px solid ${colors.border}` }} 
+                    className="mb-2"
                   />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div className="flex flex-col gap-1">
                       {availableVolunteers.map(v => {
                           const isTeamLead = v.classification === 'staff' || v.classification === 'management';
                           return (
-                            <div
+                            <Card
                                 key={v.national_id}
                                 draggable
                                 onDragStart={(e) => onDragStart(e, v.national_id)}
-                                style={{
-                                    padding: 8,
-                                    background: "white",
-                                    border: `1px solid ${colors.border}`,
-                                    borderRadius: 4,
-                                    cursor: "grab",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    fontSize: 13
-                                }}
+                                className="p-2 cursor-grab flex items-center justify-between text-sm"
                             >
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <GripVertical size={14} color={colors.textMuted} />
-                                    <div style={{ fontWeight: 500 }}>{v.full_name}</div>
+                                <div className="flex items-center gap-2">
+                                    <Text className="font-medium">{v.full_name}</Text>
                                 </div>
                                 {isTeamLead && (
-                                    <span title="מנהל צוות" style={{ color: colors.primary, fontSize: 10, background: colors.primary+"10", padding: "1px 4px", borderRadius: 4 }}>
+                                    <span
+                                        title="מנהל צוות"
+                                        className="text-xs px-1 py-0.5 rounded"
+                                        style={{
+                                            color: cssVar.brand.primary,
+                                            backgroundColor: cssVar.status.infoSoft,
+                                        }}
+                                    >
                                         Lead
                                     </span>
                                 )}
-                            </div>
+                            </Card>
                           );
                       })}
                       {availableVolunteers.length === 0 && (
-                          <div style={{ textAlign: "center", color: colors.textMuted, padding: 20 }}>
-                              אין מתנדבים זמינים
+                          <div className="text-center p-5">
+                              <Text style={{ color: cssVar.text.muted }}>אין מתנדבים זמינים</Text>
                           </div>
                       )}
                   </div>

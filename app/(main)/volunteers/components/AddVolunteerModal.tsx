@@ -2,53 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { Volunteer } from "@/type";
-
-// Styles (matching your demo)
-const muted = "#6b7280";
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 6px 18px rgba(12,18,31,0.06)",
-  border: "1px solid rgba(15,23,42,0.06)",
-};
-
-const btn: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 10,
-  border: "none",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const btnPrimary: React.CSSProperties = {
-  ...btn,
-  background: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-  color: "#fff",
-  boxShadow: "0 3px 8px rgba(0,0,0,0.08)",
-};
-
-const btnSecondary: React.CSSProperties = {
-  ...btn,
-  background: "#f3f4f6",
-  color: "#374151",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: muted,
-  marginBottom: 4,
-  display: "block",
-};
+import {
+  Title,
+  Text,
+  TextInput,
+  Textarea,
+  Button,
+  Switch,
+} from "@tremor/react";
+import { Dialog, DialogPanel } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 interface AddVolunteerModalProps {
   showModal: boolean;
@@ -130,156 +93,105 @@ export default function AddVolunteerModal({
     }
   };
 
-  if (!showModal) return null;
-
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(15,23,42,0.35)",
-        display: "grid",
-        placeItems: "center",
-        zIndex: 1000,
-      }}
-      onClick={() => setShowModal(false)}
-    >
-      <div
-        style={{
-          ...cardStyle,
-          width: "min(600px, 90vw)",
-          padding: 24,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 style={{ margin: "0 0 16px 0", fontSize: 18, fontWeight: 800 }}>
+    <Dialog open={showModal} onClose={() => setShowModal(false)}>
+      <DialogPanel className="max-w-md">
+        <Title className="mb-6">
           {editingVolunteer ? "ערוך מתנדב" : "הוסף מתנדב חדש"}
-        </h3>
+        </Title>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-4">
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: muted }}>
-              שם מלא *
-            </label>
-            <input
-              type="text"
-              style={inputStyle}
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
+              שם מלא <span style={{ color: cssVar.status.danger }}>*</span>
+            </Text>
+            <TextInput
+              placeholder="הזן שם מלא"
               value={formData.full_name}
               onChange={(e) =>
                 setFormData({ ...formData, full_name: e.target.value })
               }
-              placeholder="הזן שם מלא"
             />
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-            }}
-          >
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label
-                style={{ fontSize: 13, fontWeight: 600, color: muted }}
-              >
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                 טלפון
-              </label>
-              <input
+              </Text>
+              <TextInput
                 type="tel"
-                style={inputStyle}
+                placeholder="050-1234567"
                 value={formData.phone}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                placeholder="050-1234567"
               />
             </div>
-
             <div>
-              <label
-                style={{ fontSize: 13, fontWeight: 600, color: muted }}
-              >
+              <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                 אימייל
-              </label>
-              <input
+              </Text>
+              <TextInput
                 type="email"
-                style={inputStyle}
+                placeholder="example@email.com"
                 value={formData.email}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                placeholder="example@email.com"
               />
             </div>
           </div>
 
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: muted }}>
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
               סוג מתנדב
-            </label>
-            <input
-              type="text"
-              style={inputStyle}
+            </Text>
+            <TextInput
+              placeholder="למשל: מדריך, רפרנט, וכו׳"
               value={formData.kind}
               onChange={(e) =>
                 setFormData({ ...formData, kind: e.target.value })
               }
-              placeholder="למשל: מדריך, רפרנט, וכו׳"
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, color: muted }}>
+            <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
               הערות
-            </label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+            </Text>
+            <Textarea
               value={formData.notes}
               onChange={(e) =>
                 setFormData({ ...formData, notes: e.target.value })
               }
               placeholder="הערות נוספות..."
+              rows={3}
             />
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input
-              type="checkbox"
-              id="active"
+          <div className="flex items-center gap-3">
+            <Switch
               checked={formData.active}
-              onChange={(e) =>
-                setFormData({ ...formData, active: e.target.checked })
+              onChange={(val) =>
+                setFormData({ ...formData, active: val })
               }
             />
-            <label
-              htmlFor="active"
-              style={{ fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-            >
+            <Text className="font-semibold text-sm">
               מתנדב פעיל
-            </label>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              marginTop: 8,
-              justifyContent: "flex-end",
-            }}
-          >
-            <button
-              style={btnSecondary}
-              onClick={() => setShowModal(false)}
-            >
-              ביטול
-            </button>
-            <button style={btnPrimary} onClick={handleSubmit}>
-              {editingVolunteer ? "עדכן" : "הוסף"}
-            </button>
+            </Text>
           </div>
         </div>
-      </div>
-    </div>
+
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: cssVar.border.primary }}>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            ביטול
+          </Button>
+          <Button onClick={handleSubmit}>
+            {editingVolunteer ? "עדכן" : "הוסף"}
+          </Button>
+        </div>
+      </DialogPanel>
+    </Dialog>
   );
 }

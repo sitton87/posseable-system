@@ -1,17 +1,16 @@
-import { Card } from "@/app/components/ui";
-import { spacing, colors } from "@/app/styles/foundations";
+"use client";
 
-const muted = colors.textMuted;
+import { Card, Title, Text } from "@tremor/react";
+import { cssVar } from "@/app/styles/design-system";
 
 export default function SettingsTab() {
   return (
-    <Card style={{ padding: spacing.lg }}>
-      <h4 style={{ margin: 0 }}>הגדרות עתידיות</h4>
-      <div style={{ color: muted, marginTop: spacing.sm, fontSize: 14 }}>
+    <Card>
+      <Title>הגדרות עתידיות</Title>
+      <Text style={{ color: cssVar.text.muted }}>
         כאן נוסיף הגדרות ייעודיות לגולשים (אוטומציה, ברירות מחדל, תבניות פתקים)
         בהמשך.
-      </div>
+      </Text>
     </Card>
   );
 }
-

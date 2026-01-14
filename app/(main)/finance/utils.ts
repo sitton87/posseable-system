@@ -1,45 +1,6 @@
-import { colors, radii, spacing } from "@/app/styles/foundations";
 import { CSSProperties } from "react";
 import { TransactionFormData } from "./types";
-
-export const muted = colors.textMuted;
-export const px = (value: number) => `${value}px`;
-
-export const sectionBoxStyle: CSSProperties = {
-  marginBottom: spacing.lg,
-  padding: spacing.lg,
-  background: colors.surfaceAlt,
-  borderRadius: radii.card,
-};
-
-export const smallButtonStyle: CSSProperties = {
-  fontSize: 12,
-  padding: `${px(spacing.xs)} ${px(spacing.sm)}`,
-};
-
-export const typePillStyle = (type: "income" | "expense"): CSSProperties => ({
-  padding: "4px 8px",
-  borderRadius: radii.button,
-  fontSize: 12,
-  fontWeight: 600,
-  background: type === "income" ? colors.successSoft : colors.dangerSoft,
-  color: type === "income" ? colors.success : colors.danger,
-});
-
-export const summaryCardStyle = (bg: string, color: string): CSSProperties => ({
-  padding: spacing.lg,
-  background: bg,
-  borderRadius: radii.card,
-  color,
-  textAlign: "center",
-});
-
-export const dashedBoxStyle: CSSProperties = {
-  padding: spacing.md,
-  borderRadius: radii.card,
-  background: colors.surfaceAlt,
-  border: `1px dashed ${colors.borderMuted}`,
-};
+import { cssVar, numericValues } from "@/app/styles/design-system";
 
 export const formatDate = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString("he-IL") : "—";
@@ -78,6 +39,3 @@ export const createEmptyFormData = (): TransactionFormData => ({
   remove_attachment: false,
   donor_shares: [],
 });
-
-
-
