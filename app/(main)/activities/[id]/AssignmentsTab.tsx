@@ -337,7 +337,7 @@ export function AssignmentsTab({ activity }: AssignmentsTabProps) {
                                         className="text-xs px-1 py-0.5 rounded"
                                         style={{
                                             color: cssVar.brand.primary,
-                                            backgroundColor: cssVar.status.infoSoft,
+                                            backgroundColor: cssVar.status.infoLight,
                                         }}
                                     >
                                         Lead
