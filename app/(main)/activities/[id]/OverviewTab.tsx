@@ -204,7 +204,7 @@ export function OverviewTab({
           <Card className="p-4 flex items-center gap-4">
               <div
                 className="p-2.5 rounded-full"
-                style={{ backgroundColor: cssVar.status.successSoft, color: cssVar.status.success }}
+                style={{ backgroundColor: cssVar.status.successLight, color: cssVar.status.success }}
               >
                   <ShieldCheckIcon className="w-6 h-6" />
               </div>
@@ -216,7 +216,7 @@ export function OverviewTab({
           <Card className="p-4 flex items-center gap-4">
               <div
                 className="p-2.5 rounded-full"
-                style={{ backgroundColor: cssVar.status.warningSoft, color: cssVar.status.warning }}
+                style={{ backgroundColor: cssVar.status.warningLight, color: cssVar.status.warning }}
               >
                   <UserIcon className="w-6 h-6" />
               </div>

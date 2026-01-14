@@ -10,7 +10,7 @@ export const CONDITION_OPTIONS: ConditionOption[] = [
   {
     value: "new",
     label: "חדש",
-    badge: { background: cssVar.status.successSoft, color: cssVar.status.success },
+    badge: { background: cssVar.status.successLight, color: cssVar.status.success },
   },
   {
     value: "used",
@@ -20,7 +20,7 @@ export const CONDITION_OPTIONS: ConditionOption[] = [
   {
     value: "damaged",
     label: "דורש תיקון",
-    badge: { background: cssVar.status.dangerSoft, color: cssVar.status.danger },
+    badge: { background: cssVar.status.dangerLight, color: cssVar.status.danger },
   },
 ];
 

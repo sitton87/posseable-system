@@ -61,7 +61,7 @@ export function EquipmentSummaryCard({
         <div
           className="mt-4 p-4 rounded-lg"
           style={{
-            backgroundColor: cssVar.status.dangerSoft,
+            backgroundColor: cssVar.status.dangerLight,
             color: cssVar.status.danger,
           }}
         >
