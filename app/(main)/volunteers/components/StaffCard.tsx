@@ -436,10 +436,16 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
                   <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                     תאריך הדרכה {selectedRoleObj?.requires_training && <span style={{ color: cssVar.status.danger }}>*</span>}
                   </Text>
-                  <TextInput
+                  <input
                     type="date"
                     value={trainingDate}
                     onChange={(e) => setTrainingDate(e.target.value)}
+                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    style={{ 
+                      borderColor: cssVar.border.primary, 
+                      backgroundColor: cssVar.bg.primary,
+                      color: cssVar.text.primary 
+                    }}
                   />
                 </div>
               )}
@@ -455,10 +461,16 @@ export function StaffCard({ volunteer, onClose }: StaffCardProps) {
                   <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                     תוקף עד {selectedRoleObj?.requires_renewal && <span style={{ color: cssVar.status.danger }}>*</span>}
                   </Text>
-                  <TextInput
+                  <input
                     type="date"
                     value={validUntil}
                     onChange={(e) => setValidUntil(e.target.value)}
+                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    style={{ 
+                      borderColor: cssVar.border.primary, 
+                      backgroundColor: cssVar.bg.primary,
+                      color: cssVar.text.primary 
+                    }}
                   />
                 </div>
               )}

@@ -72,7 +72,7 @@ export default function SurfersListTab({
   onResumeDraft,
   onDeleteDraft,
 }: Props) {
-  const getStatusColor = (status: string | undefined) => {
+  const getStatusColor = (status: string | null | undefined) => {
     switch (status) {
       case "מאושר":
         return "emerald";
@@ -108,7 +108,7 @@ export default function SurfersListTab({
               boxShadow: cssVar.shadow.sm,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = cssVar.brand.emphasis;
+              e.currentTarget.style.background = cssVar.brand.hover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = cssVar.brand.primary;
@@ -218,7 +218,7 @@ export default function SurfersListTab({
                     {s.status || "—"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center">{formatPhoneNumber(s.phone)}</TableCell>
+                <TableCell className="text-center">{formatPhoneNumber(s.phone ?? undefined)}</TableCell>
                 <TableCell className="text-center">
                   <Flex justifyContent="center">
                     {s.medical_approval ? (

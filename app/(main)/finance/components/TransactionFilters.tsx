@@ -68,10 +68,16 @@ export default function TransactionFilters({
           <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
             מתאריך
           </Text>
-          <TextInput
+          <input
             type="date"
             value={filterFromDate}
             onChange={(e) => setFilterFromDate(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+            style={{ 
+              borderColor: cssVar.border.primary, 
+              backgroundColor: cssVar.bg.primary,
+              color: cssVar.text.primary 
+            }}
           />
         </div>
 
@@ -79,10 +85,16 @@ export default function TransactionFilters({
           <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
             עד תאריך
           </Text>
-          <TextInput
+          <input
             type="date"
             value={filterToDate}
             onChange={(e) => setFilterToDate(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+            style={{ 
+              borderColor: cssVar.border.primary, 
+              backgroundColor: cssVar.bg.primary,
+              color: cssVar.text.primary 
+            }}
           />
         </div>
 

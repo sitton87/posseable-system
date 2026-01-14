@@ -218,7 +218,7 @@ export default function ActivitiesListTab() {
                     {format(new Date(activity.activity_date), "dd/MM/yyyy")}
                   </TableCell>
                   <TableCell>
-                    {formatTime(activity.start_time)}
+                    {formatTime(activity.start_time ?? undefined)}
                   </TableCell>
                   <TableCell className="font-bold">
                     {activity.group_name || "-"}

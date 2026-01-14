@@ -79,7 +79,7 @@ export default function PlanningSeriesTab() {
     frequency: "Weekly",
     occurrences_count: "",
     manual_activities: [] as Array<{ date: string; start_time: string; end_time: string }>,
-    default_activity_kind: ACTIVITY_KINDS[0].value,
+    default_activity_kind: ACTIVITY_KINDS[0].value as typeof ACTIVITY_KINDS[number]["value"],
   });
 
   useEffect(() => {
@@ -213,9 +213,9 @@ export default function PlanningSeriesTab() {
       default_start_time: series?.default_start_time ? series.default_start_time.substring(0, 5) : "",
       default_end_time: series?.default_end_time ? series.default_end_time.substring(0, 5) : "",
       frequency: series?.frequency || "Weekly",
-      occurrences_count: series?.occurrences_count || "",
+      occurrences_count: series?.occurrences_count?.toString() || "",
       manual_activities: [], 
-      default_activity_kind: series?.default_activity_kind || ACTIVITY_KINDS[0].value,
+      default_activity_kind: (series?.default_activity_kind || ACTIVITY_KINDS[0].value) as typeof ACTIVITY_KINDS[number]["value"],
     });
     
     setShowModal(true);
@@ -446,7 +446,7 @@ export default function PlanningSeriesTab() {
                 </div>
                 <div>
                   <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>סוג פעילות</Text>
-                  <Select value={seriesForm.default_activity_kind} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, default_activity_kind: val }))}>
+                  <Select value={seriesForm.default_activity_kind} onValueChange={(val) => setSeriesForm((prev) => ({ ...prev, default_activity_kind: val as typeof ACTIVITY_KINDS[number]["value"] }))}>
                     {ACTIVITY_KINDS.map(kind => <SelectItem key={kind.value} value={kind.value}>{kind.label}</SelectItem>)}
                   </Select>
                 </div>
@@ -633,7 +633,7 @@ export default function PlanningSeriesTab() {
                                     <TableCell>
                                         <StatusPill tone={
                                             activity.status === 'Completed' ? 'success' : 
-                                            activity.status === 'Cancelled' ? 'error' : 
+                                            activity.status === 'Cancelled' ? 'danger' : 
                                             activity.status === 'In Progress' ? 'info' : 'neutral'
                                         }>
                                             {activity.status === 'Planned' ? 'מתוכנן' : 

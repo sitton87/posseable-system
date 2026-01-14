@@ -338,11 +338,17 @@ export function EquipmentFormModal({
                 <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                   תוקף השכרה
                 </Text>
-                <TextInput
+                <input
                   type="date"
                   disabled={!canEdit}
                   value={formState.rental_expiry}
                   onChange={(e) => onChange("rental_expiry", e.target.value)}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  style={{ 
+                    borderColor: cssVar.border.primary, 
+                    backgroundColor: cssVar.bg.primary,
+                    color: cssVar.text.primary 
+                  }}
                 />
               </div>
             )}

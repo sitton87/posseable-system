@@ -53,7 +53,7 @@ export default function SurferViewModal({
       <DialogPanel
         className="max-w-3xl w-full p-0 overflow-hidden rounded-ds-modal-radius"
         style={{
-          background: cssVar.modal.bg,
+          background: cssVar.bg.primary,
           boxShadow: cssVar.modal.shadow,
           border: `1px solid ${cssVar.border.primary}`,
         }}
@@ -101,7 +101,7 @@ export default function SurferViewModal({
         {/* Scrollable Content */}
         <div
           className="p-6 max-h-[75vh] overflow-y-auto space-y-6"
-          style={{ background: cssVar.modal.bg }}
+          style={{ background: cssVar.bg.primary }}
         >
           {/* Personal Info */}
           <InfoSection title="פרטים אישיים" icon={UserIcon}>

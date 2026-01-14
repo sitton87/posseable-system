@@ -184,10 +184,16 @@ export function WarehouseModal({
               <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                 תום חוזה שכירות
               </Text>
-              <TextInput
+              <input
                 type="date"
                 value={form.rent_expiry}
                 onChange={(e) => onChange("rent_expiry", e.target.value)}
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                style={{ 
+                  borderColor: cssVar.border.primary, 
+                  backgroundColor: cssVar.bg.primary,
+                  color: cssVar.text.primary 
+                }}
               />
             </div>
           </div>

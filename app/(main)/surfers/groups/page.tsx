@@ -430,7 +430,7 @@ export default function GroupsPage() {
               boxShadow: cssVar.shadow.sm,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = cssVar.brand.emphasis;
+              e.currentTarget.style.background = cssVar.brand.hover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = cssVar.brand.primary;
@@ -581,7 +581,7 @@ export default function GroupsPage() {
         <DialogPanel
           className="max-w-3xl w-full p-0 overflow-hidden rounded-ds-modal-radius"
           style={{
-            background: cssVar.modal.bg,
+            background: cssVar.bg.primary,
             boxShadow: cssVar.modal.shadow,
             border: `1px solid ${cssVar.border.primary}`,
           }}
@@ -629,7 +629,7 @@ export default function GroupsPage() {
           {/* Content */}
           <div
             className="p-6 max-h-[75vh] overflow-y-auto space-y-6"
-            style={{ background: cssVar.modal.bg }}
+            style={{ background: cssVar.bg.primary }}
           >
             {/* Basic Info */}
             <FormSection title="פרטי קבוצה" icon={UserGroupIcon} iconColor="info">
@@ -812,7 +812,7 @@ export default function GroupsPage() {
         <DialogPanel
           className="max-w-md w-full p-6 rounded-ds-modal-radius"
           style={{
-            background: cssVar.modal.bg,
+            background: cssVar.bg.primary,
             boxShadow: cssVar.modal.shadow,
             border: `1px solid ${cssVar.border.primary}`,
           }}
@@ -840,7 +840,7 @@ export default function GroupsPage() {
         <DialogPanel
           className="max-w-3xl w-full p-0 overflow-hidden rounded-ds-modal-radius"
           style={{
-            background: cssVar.modal.bg,
+            background: cssVar.bg.primary,
             boxShadow: cssVar.modal.shadow,
             border: `1px solid ${cssVar.border.primary}`,
           }}
@@ -890,7 +890,7 @@ export default function GroupsPage() {
               {/* Content */}
               <div
                 className="p-6 max-h-[75vh] overflow-y-auto space-y-6"
-                style={{ background: cssVar.modal.bg }}
+                style={{ background: cssVar.bg.primary }}
               >
                 {/* General Info */}
                 <ViewSection title="פרטים כלליים" icon={UserGroupIcon} iconColor="info">

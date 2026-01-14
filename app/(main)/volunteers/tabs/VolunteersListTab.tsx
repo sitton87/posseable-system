@@ -114,7 +114,7 @@ export default function VolunteersListTab({
               boxShadow: cssVar.shadow.sm,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = cssVar.brand.emphasis;
+              e.currentTarget.style.background = cssVar.brand.hover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = cssVar.brand.primary;

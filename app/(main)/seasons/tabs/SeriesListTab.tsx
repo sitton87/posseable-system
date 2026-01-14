@@ -417,7 +417,7 @@ export default function SeriesListTab() {
                         : "ידני"}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge color={getStatusColor(series.status)} size="sm">
+                      <Badge color={getStatusColor(series.status ?? "")} size="sm">
                         {series.status}
                       </Badge>
                     </TableCell>
@@ -580,7 +580,7 @@ export default function SeriesListTab() {
                       <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                         תאריך התחלה (וקביעת יום)
                       </Text>
-                      <TextInput
+                      <input
                         type="date"
                         value={seriesForm.start_date}
                         onChange={(e) => {
@@ -592,6 +592,12 @@ export default function SeriesListTab() {
                             default_day: day.toString(),
                           }));
                         }}
+                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        style={{ 
+                          borderColor: cssVar.border.primary, 
+                          backgroundColor: cssVar.bg.primary,
+                          color: cssVar.text.primary 
+                        }}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -599,24 +605,36 @@ export default function SeriesListTab() {
                         <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                           שעת התחלה
                         </Text>
-                        <TextInput
+                        <input
                           type="time"
                           value={seriesForm.default_start_time}
                           onChange={(e) =>
                             setSeriesForm((prev) => ({ ...prev, default_start_time: e.target.value }))
                           }
+                          className="rounded-md border px-3 py-2 text-sm w-full"
+                          style={{ 
+                            borderColor: cssVar.border.primary, 
+                            backgroundColor: cssVar.bg.primary,
+                            color: cssVar.text.primary 
+                          }}
                         />
                       </div>
                       <div>
                         <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                           שעת סיום
                         </Text>
-                        <TextInput
+                        <input
                           type="time"
                           value={seriesForm.default_end_time}
                           onChange={(e) =>
                             setSeriesForm((prev) => ({ ...prev, default_end_time: e.target.value }))
                           }
+                          className="rounded-md border px-3 py-2 text-sm w-full"
+                          style={{ 
+                            borderColor: cssVar.border.primary, 
+                            backgroundColor: cssVar.bg.primary,
+                            color: cssVar.text.primary 
+                          }}
                         />
                       </div>
                     </div>
@@ -644,7 +662,7 @@ export default function SeriesListTab() {
                     </Text>
                     {seriesForm.manual_activities.map((activity, index) => (
                       <div key={index} className="flex gap-3 items-center">
-                        <TextInput
+                        <input
                           type="date"
                           value={activity.date}
                           onChange={(e) => {
@@ -652,9 +670,14 @@ export default function SeriesListTab() {
                             newActivities[index].date = e.target.value;
                             setSeriesForm((prev) => ({ ...prev, manual_activities: newActivities }));
                           }}
-                          className="flex-1"
+                          className="flex-1 rounded-md border px-3 py-2 text-sm"
+                          style={{ 
+                            borderColor: cssVar.border.primary, 
+                            backgroundColor: cssVar.bg.primary,
+                            color: cssVar.text.primary 
+                          }}
                         />
-                        <TextInput
+                        <input
                           type="time"
                           value={activity.start_time}
                           onChange={(e) => {
@@ -662,9 +685,14 @@ export default function SeriesListTab() {
                             newActivities[index].start_time = e.target.value;
                             setSeriesForm((prev) => ({ ...prev, manual_activities: newActivities }));
                           }}
-                          className="w-24"
+                          className="w-24 rounded-md border px-3 py-2 text-sm"
+                          style={{ 
+                            borderColor: cssVar.border.primary, 
+                            backgroundColor: cssVar.bg.primary,
+                            color: cssVar.text.primary 
+                          }}
                         />
-                        <TextInput
+                        <input
                           type="time"
                           value={activity.end_time}
                           onChange={(e) => {
@@ -672,7 +700,12 @@ export default function SeriesListTab() {
                             newActivities[index].end_time = e.target.value;
                             setSeriesForm((prev) => ({ ...prev, manual_activities: newActivities }));
                           }}
-                          className="w-24"
+                          className="w-24 rounded-md border px-3 py-2 text-sm"
+                          style={{ 
+                            borderColor: cssVar.border.primary, 
+                            backgroundColor: cssVar.bg.primary,
+                            color: cssVar.text.primary 
+                          }}
                         />
                         <Button
                           size="xs"

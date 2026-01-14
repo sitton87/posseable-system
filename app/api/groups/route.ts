@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     `;
 
     const result = await query(sql);
-    let groups = result.recordset;
+    let groups: any[] = result.recordset;
 
     if (includeSurfers) {
       const surfersResult = await query(`

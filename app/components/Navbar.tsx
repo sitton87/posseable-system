@@ -54,7 +54,7 @@ const calcIconSize = (currentWidth: number): number => {
 export default function Navbar() {
   const [expanded, setExpanded] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [pinnedWidth, setPinnedWidth] = useState(NAV_DEFAULT_WIDTH);
+  const [pinnedWidth, setPinnedWidth] = useState<number>(NAV_DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   
   const pathname = usePathname();

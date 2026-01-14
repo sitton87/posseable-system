@@ -37,7 +37,7 @@ export default async function SystemSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <SystemSettingsClient currentRole={session.role} />
+      <SystemSettingsClient currentRole={session.role ?? ""} />
     </div>
   );
 }

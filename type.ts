@@ -150,6 +150,9 @@ export type ActivitySeries = {
   frequency?: string | null;
   occurrences_count?: number;
   default_activity_kind?: string | null;
+  default_day?: string | null;
+  default_start_time?: string | null;
+  default_end_time?: string | null;
 };
 
 export type Activity = {

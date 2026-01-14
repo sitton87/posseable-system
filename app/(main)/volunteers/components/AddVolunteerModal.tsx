@@ -69,7 +69,7 @@ export default function AddVolunteerModal({
         : "/api/volunteers/add";
       const method = editingVolunteer ? "PUT" : "POST";
       const body = editingVolunteer
-        ? { id: editingVolunteer.id, ...formData }
+        ? { id: editingVolunteer.national_id, ...formData }
         : formData;
 
       const res = await fetch(url, {

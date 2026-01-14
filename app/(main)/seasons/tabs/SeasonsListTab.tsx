@@ -203,7 +203,7 @@ export default function SeasonsListTab() {
               boxShadow: cssVar.shadow.sm,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = cssVar.brand.emphasis;
+              e.currentTarget.style.background = cssVar.brand.hover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = cssVar.brand.primary;
@@ -420,20 +420,32 @@ export default function SeasonsListTab() {
                 <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                   תאריך התחלה <span style={{ color: cssVar.status.danger }}>*</span>
                 </Text>
-                <TextInput
+                <input
                   type="date"
                   value={formData.start_date}
                   onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  style={{ 
+                    borderColor: cssVar.border.primary, 
+                    backgroundColor: cssVar.bg.primary,
+                    color: cssVar.text.primary 
+                  }}
                 />
               </div>
               <div>
                 <Text className="text-sm mb-1" style={{ color: cssVar.text.secondary }}>
                   תאריך סיום <span style={{ color: cssVar.status.danger }}>*</span>
                 </Text>
-                <TextInput
+                <input
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                  style={{ 
+                    borderColor: cssVar.border.primary, 
+                    backgroundColor: cssVar.bg.primary,
+                    color: cssVar.text.primary 
+                  }}
                 />
               </div>
             </div>

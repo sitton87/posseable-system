@@ -2,6 +2,7 @@ import { NoteStatus } from "@/type";
 
 // Based on DB schema: volunteer table
 export type Volunteer = {
+  id?: string; // Alias for national_id for compatibility
   national_id: string;
   full_name: string;
   phone?: string | null;
@@ -42,6 +43,9 @@ export type VolunteerStats = {
   active: number;
   staff: number;
   management: number;
+  approved?: number;
+  pending?: number;
+  grouped?: number;
 };
 
 export type VolunteerNote = {

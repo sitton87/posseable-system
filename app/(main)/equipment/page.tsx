@@ -1021,18 +1021,7 @@ export default function EquipmentPage() {
             supplier_document_number: includeSupplierDoc ? supplierDoc : null,
           };
         })
-        .filter(
-          (
-            line
-          ): line is {
-            item_id: string;
-            quantity: number;
-            unit_cost: number | null;
-            source_warehouse_id: string | null;
-            target_warehouse_id: string | null;
-            supplier_document_number: string | null;
-          } => Boolean(line)
-        );
+        .filter((line): line is NonNullable<typeof line> => Boolean(line));
 
       if (!sanitizedLines.length) {
         alert("יש להזין לפחות שורה אחת עם כמות תקינה.");

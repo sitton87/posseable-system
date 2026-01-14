@@ -51,9 +51,10 @@ export async function GET() {
     // result.recordsets[1] -> Tasks
     // result.recordsets[2] -> Recent Activity
 
-    const statsRow = result.recordsets[0]?.[0] || {};
-    const tasks = result.recordsets[1] || [];
-    const recentActivity = result.recordsets[2] || [];
+    const recordsets = result.recordsets as any[];
+    const statsRow = recordsets[0]?.[0] || {};
+    const tasks = recordsets[1] || [];
+    const recentActivity = recordsets[2] || [];
 
     return NextResponse.json({
       success: true,
