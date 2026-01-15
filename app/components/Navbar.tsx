@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -51,7 +51,7 @@ const calcIconSize = (currentWidth: number): number => {
   return Math.round(16 + (scale - 0.75) * 16); // בין 16 ל-20
 };
 
-export default function Navbar() {
+function NavbarContent() {
   const [expanded, setExpanded] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [pinnedWidth, setPinnedWidth] = useState<number>(NAV_DEFAULT_WIDTH);
@@ -962,5 +962,13 @@ export default function Navbar() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Navbar() {
+  return (
+    <Suspense fallback={<div style={{ width: 72 }} />}>
+      <NavbarContent />
+    </Suspense>
   );
 }
